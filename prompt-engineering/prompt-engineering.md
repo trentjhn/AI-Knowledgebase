@@ -13,10 +13,16 @@
    - [Tree of Thoughts (ToT)](#tree-of-thoughts-tot)
    - [ReAct (Reason + Act)](#react-reason--act)
    - [Automatic Prompt Engineering (APE)](#automatic-prompt-engineering-ape)
-4. [Code Prompting](#4-code-prompting)
-5. [Best Practices](#5-best-practices)
-6. [Documentation — The Practice Most People Skip](#6-documentation--the-practice-most-people-skip)
-7. [Anti-Patterns](#7-anti-patterns)
+4. [Advanced & Automated Techniques](#4-advanced--automated-techniques)
+   - [Auto-CoT](#auto-cot)
+   - [Reprompting via Gibbs Sampling](#reprompting-via-gibbs-sampling)
+   - [Chain of Draft (CoD)](#chain-of-draft-cod)
+   - [Rephrase and Respond (RaR)](#rephrase-and-respond-rar)
+   - [OPRO — Optimization by Prompting](#opro--optimization-by-prompting)
+5. [Code Prompting](#5-code-prompting)
+6. [Best Practices](#6-best-practices)
+7. [Documentation — The Practice Most People Skip](#7-documentation--the-practice-most-people-skip)
+8. [Anti-Patterns](#8-anti-patterns)
 
 ---
 
@@ -180,9 +186,17 @@ When I was 3, my partner was 3 times my age. I'm now 20. How old is my partner?
 
 **Disadvantage:** More output tokens = higher cost and latency. The reasoning appears in the response, which means you're paying for it.
 
-**Zero-shot CoT** uses just the phrase "Let's think step by step." **Few-shot CoT** shows one or more complete examples including the reasoning chain — this is more powerful for complex tasks.
+**Zero-shot CoT** uses just the phrase "Let's think step by step." Research by Kojima et al. (2023) showed this single phrase — with no examples at all — produces dramatic improvements: on MultiArith, accuracy jumped from 17.7% to 78.7%; on GSM8K (grade-school math), from 10.4% to 40.7%. The model was already capable of this reasoning; it just needed a trigger to activate it.
 
-**Critical best practice:** For CoT, always set temperature to 0. You're looking for the single correct reasoning path, not creative variation.
+Zero-shot CoT uses a two-stage process to work reliably:
+1. **Reasoning extraction**: Append "Let's think step by step." The model generates a full reasoning chain.
+2. **Answer extraction**: Feed the reasoning chain back in with "Therefore, the answer (in numerals) is" to reliably extract the final answer in the correct format.
+
+This two-step approach matters because asking the model to both reason and extract the answer in one shot leads to format errors. Separating reasoning from answer extraction keeps each step clean.
+
+**Few-shot CoT** shows one or more complete examples including the reasoning chain — this is more powerful for complex tasks. The zero-shot version is the minimal baseline that works surprisingly well; the few-shot version is the gold standard.
+
+**Critical best practice:** For CoT, always set temperature to 0. You're looking for the single correct reasoning path, not creative variation. The one exception: self-consistency (see below) deliberately uses higher temperature to generate diverse paths for voting.
 
 ### Self-Consistency
 
@@ -191,13 +205,19 @@ Self-consistency extends CoT by running the same prompt multiple times (with a h
 The intuition: if you ask ten people to independently work through a hard problem and eight of them arrive at the same answer, that answer is probably right. Self-consistency applies this voting logic to LLM responses.
 
 **The process:**
-1. Send the same CoT prompt multiple times with high temperature (so each run explores a different reasoning path)
+1. Send the same CoT prompt multiple times with temperature 0.7–0.9 (so each run explores a different reasoning path)
 2. Extract the final answer from each response
-3. Select the most frequently occurring answer
+3. Take the majority vote — simply select the most frequently occurring answer
 
-This is expensive — you're paying for multiple completions — but it provides a pseudo-probability measure of how confident the model is. If 9 out of 10 runs agree, that's meaningful signal. If it's 5/10, you know the question is genuinely ambiguous or the prompt needs work.
+**What the research shows** (Wang et al., ICLR 2023): across PaLM-540B and GPT-3, self-consistency improved CoT accuracy by significant margins — GSM8K +17.9%, SVAMP +11.0%, AQuA +12.2%, StrategyQA +6.4%, ARC-challenge +3.9%. The gains are more dramatic for larger models: smaller models see +3–6%; larger models see +9–23%.
 
-Self-consistency is most valuable when a single wrong reasoning path could lead to confidently wrong answers — it catches those cases by making them statistically rare.
+**Key finding on aggregation:** Simple majority vote (counting the most common answer) works just as well as probability-weighted voting. This is because the model assigns nearly identical probabilities to its various reasoning paths — it genuinely can't distinguish its own good from bad reasoning. The external vote does what the model can't do for itself.
+
+**Practical sampling settings:** Temperature 0.7, top-K 40 for most tasks. Sample 40 paths per question for stable estimates. The researchers used UL2-20B at temp=0.5 and PaLM-540B at temp=0.7.
+
+This is expensive — you're paying for 10–40 completions — but it provides a pseudo-probability measure of how confident the model is. If 9 out of 10 runs agree, that's meaningful signal. If it's 5/10, you know the question is genuinely ambiguous or the prompt needs work.
+
+Self-consistency is most valuable when a single wrong reasoning path could lead to confidently wrong answers — it catches those cases by making them statistically rare. It's also robust to imperfect prompts: even with slightly flawed CoT examples, self-consistency often recovers the right answer.
 
 ### Tree of Thoughts (ToT)
 
@@ -238,19 +258,115 @@ ReAct is the foundation for tool-using agents. It's what makes the difference be
 
 At a certain point, you might wonder: can you prompt the model to write better prompts? Yes — this is Automatic Prompt Engineering.
 
-**The workflow:**
-1. Write a meta-prompt asking the model to generate N variants of a prompt for your task
-2. Evaluate each variant against a quality metric (accuracy, BLEU score, human rating)
-3. Select the best-scoring variant; optionally tweak it and evaluate again
-4. Repeat
+Rather than hand-crafting your prompt, you give the model a few input-output examples of the task you want to accomplish, and it generates candidate instruction prompts automatically. The best candidate is selected by scoring each on held-out examples.
 
-APE is especially useful when you need to cover the full range of ways users might phrase a request (for chatbot training), or when you want to avoid the bias of your own prompt-writing instincts. Different people write prompts differently, and APE surfaces that variance systematically.
+**The APE workflow** (Zhou et al., ICLR 2023):
+1. Provide a small set of input-output demonstrations for your task (e.g., "direct" → "indirect"; "on" → "off")
+2. Use an LLM as an *inference model*: give it the demonstrations and ask it to generate candidate instructions that would produce these outputs (e.g., "write the antonym of the word", "give the opposite of the input")
+3. Score each candidate instruction on a validation set using zero-shot performance
+4. Keep the top-K candidates; optionally use an LLM to generate *variations* of those candidates (paraphrasing, rephrasing) for a second round of refinement
+5. Select the highest-scoring instruction as your final prompt
+
+**What the research shows:** APE-generated instructions outperform human-written prompts on 24/24 instruction induction tasks and 17/21 BIG-Bench tasks. Across 24 NLP tasks, APE using InstructGPT surpassed human prompt engineer performance as measured by interquartile mean. A notable secondary finding: APE can also discover better zero-shot CoT triggers than "Let's think step by step" — for some tasks, phrases like "Let's work this out in a step by step way to be sure we have the right answer" score higher.
+
+**Practical use:** APE is most valuable when you're building a reusable prompt for a specific production task — a classifier, an extractor, a standard response format — and you want the best possible instruction without being limited by your own phrasing instincts.
 
 The limitation: APE is only as good as your evaluation metric. If you can't clearly measure what "better" means for your task, it's hard to know which generated prompt actually wins.
 
 ---
 
-## 4. Code Prompting
+## 4. Advanced & Automated Techniques
+
+The techniques in the previous section are building blocks. The techniques here are more advanced — often research-originated, sometimes requiring more setup — but represent where the field is pushing the boundaries of what automated prompting can accomplish.
+
+### Auto-CoT
+
+The problem with few-shot CoT is that someone has to write the reasoning examples by hand. Auto-CoT eliminates that labor by automatically generating CoT demonstrations.
+
+**How it works:**
+1. Use "Let's think step by step" (zero-shot CoT) to generate reasoning chains for a diverse set of questions from the training set
+2. Cluster the questions by semantic similarity
+3. Sample one representative question from each cluster along with its auto-generated reasoning chain
+4. Use these auto-generated demonstrations as the few-shot examples for a new CoT prompt
+
+The intuition is that diverse examples (one per cluster) avoid redundancy, while auto-generation eliminates the need for human annotation. Zhang et al. (2022) showed Auto-CoT outperforms the CoT baseline by an average of 1.33% and 1.5% on arithmetic and symbolic reasoning tasks with GPT-3.
+
+**When to use it:** When you need CoT demonstrations for a new task but don't want to hand-write reasoning chains. This is the automated pipeline version of few-shot CoT.
+
+---
+
+### Reprompting via Gibbs Sampling
+
+Reprompting takes the automation even further — it automatically *learns* which CoT reasoning style works best for a given model and task, without any human-written demonstrations at all.
+
+The starting insight: different models have different "styles" of reasoning that work best for them. What works in human-written CoT for GPT-3 may not be optimal for a different model. And writing model-specific CoT demonstrations requires both domain expertise *and* expertise in how prompting works — a rare combination.
+
+**How Reprompting works** (Xu et al., ICML 2024):
+
+Think of it as an evolutionary process for CoT reasoning chains:
+
+1. **Initialize**: Generate zero-shot reasoning chains (CoT "recipes") for a small set of training examples — you get a diverse but rough population of reasoning styles
+2. **Evolve**: Iteratively "breed" new recipes — pick a problem, use other problems' current recipes as parent prompts to generate a new recipe for it; if the new recipe leads to the correct answer, keep it; otherwise, occasionally keep it anyway (avoiding local optima)
+3. **Select**: After many iterations, select the recipes that work consistently well across training examples as your few-shot demonstrations
+4. **Test**: Apply those evolved demonstrations to unseen test problems
+
+**What the research shows:** Reprompting outperforms human-written CoT by +9.4 points on average across 20 challenging reasoning tasks. It beats self-consistency by 11+ points and Auto-CoT by 11+ points on the same benchmarks. An interesting bonus: using ChatGPT to initialize and InstructGPT to sample can yield up to +71 point improvements over InstructGPT alone — the stronger model's reasoning style helps the weaker one.
+
+**When to use it:** When you need to optimize CoT for a specific model at scale and don't want to invest in writing task-specific demonstrations. The setup cost is higher (you need training examples with ground-truth answers), but the resulting demonstrations are model-specific and systematically optimal.
+
+---
+
+### Chain of Draft (CoD)
+
+Standard CoT prompting dramatically improves accuracy — but it's verbose by design. Every reasoning step is spelled out in full, which increases both latency and token cost. Chain of Draft proposes a different approach: what if the reasoning steps were concise by design?
+
+The observation behind CoD: when humans solve problems, we don't write out every step in full prose — we jot down just the essential information. CoD prompts the model to generate short, information-dense "drafts" at each step rather than full sentences.
+
+**The result** (Xu et al., 2025): CoD matches CoT accuracy in most cases while using dramatically fewer tokens. On some tasks, the accuracy is equivalent while output tokens are reduced by up to 80% — with average latency reduction of 76.2%. This makes CoD particularly valuable in production applications where response time matters.
+
+**How to use it:** In your CoT prompt examples, show brief, note-like intermediate steps rather than verbose prose reasoning. The model will imitate the concise style.
+
+**When to use it:** Production applications where you need CoT-level accuracy but can't afford CoT-level latency or cost. Also useful when the output's reasoning chain will be visible to end users — nobody wants to read paragraphs of reasoning.
+
+---
+
+### Rephrase and Respond (RaR)
+
+Sometimes the problem isn't the model's reasoning — it's the way the question was phrased. Human thought frames and LLM thought frames don't always align. A casually phrased question that's perfectly clear to a human can be ambiguous or poorly structured for an LLM's generative process.
+
+Rephrase and Respond (RaR) addresses this by letting the LLM improve the question before answering it.
+
+**The process:**
+1. Add "Rephrase and expand the question, and respond" (or similar) to your prompt
+2. The model first rewrites your question with improved clarity and precision
+3. The model then answers the rephrased version
+
+**Why it works:** The act of rephrasing forces the model to clarify implicit assumptions and resolve ambiguity before it commits to a reasoning direction. The rephrased question captures what you actually meant, even if your original wording was imprecise.
+
+**Two-step variant:** For maximum effect, separate the rephrasing and answering into two prompts. Use one LLM call to rephrase, then a second call to answer the rephrased question. This gives you visibility into how the model interpreted your question.
+
+**When to use it:** When you suspect the question's wording is causing the model to misinterpret your intent. Also useful as a general-purpose improvement for any prompt that produces unexpectedly off-target responses.
+
+---
+
+### OPRO — Optimization by Prompting
+
+OPRO (Yang et al., 2023) takes the meta-prompting idea even further than APE. Rather than just generating and selecting candidate prompts, OPRO uses an LLM as an *optimizer* that iterates in a loop — proposing solutions, observing how well they work, and generating improved solutions based on that feedback.
+
+**The core idea:** Provide the LLM with a "meta-prompt" that contains:
+- A description of the optimization problem
+- Past solutions tried and their scores (a running log)
+- A request to generate a new solution that improves on the best ones so far
+
+The LLM sees what's worked and what hasn't, reasons about patterns in that history, and proposes the next candidate. This is gradient descent without gradients — pure language-based optimization.
+
+**What the research shows:** OPRO-optimized prompts outperform human-designed prompts by up to 8% on GSM8K and up to 50% on challenging BIG-Bench tasks. The most effective prompts discovered by OPRO are sometimes counterintuitive — phrases that a human would never write but that happen to trigger better performance in the model.
+
+**When to use it:** Maximum-effort prompt optimization for high-value production tasks. OPRO requires many LLM calls (each iteration is a call), so it's expensive but systematic. Think of it as professional-grade prompt tuning rather than everyday engineering.
+
+---
+
+## 5. Code Prompting
 
 LLMs trained on large amounts of code are remarkably effective at generating, explaining, translating, and debugging code. The same prompting principles apply, but with a few specific patterns worth knowing.
 
@@ -283,7 +399,7 @@ Beyond fixing the immediate error, ask for a general code review: "Are there oth
 
 ---
 
-## 5. Best Practices
+## 6. Best Practices
 
 ### Provide Examples — The Single Most Effective Technique
 
@@ -354,7 +470,7 @@ Prompt engineering is partly subjective — what works best varies by model, tas
 
 ---
 
-## 6. Documentation — The Practice Most People Skip
+## 7. Documentation — The Practice Most People Skip
 
 Prompt outputs vary across models, across sampling settings, and even across identical prompts to the same model (when token probabilities are tied, tie-breaking is random). Without documentation, you lose track of what you tried, can't reproduce good results, and can't understand why a previously working prompt broke after a model update.
 
@@ -381,7 +497,7 @@ The recommended format for tracking every prompt attempt:
 
 ---
 
-## 7. Anti-Patterns
+## 8. Anti-Patterns
 
 **Assuming the first prompt is the final prompt.** Prompt engineering is explicitly iterative. Expecting a correct output from the first attempt is like expecting compiled code to work without testing. Budget for multiple rounds.
 
@@ -399,4 +515,4 @@ The recommended format for tracking every prompt attempt:
 
 ---
 
-*Source: Lee Boonstra, "Prompt Engineering" (Google / Vertex AI whitepaper, February 2025)*
+*Primary sources: Lee Boonstra, "Prompt Engineering" (Google / Vertex AI whitepaper, Feb 2025) · White et al., "A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT" (Vanderbilt, 2023) · Kojima et al., "Large Language Models are Zero-Shot Reasoners" (NeurIPS 2022) · Wang et al., "Self-Consistency Improves Chain of Thought Reasoning" (ICLR 2023) · Zhou et al., "Large Language Models are Human-Level Prompt Engineers" (ICLR 2023) · Xu et al., "Reprompting: Automated Chain-of-Thought Prompt Inference Through Gibbs Sampling" (ICML 2024) · Sahoo et al., "A Systematic Survey of Prompt Engineering in Large Language Models" (2024)*
