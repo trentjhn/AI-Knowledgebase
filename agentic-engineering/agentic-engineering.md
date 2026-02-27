@@ -807,6 +807,7 @@ Agentic patterns are recurring solutions to common agent architecture problems. 
 | High-stakes irreversible operations | Human-in-the-Loop |
 | Multiple independent tasks in one domain at scale | Expert Swarm |
 | Complex design decisions with real tradeoffs | Multi-Agent Collaboration |
+| Long-running projects requiring knowledge persistence across sessions | Persistent Agent Memory |
 
 Patterns can be combined: an Orchestrator can coordinate parallel Plan-Build-Review workers. Human-in-the-Loop gates fit naturally at phase transitions in any pattern.
 
@@ -1088,6 +1089,94 @@ Agents that update their own expertise based on execution outcomes. This is the 
 5. *Improve/Learn agent* runs after completion — analyzes git history, extracts new patterns, updates the expertise file
 
 The improve agent always runs *after* execution, never during. It's an analysis pass, not an intervention in the current task.
+
+---
+
+### Persistent Agent Memory
+
+Most agent patterns discussed so far are session-bound — the agent starts fresh each time, with no recollection of previous work. For long-running projects, this is a significant limitation: a coding agent that forgets your conventions after every session, a research agent that re-discovers the same sources it already processed, a personal assistant that can't remember your preferences. This pattern addresses that problem.
+
+The core idea is to give agents *external memory that survives session boundaries* — stored as plain files, tracked by git, and selectively loaded into context depending on how relevant a piece of memory is right now.
+
+**Why files over a database?**
+
+The natural instinct is to store memory in a database — structured, queryable, persistent. But files have a counterintuitive advantage: they're already a tool agents know how to use. An agent can edit a markdown file with the same bash and text-editing tools it uses for any other task. There's no specialized memory API to learn, no schema to design, no migration when structure needs to change. Standard tools are more composable, more debuggable, and less fragile than custom memory APIs.
+
+---
+
+**The Two-Tier Architecture: Core vs. Extended**
+
+Not all memory should be treated equally. The two-tier approach makes an explicit distinction:
+
+- **Core memory** — facts relevant in *every* session, regardless of what you're working on. Preferred coding style, project folder structure, conventions the team has adopted. Core memory lives in a designated folder (commonly `system/`) and is automatically injected into the system prompt every time the agent runs. It's always in context.
+
+- **Extended memory** — knowledge that might be relevant but isn't always needed. Module-specific notes, research from previous sessions, user preferences not needed every day. Extended memory lives in the directory structure but isn't auto-loaded. The agent can see it exists and choose to read it, but it doesn't pre-fill the context window on every run.
+
+This separation matters because context is finite. Loading everything into the system prompt quickly crowds out room for the actual task. The two-tier design keeps core knowledge permanently available while letting extended knowledge stay on disk until needed.
+
+```
+memory/
+├── system/                ← always injected into system prompt
+│   ├── identity.md        "You are an expert in TypeScript..."
+│   ├── conventions.md     "We use conventional commits..."
+│   └── project-map.md     "Main entry point: src/index.ts"
+└── extended/              ← visible to agent, loaded on demand
+    ├── projects/
+    │   └── auth-module.md
+    └── preferences/
+        └── human-interests.md
+```
+
+---
+
+**Git as the Memory Backend**
+
+This is the genuinely novel element of this pattern. By storing memory as a git-tracked folder, you get several capabilities for free:
+
+- **Version control:** Every change to agent memory is a commit. You can see exactly what the agent learned and when — and roll back if a memory turns out to be wrong or misleading.
+- **Audit trail:** Commit messages can record which agent made a change and why. "Reflection agent added project convention about error handling based on session 2025-11-15."
+- **Parallel agent isolation:** Multiple agents working simultaneously on memory can use git worktrees to isolate their changes before merging. This prevents race conditions where two agents overwrite each other's work — the same risk the Expert Swarm pattern manages through its Learning Separation Rule.
+
+The memory contamination risk (a hallucinated fact written to shared memory becoming "ground truth" for all future agents) is meaningfully reduced when you have full git history. A bad memory is just a commit you can inspect and revert, not permanent corruption.
+
+---
+
+**Reflection Agents (Sleeptime Agents)**
+
+Memory doesn't curate itself. You need a mechanism to take what happened during a session and decide what's worth persisting. This is the job of a **reflection agent** — sometimes called a sleeptime agent because it typically runs in the background after the main work is done.
+
+A reflection agent is a lightweight LLM call triggered at the end of a session or on a schedule. It receives recent conversation or action history and answers: *What here is worth remembering for future sessions?* It then writes or updates the appropriate memory files and commits the changes.
+
+The critical design principle: reflection agents run *after* the main agent finishes, never during. This prevents them from blocking the main workflow. The main agent does its work, completes, and memory consolidation happens asynchronously.
+
+A minimal reflection agent prompt looks like:
+
+```
+Here is a summary of what happened in the last session:
+[session summary]
+
+The current memory folder contains:
+[directory listing]
+
+Please identify any new facts, preferences, or conventions that would be
+useful in future sessions, and write them to the appropriate files.
+Commit your changes with a message describing what you added and why.
+```
+
+---
+
+**When this pattern makes sense:**
+- Long-running projects where context accumulates across many sessions
+- Personalized assistants that need to learn user preferences over time
+- Coding agents working on a codebase they should know deeply
+- Any scenario where re-discovering the same context every session is expensive
+
+**When it's overkill:**
+- One-off tasks with no meaningful carry-forward state
+- Pipelines where freshness matters more than continuity (you want the agent to re-evaluate from scratch)
+- Short-lived workflows where persistent memory adds overhead without benefit
+
+**You don't need a third-party service to implement this.** The complete pattern — git-tracked memory folder, two-tier loading convention, reflection agent at session end — is buildable with any LLM and standard file tools. Managed platforms (like Letta) add conveniences such as server-side backup, visual memory interfaces, and bootstrapping from historical sessions, but the core architecture is entirely self-hostable.
 
 ---
 
