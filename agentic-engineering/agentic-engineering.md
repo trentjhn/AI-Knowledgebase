@@ -1098,6 +1098,20 @@ Most agent patterns discussed so far are session-bound — the agent starts fres
 
 The core idea is to give agents *external memory that survives session boundaries* — stored as plain files, tracked by git, and selectively loaded into context depending on how relevant a piece of memory is right now.
 
+**What to store: three types of memory**
+
+Before thinking about how to store memory, it helps to think about what kind of information you're storing. Google's memory framework (from their "Context Engineering: Sessions & Memory" whitepaper) identifies three distinct types — and they behave differently enough to warrant treating them separately:
+
+- **Semantic memory** — stable facts and preferences. Things that are true about the world or about the person/project and change rarely. *"User prefers TypeScript. No semicolons. Tabs over spaces."* This is your most durable memory — once it's written, it should only change when a preference actually shifts.
+
+- **Episodic memory** — events and history. What happened in past sessions. *"On Feb 17 we debugged the auth module and found a race condition in token refresh."* This is always new — each session adds to it. It's the running log of what's been done.
+
+- **Procedural memory** — workflows and learned routines. How to do things. *"When deploying, run tests, then build, then push to staging, then get approval before prod."* This evolves slowly as you refine how you work.
+
+Most memory files end up containing all three mixed together, which works fine. But if you organize your files by type, you'll find naming and updating them becomes much more intuitive — and the agent has a clearer sense of which files are likely relevant for a given task.
+
+---
+
 **Why files over a database?**
 
 The natural instinct is to store memory in a database — structured, queryable, persistent. But files have a counterintuitive advantage: they're already a tool agents know how to use. An agent can edit a markdown file with the same bash and text-editing tools it uses for any other task. There's no specialized memory API to learn, no schema to design, no migration when structure needs to change. Standard tools are more composable, more debuggable, and less fragile than custom memory APIs.
@@ -1165,6 +1179,20 @@ Commit your changes with a message describing what you added and why.
 
 ---
 
+**When to consolidate: session compaction triggers**
+
+A reflection agent needs something to trigger it. There are three main strategies, each with different tradeoffs:
+
+- **Count-based** — consolidate after a certain number of tokens or conversation turns. Simple to implement, but blunt: it fires on a schedule regardless of whether anything meaningful happened. Good enough for most setups.
+
+- **Time-based** — consolidate after a period of user inactivity. Useful for long-running async projects where sessions don't have a clean end. Less predictable than count-based.
+
+- **Event-based** — consolidate when a task is detected as complete. The most intelligent approach: memory gets updated at the natural boundary between one piece of work and the next. The tradeoff is that detecting task completion reliably is harder — you need the agent to recognize when it's done, not just when it's been a while.
+
+In practice, many setups use a hybrid: count-based as a safety net (consolidate if the context gets too long), plus event-based when the user signals completion manually — like a `/new` command, or a "that's done, let's move on" message. The manual signal is essentially event-based compaction with a human doing the detection.
+
+---
+
 **When this pattern makes sense:**
 - Long-running projects where context accumulates across many sessions
 - Personalized assistants that need to learn user preferences over time
@@ -1176,7 +1204,7 @@ Commit your changes with a message describing what you added and why.
 - Pipelines where freshness matters more than continuity (you want the agent to re-evaluate from scratch)
 - Short-lived workflows where persistent memory adds overhead without benefit
 
-**You don't need a third-party service to implement this.** The complete pattern — git-tracked memory folder, two-tier loading convention, reflection agent at session end — is buildable with any LLM and standard file tools. Managed platforms (like Letta) add conveniences such as server-side backup, visual memory interfaces, and bootstrapping from historical sessions, but the core architecture is entirely self-hostable.
+**You don't need a third-party service to implement this.** The complete pattern — three memory types organized into files, git-tracked folder, two-tier loading convention, reflection agent triggered by count or event — is buildable with any LLM and standard file tools. Managed platforms (like Letta) add conveniences such as server-side backup, visual memory interfaces, and bootstrapping from historical sessions, but the core architecture is entirely self-hostable.
 
 ---
 
