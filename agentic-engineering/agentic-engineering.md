@@ -767,6 +767,38 @@ For workflows requiring 3+ dependent tool calls, generate code that orchestrates
 
 ---
 
+### Building Efficient MCP Tools
+
+Most MCP servers are built as transparent API pass-throughs: the tool calls the API, dumps the full response into context, and lets the model sort out what's relevant. This feels easiest to build, but it's expensive to run. API responses are designed for human consumption — they return every field, every nested object, every bit of metadata a developer might want. Most of it is irrelevant to what the agent needs right now, and it all burns context.
+
+Three design principles that fix this at the source:
+
+**1. Filter at the source — return only essential fields**
+
+Strip irrelevant fields inside your tool code before returning the result to the model. Don't rely on prompt instructions like "ignore the extra fields" — the model still has to read them first.
+
+Real example: a financial account tool returning 18 fields per account, reduced to 6 (id, name, type, on_budget, closed, balance). Token reduction: 65%. The model gets exactly what it needs for the task and nothing else.
+
+Default to minimal fields. If edge cases need more detail, expose them through optional parameters rather than always returning the full payload.
+
+**2. Pre-aggregate data — compute summaries server-side**
+
+When the task involves analysis across many records, summarize before returning rather than returning raw records. The model can reason about a summary far better than it can reason about 500 individual rows — and the token cost is incomparably lower.
+
+Real example: a 6-month spending analysis returning individual transactions vs. monthly summaries. Token count: 4,890 → 262 (94.6% reduction). The summary answered the user's actual question; the raw transactions would have answered a different one.
+
+**3. Work within API constraints creatively**
+
+When the API you're wrapping doesn't have a direct endpoint for what the user needs, build a multi-step workaround using the operations that do exist. Don't expose the limitation as a tool limitation — design the workflow around it.
+
+**The hidden cost of tool definitions themselves**
+
+This is easy to overlook: tool definitions — the schemas and descriptions you write so the model knows what each tool does — consume context even when the tools aren't being called. In a real production session with multiple MCP servers connected, tool definitions consumed **24% of the total context window** before a single task message was sent.
+
+This reinforces the dynamic tool discovery approach: load tool schemas only when a tool has been identified as relevant, not all at once at session start.
+
+---
+
 ### Skills — Tools That Modify Behavior
 
 **Skills** are a distinct category from regular tools. Regular tools *do things* (read a file, call an API). Skills *change how the agent reasons* — they inject specialized instructions and context that modify the agent's approach to a domain.

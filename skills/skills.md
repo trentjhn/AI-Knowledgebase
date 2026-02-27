@@ -81,6 +81,18 @@ Skills are the recipes: step-by-step instructions on how to actually cook someth
 
 Without skills, MCP users often experience a frustrating gap: the connection works, but they don't know what to ask or how to ask it. They get inconsistent results. They write long prompts explaining their process every time. Skills fill that gap — pre-built workflows activate automatically based on what the user is asking for.
 
+**When to build a Skill vs. an MCP**
+
+The confusion usually comes from the fact that both feel like "extending what Claude can do." The distinction is simpler than it appears. Ask yourself two questions:
+
+1. *Should Claude be able to call this anytime, across any context?* → Build an MCP. It's a capability that should always be available — like web search, or access to your database.
+
+2. *Is this a repeatable multi-step workflow with defined steps?* → Build a skill. It's a procedure that should activate when a specific type of task comes up.
+
+The signal that you need a skill: you notice yourself asking Claude the same multi-step sequence over and over. That repetition is exactly what a skill automates. The signal that you need an MCP: you need Claude to access an external system or service it currently can't reach.
+
+A useful way to remember it: CLAUDE.md is your employee handbook (always-on context). Skills are training modules (activated for specific procedures). MCPs are the tools on the workbench (available capabilities to reach for).
+
 ---
 
 ## 5. Anatomy of a Skill
