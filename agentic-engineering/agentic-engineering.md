@@ -1407,6 +1407,107 @@ Improving per-step accuracy from 95% to 99% more than doubles success on 50-step
 
 ---
 
+### Intent Engineering
+
+Prompt engineering tells an agent *what to do*. Context engineering tells it *what to know*. Intent engineering tells it *what to want* — and it operates at a level above both.
+
+The core problem it addresses: organizations have largely solved "can AI do this task?" and mostly failed to solve "can AI do this task in a way that serves our actual goals?" These are very different questions, and the gap between them is where production AI systems most often break down.
+
+**The Klarna case study — the canonical example**
+
+Klarna deployed an AI customer support agent that handled 2.3 million conversations monthly, cut resolution times from eleven minutes to two minutes, and saved $60 million. By every metric it was given, it succeeded. The CEO later publicly acknowledged the strategy had backfired and began rehiring humans.
+
+What went wrong: the agent optimized for speed and cost reduction — measurable, legible metrics — while quietly destroying the customer relationships and trust that actually drove retention. It succeeded at the wrong thing. Nobody told it that "resolve quickly" and "preserve customer loyalty" were in tension, or which one to prioritize when they conflicted.
+
+This is the intent gap. The agent did exactly what it was measured on. The organization failed to encode what it actually needed.
+
+**What intent engineering involves**
+
+Intent is what determines how an agent acts when explicit instructions run out — when it hits an ambiguous case, a tradeoff not covered in the spec, a situation the prompt didn't anticipate. Without encoded intent, agents default to optimizing for whatever is most legible: speed, task completion, literal instruction-following. With it, they can reason about edge cases in alignment with what the organization actually values.
+
+A complete intent specification for an agent covers seven components:
+
+1. **Objective** — the problem being solved and its business value
+2. **Desired outcomes** — observable state changes that indicate success (not just task completion)
+3. **Health metrics** — non-regression constraints that must be maintained even while optimizing (e.g., CSAT must not drop below 4.2)
+4. **Strategic context** — the broader system the agent operates within
+5. **Constraints** — steering rules (soft guidance) and hard enforced limits
+6. **Decision authority** — which decisions the agent can make independently vs. must escalate
+7. **Stop rules** — when to halt, escalate, or declare completion
+
+The customer support example properly specified: *objective* = resolve issues without creating frustration; *desired outcome* = customer confirms resolution, no repeat ticket within 24 hours; *health metric* = CSAT stays above 4.2. An agent with these constraints cannot optimize resolution speed at the expense of satisfaction — the health metric makes that tradeoff explicit and bounded.
+
+**Intent engineering vs. the other disciplines**
+
+| Discipline | Tells the agent... | Time horizon |
+|---|---|---|
+| Prompt craft | What to do right now | Per-request |
+| Context engineering | What to know | Per-session |
+| Intent engineering | What to want / optimize for | Persistent infrastructure |
+
+Intent engineering sits closest to organizational strategy. It's less about any individual prompt or agent and more about what gets encoded into the infrastructure that agents run on — the standing values, tradeoffs, and decision hierarchies that should govern autonomous behavior across all tasks.
+
+Gartner predicts 40% of agentic AI projects will be cancelled by 2027. The most common reason won't be that the agents couldn't do the task — it'll be that they did the task while failing to preserve what the organization actually cared about.
+
+---
+
+### Specification Engineering Primitives
+
+As agents become capable of running autonomously for hours or days, the bottleneck shifts from real-time prompt iteration to upfront specification quality. You can't course-correct a long-running agent mid-task the way you'd refine a chat prompt. Everything the agent needs to succeed must be encoded before it starts.
+
+Specification engineering is the practice of writing agent-readable documents complete enough for autonomous execution. Five primitives define what a good specification contains:
+
+**1. Self-contained problem statement**
+
+All context the agent needs is in the spec. The agent should never have to guess about project conventions, user preferences, or background state. If the agent has to ask a clarifying question before it can start, the problem statement failed.
+
+*Practice:* Write the request as if the recipient has zero prior knowledge. If you find yourself thinking "they'll know what I mean," that assumption is the gap.
+
+**2. Clear acceptance criteria**
+
+Three or fewer verifiable sentences that define what "done" looks like. Not "build a good dashboard" — "the dashboard displays daily active users, 30-day retention, and revenue by segment; all three charts update when the date filter changes; page load time is under two seconds."
+
+Acceptance criteria serve two purposes: they tell the agent what to aim for, and they give you a way to evaluate whether the output is actually done rather than just reasonable-looking.
+
+*Practice:* Before handing any task to an agent, write three sentences that would let a stranger verify completion without asking you.
+
+**3. Constraint architecture**
+
+Four layers of constraint, each serving a different function:
+- *Must do* — required behaviors with no exceptions
+- *Must not do* — hard limits that should trigger escalation if approached
+- *Prefer* — soft guidance for ambiguous cases (when in doubt, choose X over Y)
+- *Escalate when* — conditions that should pause execution and request human input
+
+Without explicit constraints, agents default to whatever behavior minimizes task friction — which is not always the right behavior.
+
+**4. Decomposition**
+
+Break large tasks into independently executable subtasks, each under roughly two hours of agent work. Tasks that are too large create compounding error risk (see the per-step accuracy table above) and make debugging nearly impossible when something goes wrong.
+
+The test for good decomposition: could you hand each subtask to a different agent, with no shared context, and have it produce a useful artifact? If not, the task is still too coupled.
+
+**5. Evaluation design**
+
+For any task you'll run repeatedly, define how you'll verify the output is actually good — not just plausible-looking. Three to five test cases with known good outputs let you catch regressions when models update, prompts change, or edge cases appear in production.
+
+*Practice:* After completing a recurring AI task successfully, capture that input/output pair as a test case. Over time, this builds institutional knowledge about what "good" looks like for your specific use case — knowledge that doesn't exist anywhere else.
+
+**The cumulative stack**
+
+These four disciplines build on each other:
+
+```
+Specification engineering (what to build, fully specified)
+  requires →  Intent engineering (what to optimize for)
+    requires →  Context engineering (what to know)
+      requires →  Prompt craft (how to express it)
+```
+
+Failures at higher levels are increasingly severe — a great prompt in service of the wrong intent causes more damage than a poorly phrased prompt for the right one. Getting the stack right, from bottom to top, is the compounding investment.
+
+---
+
 ## 9. Mental Models
 
 ### The Pit of Success
