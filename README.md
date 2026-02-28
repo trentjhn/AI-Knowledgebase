@@ -17,3 +17,5 @@ A unified reference for AI teachings, findings, experiments, and research.
 | [prompt-engineering/](prompt-engineering/) | Prompting techniques (CoT, self-consistency, APE, ReAct), prompt patterns catalog, research findings |
 | [playbooks/](playbooks/) | Scenario-based guides — building agents, chatbots, RAG pipelines, production prompts |
 | [ai-security/](ai-security/) | AI security guardrails — OWASP LLM Top 10, prompt injection defenses, identity management, AI firewalls, Zero Trust |
+| [ai-system-design/](ai-system-design/) | AI system architecture — 11 design patterns, data pipelines, observability, scalability lessons from Uber/Netflix/Meta, trade-offs |
+| [specification-clarity/](specification-clarity/) | Writing clear AI specifications — 7-property framework, ambiguity types, BDD acceptance criteria, constraint architecture, decomposition |
