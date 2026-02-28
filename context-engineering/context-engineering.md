@@ -420,6 +420,16 @@ The following tools are specifically designed to support context engineering:
 
 **CLAUDE.md / Cursor Rules** — The "always-included context" approach for coding assistants. A markdown file that gets injected into every context window for a given project, encoding the project's conventions, architecture, and patterns so the model doesn't have to rediscover them each time.
 
+Effective CLAUDE.md design has a few non-obvious constraints worth knowing:
+
+*Instruction budget.* Claude Code's system prompt already consumes roughly 50 instructions before your CLAUDE.md is even loaded. The practical ceiling before instruction overload degrades performance is around 150–200 total — leaving you 100–150 slots. Every instruction you add displaces attention from the others. This makes the **80% rule** the most important filter: only include instructions relevant to 80%+ of your sessions. Task-specific instructions belong in separate files that get loaded on demand, not in the always-on CLAUDE.md.
+
+*Three-level hierarchy.* CLAUDE.md files load at three scopes: global (`~/.claude/CLAUDE.md`, applies to all projects), project root (`./CLAUDE.md`), and directory-specific (`./src/CLAUDE.md`, `./tests/CLAUDE.md`). Directory files only load when Claude accesses that part of the codebase — a natural form of progressive disclosure that keeps the active context lean. Use this to write conditional behavior: different conventions for `tests/` vs. `src/api/` without cluttering the root file.
+
+*Context swapping.* For projects with very different operational modes (development vs. deployment vs. debugging), maintain separate CLAUDE.md variants and swap them in as needed. This is preferable to one bloated file with branching instructions for every possible situation.
+
+*What not to include.* Code style rules enforced by linters (ESLint, Black, Ruff) don't belong in CLAUDE.md — use hooks and pre-commit automation to enforce those. Credentials and API keys never belong there. Anything inferrable directly from the codebase is better left out. CLAUDE.md should encode what the codebase can't tell Claude on its own.
+
 ---
 
 ## Key Takeaways
