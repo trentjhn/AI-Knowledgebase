@@ -682,6 +682,8 @@ Tools are the mechanisms through which agents take actions in the world. Without
 
 Every tool call works the same way: the model decides to use a tool, generates a structured tool call (the tool name + parameters), your application intercepts it, executes the actual action, and returns the result back to the model's context.
 
+One architectural nuance worth internalizing: **the model never directly executes a tool.** It generates a structured request — essentially a JSON blob saying "call this tool with these parameters." A separate orchestration layer (your application code) receives that request, validates it against permissions and constraints, and then executes it. This separation is intentional. It means you can inspect, log, throttle, or reject any tool call before it happens — the model's intent and the actual execution are distinct steps with a control point between them.
+
 ---
 
 ### Designing Good Tools
@@ -724,6 +726,10 @@ Rule of thumb: **more than ~50 tools degrades selection performance.** When you'
 - **Role-based filtering:** Not every agent needs every tool. A research agent doesn't need deployment tools.
 - **Dynamic discovery:** Only load tool definitions that are relevant to the current task
 - **Skill-based activation:** Load specialized tool sets on demand when entering a specialized workflow phase
+
+**The production pattern: decision trees first, model second.**
+
+Not every decision should run through the LLM. In production agents, the right architecture is to handle routine, high-confidence cases with deterministic logic — simple if-else trees or rule-based lookups — and only invoke the model when genuine ambiguity exists. This avoids burning tokens and adding latency on decisions that don't actually require reasoning. Routing a support ticket to the billing team doesn't need an LLM; recognizing that a request is ambiguous between two departments does. Structure your agent so the model is a last resort for hard cases, not the default path for every case.
 
 ---
 
