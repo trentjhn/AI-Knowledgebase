@@ -805,6 +805,16 @@ This reinforces the dynamic tool discovery approach: load tool schemas only when
 
 ---
 
+### Tool Lifecycle — Revisit as Models Improve
+
+Most tool design advice focuses on what to add. There's an equally important question that's easier to miss: **what should you remove or replace as model capabilities increase?**
+
+Tools are built against the model you have at the time. A tool designed to scaffold a weaker model can become a constraint for a stronger one. The Claude Code team experienced this directly: early Claude needed a TodoWrite tool and periodic system reminders to stay on task. As the model improved, those reminders started working against it — Claude interpreted them as a signal that it couldn't modify the plan, limiting the adaptive behavior the newer model was actually capable of. The scaffolding had become a cage.
+
+The lesson: periodically audit your existing tools against the model you're running now, not the model you designed for. Ask not just "are there gaps in what my agent can do?" but also "are there tools that are now constraining behavior that the current model handles better on its own?" What was scaffolding six months ago may be deadweight — or worse, an active constraint — today.
+
+---
+
 ### Skills — Tools That Modify Behavior
 
 **Skills** are a distinct category from regular tools. Regular tools *do things* (read a file, call an API). Skills *change how the agent reasons* — they inject specialized instructions and context that modify the agent's approach to a domain.
