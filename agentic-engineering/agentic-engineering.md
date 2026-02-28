@@ -1052,6 +1052,16 @@ Next swarm benefits from all learnings
 
 **When not to use:** Simple single-file changes, tasks with sequential dependencies on each other, domain expertise not yet codified into an expertise file.
 
+**The honest cost math — swarms are not always worth it.** Real-world data from Overstory (a production multi-agent orchestration system built by Jaymin West, the author of the agentic engineering book this doc draws from):
+
+> 20-agent swarm: 8M tokens, $60, 6 hours
+> Single agent sequential: 1.2M tokens, $9, 8 hours
+> Same result. 6.6× more expensive for 25% faster.
+
+The failure modes that drive this: errors compound multiplicatively at integration boundaries, coordination overhead consumes tokens without producing code, and independent agents produce architectural drift — inconsistent naming, duplicated utilities, conflicting assumptions. Jaymin's own conclusion: *"Most day-to-day engineering work is deeply interconnected, benefits from coherent reasoning, and is better served by a single focused agent."* Swarms genuinely win for embarrassingly parallel tasks (test generation, large-scale exploration, experiments with zero shared state). For everything else, lean toward a single focused agent first.
+
+**Inter-agent communication — the SQLite mail pattern.** When you do need agents to coordinate, one production-tested approach is a persistent message queue backed by SQLite rather than direct process communication or shared state. Each agent sends and receives typed protocol messages (`worker_done`, `merge_ready`, `dispatch`, `escalation`) through a central database. Benefits: agents don't need to know about each other's process IDs or execution state, messages persist across restarts, and the mail log becomes a built-in audit trail of what each agent did and why. WAL (Write-Ahead Logging) mode enables concurrent reads at ~1-5ms per query without locking conflicts.
+
 ---
 
 ### Multi-Agent Collaboration
