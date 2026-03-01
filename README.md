@@ -19,3 +19,5 @@ A unified reference for AI teachings, findings, experiments, and research.
 | [ai-security/](ai-security/) | AI security guardrails — OWASP LLM Top 10, prompt injection defenses, identity management, AI firewalls, Zero Trust |
 | [ai-system-design/](ai-system-design/) | AI system architecture — 11 design patterns, data pipelines, observability, scalability lessons from Uber/Netflix/Meta, trade-offs |
 | [specification-clarity/](specification-clarity/) | Writing clear AI specifications — 7-property framework, ambiguity types, BDD acceptance criteria, constraint architecture, decomposition |
+| [evaluation/](evaluation/) | Evaluating AI/LLM systems — metrics, LLM-as-judge, RAG evaluation (Ragas), benchmarks, eval frameworks, production monitoring, the eval flywheel |
+| [fine-tuning/](fine-tuning/) | LLM fine-tuning — LoRA/QLoRA, instruction tuning, RLHF vs DPO, PEFT methods, data requirements, cost tradeoffs, failure modes |
