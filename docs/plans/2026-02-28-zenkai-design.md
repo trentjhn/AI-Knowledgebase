@@ -122,14 +122,37 @@ Modules unlock sequentially. A module unlocks after hitting ≥70% quiz score on
 
 ## Module Structure
 
-Each of the 7 topics becomes a module with consistent internal structure:
+Each of the 9 topics (plus Module 0) becomes a module with consistent internal structure:
 
 ### 1. Concept Layer
-Claude reads from *both* the KB doc and the PM context source simultaneously, then generates each concept with:
-- Plain-English explanation (2–3 paragraphs max)
-- Visual: Mermaid diagram or Claude-generated SVG illustration
-- Real-world example framed around AI roles and practical application
-- **AI PM Application section** (see below — this is the core PM integration layer)
+
+Each concept is a layered card — not a wall of text. Two depths, learner-controlled:
+
+**Default view (what loads first):**
+- **Prediction question** — one MC question *before* the explanation loads. Forces a guess, primes the brain. Answer revealed after the full explanation.
+- **Hook + plain-English explanation** — why this matters, then what it is. ~200 words. Analogy where one fits naturally.
+- **Visual** — Mermaid diagram or Claude-generated SVG. Always present.
+- **Quick check** — one MC question immediately after. Locks in the concept before moving on.
+
+**"Go Deeper" tap (learner-initiated):**
+- How it actually works mechanically — the real internals, not just the surface description
+- Edge cases and nuances
+- Research numbers and empirical findings where available (e.g., "Zero-shot CoT pushed MultiArith accuracy from 17.7% to 78.7%")
+- One real-world failure mode as a brief story — what happened when someone got this wrong
+
+The quiz questions test material from *both* layers. To hit 70% and unlock the next module, learners will naturally need to engage with the deeper layer on most concepts. Depth is self-directed but structurally incentivized.
+
+**Three enhancements applied across every concept:**
+
+1. **Prediction question (pre-concept)** — Before the explanation loads, one question appears testing what the learner already suspects. Wrong guesses are expected and fine — the act of forming a prediction is the mechanism. After the full explanation is read, the prediction answer is revealed with context.
+
+2. **Worked, annotated examples** — After the explanation (default or deep layer), at least one real artifact showing the concept applied: an actual prompt using the technique, an actual architecture diagram with components labeled, an actual bad-vs-good comparison. Callouts point to where the concept is visible. This bridges "I understand the concept" and "I can recognize it in practice."
+
+3. **Spec writing micro-exercise (per module, not per concept)** — At the end of each module's concept layer, a 2-minute applied exercise. Given a scenario, write: one acceptance criterion, or the one question you'd ask your engineering team, or identify the failure mode in a described system. One or two sentences typed in, then compared to a model answer with explanation. Builds specification literacy directly — the actual PM skill, not just knowledge about it.
+
+**Real failure case (per module):** One short story (3–4 paragraphs) about a real AI system failure, analyzed through the lens of what the module covers. Placed before the module quiz. Makes the stakes real and creates a memorable anchor for abstract concepts. Examples: Air Canada's chatbot promising unauthorized refunds (agentic engineering, authority scoping), Amazon's hiring algorithm (evaluation, metric gaming), Microsoft Tay (alignment, RLHF gone wrong).
+
+**Concept connections:** After each concept, a brief visual thread showing how it connects to concepts learned in previous modules and where it leads in future modules. Builds the web rather than isolated nodes.
 
 ### AI PM Application Section (per module, not per concept)
 Each module has one lightweight PM application section — not a section on every individual concept. This is intentional. Zenkai's primary goal is AI learning. The PM context is a lens, not the subject.
@@ -284,11 +307,15 @@ sessions         — session history and duration
 | Principle | Implementation |
 |---|---|
 | Spaced repetition (Ebbinghaus) | Review intervals double on success, reset on failure |
-| Active recall (Roediger & Karpicke) | Quiz before re-reading, not after |
+| Active recall (Roediger & Karpicke) | Quiz before re-reading, not after. Prediction question before each concept. |
+| Pre-testing effect | Prediction question before each concept — wrong guesses prime retention |
 | Metacognitive monitoring | Confidence rating after every answer |
 | Scaffolded learning (Vygotsky ZPD) | Module gating — unlock only when ready |
-| Cognitive load theory (Sweller) | Max 4–8 concepts per module, one concept per screen |
+| Cognitive load theory (Sweller) | Layered depth — default view is brief, "go deeper" is learner-initiated |
 | Dual coding (Paivio) | Every concept has both text explanation and visual |
+| Elaborative interrogation | Worked annotated examples — seeing the concept applied, not just described |
+| Generation effect | Spec writing micro-exercise per module — producing an artifact, not just recognizing one |
+| Narrative learning (story anchoring) | Real failure case per module — abstract concepts anchored to real stakes |
 
 ---
 
@@ -324,14 +351,18 @@ This is not an optimization — it's an architectural requirement. A module with
 
 Not all generation tasks require Sonnet. Use the right model for the job:
 
-| Task | Model | Reason |
-|---|---|---|
-| Concept explanation (plain-English) | claude-sonnet-4-6 | Quality matters — this is the learning content |
-| AI PM Application section | claude-sonnet-4-6 | Nuanced role framing requires better reasoning |
-| Multiple choice quiz questions | claude-haiku-4-5 | Formulaic enough for Haiku; ~20x cheaper |
-| Scenario-based quiz questions | claude-sonnet-4-6 | Applied judgment questions need quality |
-| Cheatsheet generation | claude-haiku-4-5 | Summarization from existing content |
-| Delta sync detection summary | claude-haiku-4-5 | Just classifying what changed |
+| Task | Prompt | Model | Reason |
+|---|---|---|---|
+| Concept explanation — default layer | 1a | claude-sonnet-4-6 | Core learning content — quality matters |
+| Concept deep layer | 1b | claude-sonnet-4-6 | Mechanism + failure story require reasoning |
+| Prediction question | 1c | claude-haiku-4-5 | Formulaic MC before explanation; cheap |
+| Worked annotated example | 1d | claude-sonnet-4-6 | Specific artifacts + callout reasoning |
+| Spec writing micro-exercise | 1e | claude-sonnet-4-6 | PM artifact + model answer need quality |
+| AI PM Application section | 2 | claude-sonnet-4-6 | Nuanced role framing |
+| Multiple choice quiz questions | 3 | claude-haiku-4-5 | Formulaic structure; ~20x cheaper |
+| Scenario-based quiz questions | 4 | claude-sonnet-4-6 | Applied judgment needs quality |
+| Module cheatsheet | 5 | claude-haiku-4-5 | Summarization from cached content |
+| Delta sync detection summary | — | claude-haiku-4-5 | Classification only |
 
 ### Rule 3: Chunk Generation — One Concept at a Time
 
@@ -393,9 +424,9 @@ These are the system prompts sent to Claude API for each generation task. Each p
 
 ---
 
-### Prompt 1 — Concept Explanation
+### Prompt 1a — Concept Explanation (Default Layer)
 
-Used for: generating the plain-English explanation of each AI concept.
+Used for: the default concept card — hook, plain-English explanation, analogy. What loads first.
 Model: `claude-sonnet-4-6`
 Input: KB section text for this specific concept (30–80 lines, not the full doc)
 
@@ -404,28 +435,116 @@ You are an AI learning content writer for Zenkai, a personal AI learning system 
 
 Your job is to explain one AI concept clearly and engagingly. The learner has a CS background but is approaching most of these topics fresh. They learn best through concrete analogies and specific examples — not abstract definitions.
 
-The KB content you receive is the authoritative technical source. Your explanation should be faithful to it but written for a learner, not as a reference doc.
+Produce the default concept card with this exact structure:
 
-Produce a concept explanation with this exact structure:
+1. **Opening hook** (2–3 sentences): Start with why this concept matters before explaining what it is. Ground it in a real-world scenario where getting this wrong causes a real problem.
 
-1. **Opening hook** (2–3 sentences): Start with why this concept matters before explaining what it is. Ground it in a real-world scenario where understanding this concept is the difference between success and failure.
+2. **Plain-English explanation** (2–3 paragraphs): Explain what this concept is. Define every technical term on first use — never assume the reader knows jargon. Build understanding progressively from familiar to unfamiliar.
 
-2. **Plain-English explanation** (2–3 paragraphs): Explain what this concept is. Define any technical term on first use — never assume the reader knows jargon (RAG, CoT, RLHF, etc.). Build understanding progressively.
-
-3. **Analogy** (1 paragraph): One strong analogy that grounds the concept in a familiar non-AI experience. Good analogies clarify, not decorate. If no analogy fits naturally, skip it rather than forcing one.
-
-4. **How it works** (1–2 paragraphs): The mechanism behind the concept. Enough technical detail to build real understanding — not so much that it overwhelms. Prioritize the "why it works" over the "how it's implemented."
-
-5. **When it matters** (1 paragraph): Two or three concrete situations where this concept is the difference between a system that works and one that fails.
+3. **Analogy** (1 paragraph): One strong analogy grounding the concept in a non-AI experience. If no clean analogy exists, skip it rather than forcing one.
 
 Formatting rules:
 - Prose paragraphs only — no bullet lists
-- No markdown section headers in the output — use natural paragraph flow
-- Max 400 words total
-- Specific examples only — no placeholders like "[example]" or "[insert scenario here]"
-- Tone: clear and direct, like an expert explaining to a smart non-expert
+- Max 250 words total — this is the hook, not the full explanation
+- Specific examples only — no placeholders
+- Tone: clear and direct, like an expert talking to a smart colleague who is new to this topic
 
-Output as JSON: { "title": string, "hook": string, "explanation": string[], "analogy": string | null, "mechanism": string[], "when_it_matters": string }
+Output as JSON: { "title": string, "hook": string, "explanation": string[], "analogy": string | null }
+```
+
+---
+
+### Prompt 1b — Concept Deep Layer
+
+Used for: the "Go Deeper" section revealed on tap. The real mechanism, edge cases, research numbers, failure story.
+Model: `claude-sonnet-4-6`
+Input: same KB section as 1a — extract the deeper content
+
+```
+You are writing the "Go Deeper" layer for an AI learning concept card. The learner has already read the plain-English explanation. This layer is for those who want genuine understanding — the internals, the nuance, the numbers.
+
+Produce four components:
+
+1. **How it actually works** (2–3 paragraphs): The real mechanism — not just what it does, but why it works that way. Go one level deeper than the plain-English explanation. Include enough technical specificity that someone who reads this understands the concept at an implementation-adjacent level.
+
+2. **Edge cases and nuances** (1–2 paragraphs): Where the concept breaks down or behaves unexpectedly. What's often misunderstood or oversimplified. The things that only come up when you've actually built with this.
+
+3. **The number that makes it real** (1–2 sentences): One empirical finding or concrete data point from the KB source. Actual research results, performance differences, cost ratios — something that makes the concept tangible. If no number exists naturally in the source, use a concrete comparison instead.
+
+4. **The failure story** (2–3 paragraphs): One real or realistic scenario where this concept was misunderstood or misapplied and something went wrong. Specific, narrative, with a clear lesson. Real-world examples preferred (Air Canada chatbot, Amazon hiring algorithm, etc.) — if none fits, construct a realistic scenario.
+
+Formatting rules:
+- Prose paragraphs — no bullet lists
+- Max 400 words total across all four components
+- The failure story should read like a brief case study, not a bullet point
+
+Output as JSON: { "mechanism": string[], "edge_cases": string[], "key_number": string, "failure_story": string }
+```
+
+---
+
+### Prompt 1c — Prediction Question (pre-concept)
+
+Used for: the question shown *before* the concept explanation loads. Forces a guess to prime retention.
+Model: `claude-haiku-4-5`
+Input: concept title + one-sentence description only (not the full explanation)
+
+```
+You are creating a single pre-concept prediction question for a learning app.
+
+This question appears BEFORE the concept is explained. The learner hasn't seen the explanation yet. The goal is to make them form a hypothesis — not to test knowledge they don't have.
+
+Rules:
+- Ask "what do you think X does?" or "why do you think Y is hard?" or "which of these would you guess is the problem?" — not "what is the definition of X?"
+- 4 options — all should be reasonable guesses from someone with general CS knowledge but no specific AI expertise
+- There is no penalty for being wrong — the question exists to prime thinking, not to assess knowledge
+- After the explanation is read, this question's answer is revealed with a 1-sentence explanation of why
+
+Output as JSON: { "question": string, "options": [string, string, string, string], "correct_index": number, "reveal_explanation": string }
+```
+
+---
+
+### Prompt 1d — Worked Annotated Example
+
+Used for: the annotated artifact shown after the concept explanation. A real example of the concept in action.
+Model: `claude-sonnet-4-6`
+Input: concept explanation (1a output) + KB section
+
+```
+You are creating a worked, annotated example for an AI learning concept card.
+
+The learner just read the concept explanation. Your job is to show the concept in action — a real artifact (prompt, architecture description, system behavior, before/after comparison) with the key parts explicitly called out.
+
+Produce:
+1. **The artifact** — a concrete example: an actual prompt using the technique, an architecture diagram described in text, a before/after output comparison, or a realistic system scenario. Real and specific — no placeholders.
+2. **Annotations** — 3–5 callout points, each referencing a specific part of the artifact and explaining what makes it an example of this concept. Format: [Part of artifact] → [Why this demonstrates the concept].
+
+This is the bridge between "I understand the concept" and "I can recognize it in practice."
+
+Output as JSON: { "artifact_type": "prompt" | "architecture" | "before_after" | "scenario", "artifact": string, "annotations": [{ "reference": string, "explanation": string }] }
+```
+
+---
+
+### Prompt 1e — Spec Writing Micro-Exercise (per module)
+
+Used for: the applied exercise at the end of each module's concept layer. One short task that produces a PM artifact.
+Model: `claude-sonnet-4-6`
+Input: list of all concept titles in this module + module topic
+
+```
+You are creating a specification writing micro-exercise for an AI learning module. This is a 2-minute applied task — not a quiz question. The learner produces a short PM artifact, then compares it to a model answer.
+
+The learner is a Technical PM building AI fluency. The exercise should require them to apply something from this module in a concrete PM context: writing acceptance criteria, drafting a team question, identifying a failure mode in a described system, or choosing between two architectural options with justification.
+
+Produce:
+1. **Scenario** (2–3 sentences): A realistic AI PM situation requiring knowledge from this module. Specific enough that a good answer requires module knowledge — vague enough that there's room to reason.
+2. **Task** (1 sentence): What the learner writes. Exactly one of: one acceptance criterion, one question for the engineering team, one identified failure mode with explanation, or one architectural recommendation with one-sentence justification.
+3. **Model answer** (2–3 sentences): A strong response to the task. Shows what good looks like — not the only right answer, but a clearly strong one.
+4. **What makes it strong** (1–2 sentences): The specific reasoning or knowledge that makes the model answer better than a generic response.
+
+Output as JSON: { "scenario": string, "task": string, "model_answer": string, "strength_explanation": string }
 ```
 
 ---
