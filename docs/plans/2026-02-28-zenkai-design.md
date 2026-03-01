@@ -280,6 +280,85 @@ sessions         — session history and duration
 
 ---
 
+## Token & Cost Optimization — Best Practices for Zenkai
+
+This is a first-principles build. Every API call costs money. Zenkai's backend makes real calls to the Claude API for content generation and quiz creation — these costs compound as the KB grows. Design for efficiency from day one.
+
+### The Core Principle: Zenkai's Content Generation IS RAG
+
+Zenkai's backend is a RAG system where the KB is the document store. When generating a concept explanation, the pipeline is: query (what concept?) → retrieve (find the relevant KB sections) → generate (produce explanation + PM application). Apply the RAG best practices from the KB's own `playbooks/building-rag-pipelines.md` directly to Zenkai's own content generation pipeline.
+
+### Rule 1: Cache Everything Permanently
+
+Generated content is expensive to produce and cheap to store. Once a concept explanation, PM application section, or quiz question set is generated, it lives in SQLite permanently. It is never regenerated unless:
+- The source KB content changed (detected via git diff on `last_synced_commit`)
+- The PM context source changed
+- The user explicitly triggers a regeneration
+
+This is not an optimization — it's an architectural requirement. A module with 6 concepts and 3 questions each = 18 API calls. Regenerating on every load would make the app unusable and expensive.
+
+### Rule 2: Model Tiering — Use Haiku for Cheap Tasks
+
+Not all generation tasks require Sonnet. Use the right model for the job:
+
+| Task | Model | Reason |
+|---|---|---|
+| Concept explanation (plain-English) | claude-sonnet-4-6 | Quality matters — this is the learning content |
+| AI PM Application section | claude-sonnet-4-6 | Nuanced role framing requires better reasoning |
+| Multiple choice quiz questions | claude-haiku-4-5 | Formulaic enough for Haiku; ~20x cheaper |
+| Scenario-based quiz questions | claude-sonnet-4-6 | Applied judgment questions need quality |
+| Cheatsheet generation | claude-haiku-4-5 | Summarization from existing content |
+| Delta sync detection summary | claude-haiku-4-5 | Just classifying what changed |
+
+### Rule 3: Chunk Generation — One Concept at a Time
+
+Never send a full 700-line KB doc to Claude and ask for all 6 concepts at once. Instead:
+1. Pre-index the KB at build time (section headers → line ranges → stored in SQLite)
+2. For each concept, send only the relevant KB section (typically 30–80 lines)
+3. Generate one concept at a time, cache immediately, continue
+4. Send the PM context section alongside — not the entire pm-context file
+
+This keeps individual prompt sizes small, output is predictable per concept, and partial failures don't waste work already done.
+
+### Rule 4: Pre-Index the KB at Build Time
+
+On first launch (and on KB updates), Zenkai builds a section index:
+- Parse markdown headers from each KB file
+- Store: file path, section heading, start line, end line, section hash
+- On content generation, retrieve only the matching section by line range
+
+This mirrors `KB-INDEX.md` in the KB root — that file exists for Claude Code session efficiency. Zenkai's SQLite-stored version serves the same purpose for the backend. Never grep the KB live during generation — use the pre-built index.
+
+### Rule 5: Inject Context Surgically
+
+When generating a concept explanation, the prompt contains:
+1. System prompt (role + instructions) — ~200 tokens
+2. The specific KB section — ~500–1,500 tokens depending on section length
+3. The specific PM context mapping for this concept — ~300–500 tokens
+4. The generation instruction — ~100 tokens
+
+Total per concept call: ~1,000–2,500 tokens input. At Sonnet pricing this is cents per concept. 7 modules × 6 concepts = 42 concept calls. Initial generation of the entire KB costs under $2 at current pricing. The delta sync system means you almost never pay that again.
+
+### Rule 6: Delta Sync Is the Cost Governor
+
+The delta sync system (git commit hash tracking) is not just a UX feature — it's the primary cost control mechanism. When KB content changes:
+- Only sections whose hash changed trigger regeneration
+- A single paragraph edit regenerates one concept, not the whole module
+- Quiz questions regenerate only for concepts whose explanations changed
+
+This means ongoing costs are nearly zero for sessions where the KB didn't change.
+
+### Rule 7: Session-Level Efficiency for Claude Code (Development)
+
+During the Zenkai build phase, apply these rules to Claude Code sessions:
+- Use `KB-INDEX.md` (in KB root) to navigate — read section ranges, not full files
+- One focused session per feature/task — don't mix design discussions with coding
+- Use Grep over Read for search — 20 lines vs. 700 lines for the same answer
+- Use subagents for research tasks — they protect the main context window
+- Start fresh sessions for new topics rather than extending long ones
+
+---
+
 ## Out of Scope (V1)
 
 - Mobile app (potential V2 after local version works)
