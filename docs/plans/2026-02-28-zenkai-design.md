@@ -442,18 +442,198 @@ This means the learning system evolves alongside the knowledge base without rese
 
 ---
 
-## SQLite Schema (Core Tables)
+## Save State Architecture
+
+### Core Principle: Auto-Save Everything, Immediately
+
+No save button. No session flush. Every meaningful action — answer submitted, confidence rated, concept read, module unlocked, XP earned — persists to SQLite the moment it happens. Continuous auto-save, like a modern game. A crash or closed tab never loses progress.
+
+### Designed for Single User Now, Multi-User Later
+
+`user_id` is a column in every progress table, even for personal use where it's always `1`. This costs nothing now and means the migration to public deployment is adding auth middleware — not rewriting the data model. Do not skip this.
+
+**Personal (V1):** SQLite, no auth, `user_id = 1` everywhere.
+**Public (V2):** SQLAlchemy ORM connection string changes from SQLite → PostgreSQL. Auth middleware added. User registration/login added. Data model unchanged.
+
+---
+
+## SQLite Schema — Full Column Definitions
+
+### `users`
+```sql
+id              INTEGER PRIMARY KEY
+username        TEXT UNIQUE NOT NULL DEFAULT 'default'
+character_form  INTEGER NOT NULL DEFAULT 1          -- 1=Ronin, 2=Warrior, 3=Samurai, 4=Ghost
+total_xp        INTEGER NOT NULL DEFAULT 0
+current_streak  INTEGER NOT NULL DEFAULT 0
+longest_streak  INTEGER NOT NULL DEFAULT 0
+last_study_date DATE
+created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+Single row for personal use. Expands to multi-row when auth is added for public deployment.
+
+### `modules`
+```sql
+id                  INTEGER PRIMARY KEY
+order_index         INTEGER NOT NULL UNIQUE         -- 0-9
+title               TEXT NOT NULL
+kb_source_path      TEXT                            -- NULL for Module 0 (PM only)
+pm_context_path     TEXT                            -- NULL for Modules 1-9 (KB only)
+last_synced_commit  TEXT                            -- git hash of last generation
+is_unlocked         BOOLEAN NOT NULL DEFAULT 0
+quiz_score_achieved REAL                            -- 0.0-1.0, NULL until attempted
+unlocked_at         TIMESTAMP
+created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+### `concepts`
+```sql
+id                  INTEGER PRIMARY KEY
+module_id           INTEGER NOT NULL REFERENCES modules(id)
+order_index         INTEGER NOT NULL
+title               TEXT NOT NULL
+default_layer       JSON NOT NULL                   -- Prompt 1a output
+deep_layer          JSON NOT NULL                   -- Prompt 1b output
+prediction_question JSON NOT NULL                   -- Prompt 1c output
+worked_example      JSON NOT NULL                   -- Prompt 1d output
+content_hash        TEXT NOT NULL                   -- hash of source KB section, for delta detection
+generated_at        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+### `concept_reads`
+```sql
+id              INTEGER PRIMARY KEY
+user_id         INTEGER NOT NULL REFERENCES users(id)
+concept_id      INTEGER NOT NULL REFERENCES concepts(id)
+read_default    BOOLEAN NOT NULL DEFAULT 0          -- default layer read
+read_deep       BOOLEAN NOT NULL DEFAULT 0          -- go deeper layer read
+first_read_at   TIMESTAMP
+deep_read_at    TIMESTAMP
+UNIQUE(user_id, concept_id)
+```
+
+### `quiz_questions`
+```sql
+id              INTEGER PRIMARY KEY
+concept_id      INTEGER NOT NULL REFERENCES concepts(id)
+question_type   TEXT NOT NULL                       -- 'mc', 'scenario', 'prediction', 'ordering', 'match'
+scenario_type   TEXT                                -- 'system_design', 'production_failure', 'risk_communication'
+content         JSON NOT NULL                       -- full question object from generation prompts
+generated_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+### `user_progress`
+```sql
+id                  INTEGER PRIMARY KEY
+user_id             INTEGER NOT NULL REFERENCES users(id)
+quiz_question_id    INTEGER NOT NULL REFERENCES quiz_questions(id)
+answered_correctly  BOOLEAN NOT NULL
+confidence          TEXT NOT NULL                   -- 'guessed', 'somewhat_sure', 'knew_it'
+answered_at         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+time_spent_ms       INTEGER                         -- milliseconds on this question
+```
+
+### `review_schedule`
+```sql
+id              INTEGER PRIMARY KEY
+user_id         INTEGER NOT NULL REFERENCES users(id)
+concept_id      INTEGER NOT NULL REFERENCES concepts(id)
+next_review_at  TIMESTAMP NOT NULL
+interval_days   REAL NOT NULL DEFAULT 1.0           -- current SRS interval
+ease_factor     REAL NOT NULL DEFAULT 2.5           -- SM-2 ease factor
+repetitions     INTEGER NOT NULL DEFAULT 0          -- successful review count
+last_reviewed_at TIMESTAMP
+UNIQUE(user_id, concept_id)
+```
+
+### `sessions`
+```sql
+id                  INTEGER PRIMARY KEY
+user_id             INTEGER NOT NULL REFERENCES users(id)
+started_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+ended_at            TIMESTAMP
+questions_answered  INTEGER NOT NULL DEFAULT 0
+correct_answers     INTEGER NOT NULL DEFAULT 0
+concepts_read       INTEGER NOT NULL DEFAULT 0
+xp_earned           INTEGER NOT NULL DEFAULT 0
+```
+
+### `character_equipment`
+```sql
+id              INTEGER PRIMARY KEY
+user_id         INTEGER NOT NULL REFERENCES users(id)
+module_id       INTEGER NOT NULL REFERENCES modules(id)   -- which module unlock triggered this
+equipment_name  TEXT NOT NULL
+equipped_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+### `spec_exercises`
+```sql
+id              INTEGER PRIMARY KEY
+user_id         INTEGER NOT NULL REFERENCES users(id)
+module_id       INTEGER NOT NULL REFERENCES modules(id)
+user_response   TEXT NOT NULL
+submitted_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+```
+
+---
+
+## Spaced Repetition Algorithm (SM-2 Simplified)
+
+After each reviewed concept, update `review_schedule` immediately:
 
 ```
-modules          — module metadata, source file path, last_synced_commit, pm_context_path
-concepts         — individual concepts within each module
-quiz_questions   — questions per concept (multiple choice + scenario, tagged by type)
-user_progress    — per-concept performance history
-review_schedule  — spaced repetition scheduling (next review date, interval)
-sessions         — session history and duration
+IF answered_correctly:
+    IF confidence == 'knew_it':
+        interval = interval * ease_factor
+        ease_factor = min(3.0, ease_factor + 0.1)
+    IF confidence == 'somewhat_sure':
+        interval = interval * ease_factor
+        (ease_factor unchanged)
+    IF confidence == 'guessed':
+        interval = max(1.0, interval * 0.8)    -- trust a correct guess less
+        (ease_factor unchanged)
+    repetitions += 1
+ELSE:
+    interval = 1.0                              -- reset to tomorrow
+    ease_factor = max(1.3, ease_factor - 0.2)  -- gets harder to raise interval
+    repetitions = 0
+
+next_review_at = NOW + interval (days)
 ```
 
-`pm_context_path` on the modules table points to the relevant PM context file used during content generation. Module 0 has no KB source — only a PM context path. Modules 1–7 have both.
+Starting values: `interval_days = 1.0`, `ease_factor = 2.5`, `repetitions = 0`
+
+A correct "Guessed" answer is treated with suspicion — the interval grows slowly until confidence improves. This is intentional: lucky guesses don't fool the scheduler.
+
+---
+
+## Session Lifecycle
+
+Every study session is tracked end-to-end:
+
+1. **Session start:** Insert row into `sessions` with `started_at`, `user_id`
+2. **During session:** Increment `questions_answered`, `correct_answers`, `concepts_read`, `xp_earned` via PATCH to current session — auto-save after every action
+3. **Session end:** Set `ended_at` — triggered when user navigates away, closes app, or explicitly ends
+4. **Streak update:** On session end, check `last_study_date`. If yesterday or earlier today: increment `current_streak`. If more than 1 day gap: reset to 1. Update `longest_streak` if current > longest.
+
+---
+
+## Public Deployment Migration Path (V2)
+
+When ready to go public, the changes are additive — nothing in V1 schema gets dropped:
+
+1. **Add auth fields to `users`:** `email`, `password_hash`, `email_verified`, `auth_provider`
+2. **Add JWT middleware** to FastAPI — all routes require valid token except `/auth/*`
+3. **Swap database:** change SQLAlchemy connection string from `sqlite:///zenkai.db` to `postgresql://...`
+4. **Run one-time migration script** to move SQLite data to PostgreSQL
+5. **Add user registration/login endpoints** — `/auth/register`, `/auth/login`, `/auth/refresh`
+6. **KB path becomes per-user config** — each user syncs their own KB fork or uploads docs
+
+The data model is identical. The business logic is identical. Only the infrastructure layer changes. This is why `user_id` in every table from day one is non-negotiable.
+
+`pm_context_path` on the modules table points to the relevant PM context file used during content generation. Module 0 has no KB source — only a PM context path. Modules 1–9 have both.
 
 ---
 
