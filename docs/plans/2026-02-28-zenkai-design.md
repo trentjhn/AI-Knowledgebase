@@ -1,8 +1,100 @@
 # Zenkai — Design Document
 
 **Date:** 2026-02-28
-**Status:** Approved
+**Status:** Approved — design complete, known issues documented below
 **Repo:** `trentjhn/zenkai` (separate repository — this doc moves there when the repo is created)
+
+---
+
+## Known Issues — Fix Before Building
+
+These are gaps identified in the Gemini design system output. Every item here must be resolved before or during the first implementation sprint. Do not treat the Gemini code as production-ready as-is.
+
+### Code Fixes (must resolve before touching any component)
+
+**1. Register CSS variables are missing from globals.css**
+The JSX files reference `var(--register-study-bg)` and `var(--register-battle-bg)` inline, but these are never declared as CSS custom properties. They're defined in `tailwind.config.js` as `register.study` and `register.battle` but that only creates Tailwind classes, not CSS variables. Add to `:root` in `globals.css`:
+```css
+--register-study-bg: 235 21% 11%;   /* Cool/contemplative */
+--register-battle-bg: 280 25% 14%; /* Warm/dynamic */
+```
+
+**2. Wrong module names throughout — must be replaced**
+Gemini invented placeholder module names: "Neural Basics I", "Deep Learning I", "Zenkai Dōjō", etc. The actual Zenkai roadmap is:
+- Module 0: AI PM Foundations
+- Module 1: Prompt Engineering
+- Module 2: Context Engineering
+- Module 3: Reasoning LLMs
+- Module 4: Agentic Engineering
+- Module 5: Skills
+- Module 6: Evaluation
+- Module 7: Fine-tuning
+- Module 8: AI Security
+- Module 9: Playbooks
+
+Replace all placeholder names in `world-map/page.tsx` module data array and anywhere else they appear.
+
+**3. Body font is wrong**
+`tailwind.config.js` sets `fontFamily.body` to `Inter`. The design specifies **Geist or Satoshi** (not Inter). Update before any component is built — changing it after touches every text element.
+
+**4. ConceptCard props don't match content generation output**
+The current `ConceptCard` accepts generic `concept` and `depthContent` string props. It needs to accept the structured JSON our generation prompts (1a and 1b) actually produce:
+```tsx
+interface ConceptCardProps {
+  defaultLayer: {
+    title: string
+    hook: string
+    explanation: string[]
+    analogy: string | null
+  }
+  deepLayer: {
+    mechanism: string[]
+    edge_cases: string[]
+    key_number: string
+    failure_story: string
+  }
+}
+```
+Without this fix the content pipeline has no way to render generated content correctly.
+
+---
+
+### Assets — Blocked Until Created
+
+The following image files are referenced in code but do not exist. Every `<Image>` tag in the Gemini output will render a broken image until these are created. Recommended path: build all screens with colored placeholder `<div>` elements first, swap in real assets when ready.
+
+| Asset | Referenced In | How to Create |
+|---|---|---|
+| `/assets/map/map-base.png` | world-map/page.tsx | Pixel art world map — Midjourney or Aseprite |
+| `/assets/map/fog-overlay.png` | world-map/page.tsx | Semi-transparent mist layer — CSS may suffice |
+| `/assets/sprites/ronin_idle_walk.png` | world-map/page.tsx | Form 1 samurai sprite — Midjourney pixel art |
+| `/assets/sprites/warrior_battle_idle.png` | quiz/battle/page.tsx | Form 2 combat sprite |
+| `/assets/sprites/evolution_forms_strip.png` | character-sheet/page.tsx | All 4 forms side-by-side strip |
+| `/assets/ui/segmented_bar_texture.png` | quiz/battle/page.tsx | CSS alternative likely simpler |
+
+**Recommendation:** Replace all `<Image src="...">` tags with `<div className="bg-zen-slate border border-zen-plasma/30 flex items-center justify-center">` placeholders during build. Label each with the asset name as text. Swap real art in once the UI is fully functional.
+
+---
+
+### Components — Concept Only, Not Yet Coded
+
+These components are designed and specced but have no implementation code yet. They need to be built during the implementation sprint:
+
+| Component | Status | Notes |
+|---|---|---|
+| Prediction question | Spec only | Pre-concept MC question, answer revealed after explanation |
+| Confidence rating chips | Spec only | Candle/flame/fire icons, three states, required after every answer |
+| Worked annotated example | Spec only | Artifact inspection frame, floating rune tags, speech bubble on click |
+| Spec writing exercise | Spec only | Monospace textarea, FORGE SPEC button, submission particle effect, model answer reveal |
+| Cheatsheet | Spec only | 3-column mini-scroll grid, hover tooltip, golden seal for mastered concepts |
+
+---
+
+### Design Validation Needed
+
+**Color palette may not match Pinterest images.** Gemini generated the color system from its training data (the palette resembles Tokyo Night, a VS Code theme), not from the actual Pinterest inspiration images uploaded. The `zen-gold`, `zen-plasma`, and `zen-sakura` values should be validated visually once the app is running — they may need to be pulled closer to the muted deep navy, vermillion red, and earthy amber from the samurai reference images. Do not permanently lock in the palette until you've seen it rendered at full scale.
+
+---
 
 ---
 
