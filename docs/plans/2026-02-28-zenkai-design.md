@@ -252,20 +252,83 @@ The scenario questions are the mechanism. "Your team proposes using HyDE for que
 
 ---
 
+## Design System — From Gemini Session
+
+The full design system was generated via Gemini with Pinterest pixel art / Japanese samurai / JRPG inspiration images. Source files live in the Zenkai repo. Key decisions captured here:
+
+### Tech Foundation
+- `tailwind.config.js` — all color tokens, dual-font system, `ma` spacing, `clipped-corners` clip-path utility
+- `globals.css` — CSS custom properties for all registers and color tokens
+- All components use `clipped-corners` — no border-radius anywhere
+- All interactive elements use `ma` (24px) padding rule
+- Study/contemplative components: `bg-zen-slate` + `zen-plasma` accents
+- Battle/active components: `bg-zen-void` + `zen-sakura` or `zen-gold` accents
+
+### Color Tokens
+```
+zen-gold:   #F4D03F  — primary, headers, active states
+zen-void:   #1A1B26  — deepest background
+zen-slate:  #24283B  — card surfaces
+zen-sakura: #FF4D6D  — battle/danger/wrong answer
+zen-plasma: #7AA2F7  — spirit/correct/deeper layer accent
+register-study-bg:  235 21% 11%  — cool, contemplative
+register-battle-bg: 280 25% 14% — warm, dynamic
+```
+
+### AI Integration Prompt (use to maintain consistency)
+> "Use the provided tailwind.config.js and globals.css. Every component must use the clipped-corners utility. All interactive elements must use the 'Ma' padding rule (24px). For Study/Contemplative components, use bg-zen-slate and zen-plasma accents. For Battle/Active components, use bg-zen-void and zen-sakura or zen-gold accents."
+
+---
+
 ## Three Main Screens
 
-### Dashboard / Roadmap
-Bento-style grid of 7 topic cards. Each card shows: topic name, completion %, progress ring, locked/unlocked state, new content indicator. Teal accent for progress rings and unlock animations. Purple accent for active/selected module. Clean, high-end SaaS feel.
+### World Map (Dashboard)
+The overworld — not a card grid. A pixel art map with 10 module regions connected by a winding path. Each region has its own atmospheric identity. Locked regions obscured by fog-of-war mist overlay. Active region visually alive. Completed regions marked with a golden Z seal. User's samurai avatar traverses the map, animating to each selected region. Module status panel below the map with "Enter Dōjō" / "Revisit Dōjō" CTA.
 
-### Module View
-Split layout:
-- **Left sidebar:** concept list with checkmarks and current concept highlighted
-- **Right main area:** concept title → explanation → visual → career callout
-- **Top right:** Audio Overview button (opens NotebookLM)
-- Clean reading experience, nothing competing for attention
+### Module View (Contemplative Register — cool tones)
+Split layout: left sidebar (quest log style, concept list with checkmarks) + right main area (concept card). Sidebar functions like a Pokédex or inventory panel. Top right: NotebookLM audio link. Reading experience is the priority — nothing competing for attention.
 
-### Quiz Screen
-Full focus mode — sidebar collapses completely. Question card centered with large type and generous padding. Four answer options as tappable cards (not radio buttons). Selected card highlights on tap. On reveal: correct answer glows teal, wrong answer dims, correct answer illuminates if different from selection. 1–2 sentence explanation appears below. Confidence rating prompt follows (Guessed / Somewhat sure / Knew it). Streak counter visible top-right. Progress bar across the top. Framer Motion spring transitions between questions — no jarring jumps. The experience should feel closer to a well-designed game than a form.
+### Quiz Screen (Battle Register — warm tones)
+Full Pokémon battle layout. Challenge/question at top. User's samurai avatar idle in corner. Four move cards at bottom. Segmented streak bar replacing HP bar — fills from crimson (low streak) to plasma blue (high streak). Correct answer: flash + green glow. Wrong answer: screen shake + red dim. After reveal: confidence chips (see below). Framer Motion step transitions — game-feel, not SaaS-fade.
+
+### Character Sheet
+Warm/dynamic register. Current samurai form displayed large. Evolution timeline showing all four forms with current form highlighted. Equipment list (Skyrim-style accumulation per module). Stat bars per knowledge domain. XP progress bar to next form evolution.
+
+---
+
+## Component Decisions
+
+### Confidence Rating Chips — Candle / Flame / Fire
+Three chips shown after every quiz answer. Visual metaphor: confidence as heat.
+- **Guessed** → single candle icon, muted grey border, neutral register
+- **Somewhat sure** → flame icon, warm yellow glow, warming register
+- **Knew it** → roaring fire icon, plasma blue aura, intense register
+
+This is the design. Do not reduce to text labels.
+
+### ConceptCard — Dual Layer
+```
+Props: { defaultLayer: { title, hook, explanation[], analogy }, deepLayer: { mechanism[], edge_cases[], key_number, failure_story } }
+```
+Default view: hook + explanation + analogy. "Go Deeper" button reveals deep layer via AnimatePresence height animation — feels like a scroll unfurling. Button copy: "Go Deeper" → "Close Scroll". Left border accent in `zen-plasma`.
+
+### Worked Annotated Example — Artifact Inspection
+Framed as examining a discovered artifact. Shadowbox container with paper-texture CSS overlay. Floating rune/tag markers (+ icons) positioned over key parts of the example. Clicking a marker reveals a pixel speech bubble explaining why that part demonstrates the concept. Copy: examining, not reading.
+
+### Spec Writing Exercise — Forge the Vision
+Large multi-line textarea, monospace font. CTA button: **FORGE SPEC** (not "Submit"). On submission: brief sparks/fire particle effect triggers (not during typing — submission only). Reveals model answer + "What makes it strong" explanation after submission.
+
+### Cheatsheet — The Inventory
+3-column grid of "Mini-Scrolls." Hover reveals Quick Reference tooltip. Concepts with SRS interval > 30 days show a small golden seal (mastered). Layout functions like an item compendium or Pokédex completion screen.
+
+### Samurai Character Evolution
+Four forms, same character, progressively more powerful:
+- **Form 1 — Ronin:** Simple gi, straw hat, one katana, meditating idle. No armor.
+- **Form 2 — Warrior** (after Module 3): Light leather armor, blue scarf, second blade, combat stance.
+- **Form 3 — Samurai** (after Module 6): Full dark plate, elaborate kabuto, golden crest, nodachi.
+- **Form 4 — The Ghost/Zenkai** (after Module 9): Semi-translucent, plasma-blue aura, sakura petals drifting. Ghost of Tsushima reference made visual.
+
+Evolution animations are full-screen moments — flash sequence, silhouette transform, form name reveal. The most emotionally significant events in the app.
 
 ---
 
