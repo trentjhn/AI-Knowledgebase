@@ -320,4 +320,140 @@ One important constraint: if your agentic pipeline includes multiple retrieval a
 
 ---
 
-*Draw from: `prompt-engineering/prompt-engineering.md` (system prompting, grounding, CoT) · `prompt-engineering/prompt-patterns.md` (Fact Check List, Reflection, Context Manager) · `context-engineering/context-engineering.md` (context selection and compression strategies)*
+## LangGraph — Implementing the Decision Graph
+
+LangGraph is a library for building agentic workflows as directed graphs with explicit state. It's the standard tool for implementing the agentic RAG decision loop because it makes the control flow visible, debuggable, and modifiable — instead of a tangle of conditionals buried in a single function.
+
+### The Core Concept: State + Nodes + Edges
+
+A LangGraph workflow has three building blocks:
+
+**State** is a typed dictionary that flows through every node in the graph. Every node reads from state and writes back to it. For an agentic RAG system, state carries: the original query, retrieved documents, grading results, rewrite count, and final answer.
+
+```python
+class RAGState(TypedDict):
+    query: str
+    rewritten_query: str | None
+    retrieved_docs: list[Document]
+    graded_docs: list[Document]
+    rewrite_count: int
+    answer: str | None
+```
+
+**Nodes** are functions that take state, do one thing, and return updated state. Each step in your decision graph is a node: retriever, grader, rewriter, generator, guardrail.
+
+**Edges** define the flow between nodes. Normal edges always go from A to B. Conditional edges route based on state — this is where the "should I rewrite or generate?" decision lives.
+
+### Building the Agentic RAG Graph
+
+```python
+from langgraph.graph import StateGraph, END
+
+workflow = StateGraph(RAGState)
+
+# Add nodes — one function per decision step
+workflow.add_node("guardrail",  check_domain)        # is this query in-domain?
+workflow.add_node("retrieve",   retrieve_documents)   # hybrid BM25 + semantic
+workflow.add_node("grade",      grade_documents)      # are chunks relevant?
+workflow.add_node("rewrite",    rewrite_query)        # refine if grading fails
+workflow.add_node("generate",   generate_answer)      # LLM call
+
+# Entry point
+workflow.set_entry_point("guardrail")
+
+# Fixed edges
+workflow.add_edge("retrieve", "grade")
+workflow.add_edge("rewrite",  "retrieve")  # after rewriting, retrieve again
+workflow.add_edge("generate", END)
+
+# Conditional edges — where the intelligence lives
+workflow.add_conditional_edges(
+    "guardrail",
+    route_after_guardrail,          # function returns "retrieve" or "reject"
+    {"retrieve": "retrieve", "reject": END}
+)
+
+workflow.add_conditional_edges(
+    "grade",
+    route_after_grading,            # function returns "generate" or "rewrite"
+    {"generate": "generate", "rewrite": "rewrite"}
+)
+
+app = workflow.compile()
+```
+
+The routing functions are the decision logic — they inspect state and return the name of the next node:
+
+```python
+def route_after_grading(state: RAGState) -> str:
+    sufficient_docs = [d for d in state["graded_docs"] if d.relevant]
+    if len(sufficient_docs) >= 2:
+        return "generate"
+    if state["rewrite_count"] >= 2:
+        return "generate"   # give up rewriting, generate with what we have
+    return "rewrite"
+```
+
+### Why Graph Structure Over If/Else
+
+The graph isn't just aesthetic. It gives you:
+
+- **Visualization.** LangGraph can render the workflow as a diagram. You can see exactly what path a query took through the system — invaluable for debugging unexpected behavior.
+- **State transparency.** Because all intermediate state is explicit and typed, you can inspect it at any point. After a failed query, you can see exactly what was retrieved, what was graded out, how many rewrites happened.
+- **Modular testing.** Each node is a plain function — test it in isolation without running the full pipeline.
+- **Easy iteration.** Adding a new step (a reranker, a second grader, a different generator) is adding a node and rewiring an edge, not refactoring a monolithic function.
+
+### Max Iteration Guard
+
+Always cap the rewrite loop. Without a maximum, a query that consistently fails retrieval will loop indefinitely. A rewrite count of 2–3 is the standard ceiling — after that, generate with whatever was retrieved and express appropriate uncertainty.
+
+---
+
+## Evaluating Agentic RAG
+
+Evaluating a basic RAG pipeline is already covered in `evaluation/evaluation.md`. Agentic RAG introduces new failure modes that require additional evaluation dimensions — because you're now not just asking "was the answer correct?" but "did the agent make the right decisions along the way?"
+
+### The Four Layers of Agentic RAG Evaluation
+
+**Layer 1 — Retrieval quality** (same as basic RAG)
+Did the retrieval step surface relevant documents? Measure recall@K: of the K documents retrieved, how many were actually relevant to the query? This is your baseline — if retrieval is broken everything else is irrelevant.
+
+**Layer 2 — Grader accuracy**
+Is the document grader making correct relevance calls? Evaluate this independently with a labeled dataset of (query, document, relevant: true/false) triples. Measure:
+- Precision: of documents it marked relevant, how many actually were?
+- Recall: of actually relevant documents, how many did it catch?
+
+A grader with low recall (misses relevant documents) will over-trigger rewrites, adding latency for no reason. A grader with low precision (marks irrelevant documents as relevant) lets noise into the generation step, degrading answer quality. Both failure modes are invisible if you only measure final answer quality.
+
+**Layer 3 — Rewrite effectiveness**
+When the system rewrites a query and retries, does the rewrite actually improve retrieval? Measure whether rewritten queries retrieve better documents than the original query did. If rewrites don't reliably improve retrieval, the rewrite node is adding latency without benefit.
+
+Track: for queries that triggered a rewrite, what was the grading score before and after? If rewritten queries pass grading at similar rates to original queries, your rewriter isn't working.
+
+**Layer 4 — Guardrail precision and recall**
+Is the guardrail correctly classifying in-domain vs. out-of-domain queries? False positives (rejecting valid domain questions) frustrate users. False negatives (allowing out-of-domain queries through) lead to hallucinations.
+
+Build a labeled test set with:
+- Clearly in-domain queries that should pass
+- Clearly out-of-domain queries that should be rejected
+- Edge cases — in-domain but out-of-scope (the hardest category)
+
+Measure precision and recall on each category separately. Track the edge case category closely — that's where user frustration lives.
+
+### Tracing Every Decision
+
+The evaluation pipeline for agentic RAG requires per-query traces, not just aggregate metrics. You need to know, for each query: which path through the graph it took, what was retrieved, what was graded, whether it rewrote and how many times, and what the final answer was.
+
+Langfuse handles this automatically when instrumented correctly — each node emits a span with its inputs and outputs. Your evaluation pipeline queries Langfuse for traces, samples them, and runs your evaluation metrics against the trace data.
+
+Without traces, all you can measure is final answer quality. With traces, you can pinpoint exactly where in the decision graph failures originate.
+
+### The Compound Failure Problem
+
+Agentic RAG has a compounding failure mode that basic RAG doesn't: each decision node can fail in a way that makes downstream failures more likely. A grader that's too aggressive (grades most documents as irrelevant) forces excessive rewrites, which may produce worse queries, which retrieves worse documents, which grades even worse.
+
+This means aggregate metrics can look deceptively stable while individual components are degrading. Track each layer's metrics independently and watch for correlated degradation — if rewrite rate is climbing while final answer quality holds steady, your grader has quietly become more aggressive and you haven't noticed yet because users haven't complained.
+
+---
+
+*Draw from: `prompt-engineering/prompt-engineering.md` (system prompting, grounding, CoT) · `prompt-engineering/prompt-patterns.md` (Fact Check List, Reflection, Context Manager) · `context-engineering/context-engineering.md` (context selection and compression strategies) · `evaluation/evaluation.md` (Ragas metrics, LLM-as-judge, production monitoring)*
