@@ -85,7 +85,7 @@ The emerging consensus from 2024–2025 research is that the strongest productio
 
 Think of it like this: the AI is the interpreter who translates what the user actually wants into a structured specification. The deterministic system then executes that specification faithfully. Neither component tries to do the other's job.
 
-A concrete example from Augment Code's research (2024): 62% of developers now use AI coding tools, but trust in AI-generated code accuracy dropped from 40% to 29% between 2024 and 2025. The lesson is that AI-generated code needs a deterministic validation layer (tests, linting, static analysis) on top — not because AI is bad, but because mixing AI generation with deterministic enforcement is the right architecture.
+A concrete example from Stack Overflow's 2025 Developer Survey: developer trust in AI-generated code accuracy dropped from ~43% to ~33% between 2024 and 2025, even as adoption of AI coding tools continued rising. The lesson is that AI-generated code needs a deterministic validation layer (tests, linting, static analysis) on top — not because AI is bad, but because mixing AI generation with deterministic enforcement is the right architecture. The trust gap also signals that developers are becoming more calibrated about AI limitations, not necessarily that model quality dropped.
 
 ---
 

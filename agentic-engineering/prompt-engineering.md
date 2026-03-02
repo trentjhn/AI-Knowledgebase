@@ -153,7 +153,7 @@ Require explicit triggering by name (e.g., `/review:security`).
 
 ### Verb Semantics: Declarative vs. Imperative
 
-**Research finding (SatLM Study):** Declarative prompts outperform imperatives by ~23% on complex reasoning tasks.
+**Research finding (SatLM, Ye et al., NeurIPS 2023):** Declarative prompts outperformed imperatives by ~23% on a challenging GSM arithmetic subset — not broadly across all complex reasoning tasks. Imperative style remains competitive on the full GSM8K dataset.
 
 | Task Type | Preferred Mood | Rationale |
 |-----------|---------------|-----------|

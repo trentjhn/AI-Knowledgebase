@@ -54,7 +54,7 @@ These four pillars are deeply interconnected. You can't change one without affec
 - Expanding your context with more background information affects how the model interprets your prompt
 - Changing the prompt can override how the model interprets everything else in the context
 
-> **Counter-intuitive finding:** "More" does not equal better. More tools, more context, and more instructions *degrade* agent performance. A focused agent with the right tools and lean context consistently outperforms an over-equipped agent drowning in options.
+> **Counter-intuitive finding:** "More" does not equal better — but the type of "more" matters. More *irrelevant* tools, *noisy* context, and *redundant* instructions degrade agent performance: a focused agent with the right tools and lean context consistently outperforms one drowning in options. However, more *structured, domain-relevant* context (comprehensive playbooks, well-organized knowledge) can improve performance for knowledge-intensive tasks. The rule is: cut noise ruthlessly, but don't strip structured domain knowledge. See ACE framework in Section 5 for when larger context helps.
 
 **The 2025 landscape:** Until recently, model choice dominated everything — get the best model and most other things would work out. That's no longer true. The gap between frontier models has narrowed significantly. The other three pillars (prompt, context, tool use) now carry far more weight in determining whether your agent succeeds.
 
@@ -247,7 +247,7 @@ The agent should *produce* the output, not *announce* that it's producing it.
 
 ---
 
-**Declarative vs. Imperative language:** Research (SatLM Study) found that declarative prompts outperform imperative ones by ~23% on complex reasoning tasks.
+**Declarative vs. Imperative language:** The SatLM study (Ye et al., NeurIPS 2023) found declarative prompts outperform imperative ones by ~23% — but specifically on a challenging subset of grade-school arithmetic (GSM), not on complex reasoning tasks broadly. On the full GSM8K dataset, imperative program-aided LMs remain competitive. The principle (declarative for constraint satisfaction and reasoning, imperative for procedural tool-calling) is sound, but the 23% figure shouldn't be taken as a general benchmark.
 
 - **Declarative** describes a desired state: *"The solution minimizes edge cases."* The model figures out how to achieve it.
 - **Imperative** prescribes steps: *"Parse input, validate schema, return result."* The model executes the steps.
@@ -469,7 +469,7 @@ Orchestrator (Opus)
 Orchestrator synthesizes all results
 ```
 
-Research backing: NVIDIA's ToolOrchestra found that an 8B orchestrator + 1B specialists outperformed larger single models: 78.2% accuracy at $9.20/1000 queries vs. 72.5% accuracy at $17.80/1000 queries.
+Research backing: NVIDIA's ToolOrchestra (arXiv 2511.21689) demonstrated this pattern with Nemotron-Orchestrator-8B routing to specialized domain models. On benchmark tasks (FRAMES: 76.3%, tau2-Bench: 80.2%), the orchestrator-specialist system outperformed larger monolithic models at lower compute cost. The key finding: a small orchestrator that routes intelligently beats a large model trying to do everything — routing intelligence matters more than raw model size.
 
 **Model Cascades:**
 
@@ -487,7 +487,7 @@ Let the expensive model plan; let the cheap model execute.
 
 An expensive planning model produces a detailed structured plan (JSON task definitions, dependency graph). A cheap execution model reads the plan and follows it step by step.
 
-Research finding: GPT-4o planning + GPT-3.5 execution achieved **96.3% task success** vs. 41.1% for a single GPT-3.5 model doing everything. The planning model's structured output is the key — it converts an ambiguous goal into unambiguous steps that a cheaper model can follow reliably.
+The mechanism: the planning model's structured output converts an ambiguous goal into unambiguous steps that a cheaper execution model can follow reliably. The quality lift comes from the plan quality, not the executor. Specific benchmarks vary by task; measure against your own workload rather than expecting a universal accuracy gain.
 
 ---
 
@@ -636,7 +636,7 @@ Why this matters:
 - **Natural compression boundary:** When subagents return results to the orchestrator, they summarize — creating an automatic compression point
 - **Fresh starts at scale:** Each new subagent starts clean, not burdened by the history of previous work
 
-**The cost:** Multi-agent context isolation uses approximately **15× more tokens** than a single-agent approach. You're paying for quality and reliability, not speed — both single-agent and multi-agent approaches achieve similar latency on complex tasks (~40 seconds). The value is deterministic quality and zero variance across runs.
+**The cost:** Multi-agent context isolation uses approximately **15× more tokens** than a single-agent approach (Anthropic Engineering, "How we built our multi-agent research system," 2025 — token usage explained 80% of performance variance). You're paying for quality and reliability, not speed — both single-agent and multi-agent approaches achieve similar latency on complex tasks (~40 seconds). The value is deterministic quality and zero variance across runs.
 
 **Explicit context forking in practice:**
 ```yaml

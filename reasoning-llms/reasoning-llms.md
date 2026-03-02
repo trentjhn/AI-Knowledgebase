@@ -59,7 +59,7 @@ The critical mistake people make is assuming that reasoning models are always be
 
 **Tasks where fast iteration matters more than perfect accuracy.** Rapid prototyping, drafting, brainstorming — cases where speed of iteration beats precision.
 
-**When manual chain-of-thought prompting already works.** If you've successfully gotten a standard model to reason step by step through your problem using "think step by step" prompting, you may not need a reasoning model.
+**When manual chain-of-thought prompting already works — but test reasoning models without CoT too.** If a standard model with "think step by step" already solves your task reliably, you may not need a reasoning model. The caveat: always run a separate test with a reasoning model using *no* CoT instructions (see Section 4 — adding CoT to reasoning models actively hurts them). You're comparing two different things: standard model + manual CoT vs. reasoning model + no CoT. The reasoning model sometimes wins even when the standard + CoT baseline is acceptable.
 
 > **Decision rule:** Always test a standard model first. If the output is shallow, misses important considerations, or fails on complex cases, that's your signal to try a reasoning model.
 
@@ -165,9 +165,9 @@ Vague instructions cause two problems with reasoning models:
 
 ---
 
-### Output Format: Prefer XML Over JSON
+### Output Format: XML vs JSON — Test Your Model
 
-For complex structured outputs, XML formatting is generally more reliable with reasoning models than JSON. The reason: JSON's nested structure and strict syntax rules (missing commas, unclosed brackets) can cause parsing failures. XML is more forgiving and the tagging structure maps more naturally to how reasoning models generate text.
+Some practitioners report XML being more robust with reasoning models for complex structured outputs — the argument being that JSON's strict syntax (missing commas, unclosed brackets) causes parse failures that XML's more forgiving structure avoids. However, **this is largely anecdotal and model-specific**. Frontier models (GPT-4o, Claude 3.7 Sonnet, Gemini 2.5) rarely fail at JSON generation, and JSON is often preferable for programmatic parsing downstream. Test both formats with your specific model and task before committing to either. If your model reliably produces valid JSON, don't switch to XML on principle.
 
 ---
 

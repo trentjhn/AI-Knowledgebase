@@ -147,7 +147,7 @@ A real demonstration of how damaging this can be: a user gave an AI agent criter
 - **Datamarking**: intersperse a special character through untrusted text (e.g., every word separated by `|`) so the model recognizes its boundaries
 - **Encoding**: base64-encode external content before injecting it into context
 
-Research shows spotlighting reduces attack success rates from >50% to <2% on GPT models.
+Microsoft Research (arXiv 2403.14720) demonstrated spotlighting reducing attack success rates from >50% to <2% with minimal task efficacy impact — a verified finding now deployed in Azure AI Foundry as Prompt Shields. One caveat: the study used GPT-3.5/4-era models; frontier models (GPT-4o, Claude 3.5+) have improved baseline injection resistance, so both the baseline rate and the spotlighting benefit may differ for current models. The technique is still recommended — but test effectiveness against your specific model rather than assuming the published numbers transfer directly.
 
 *Structural separation* — Keep control instructions and untrusted data in clearly separated prompt sections. Never interpolate external content into instruction sections.
 
@@ -171,7 +171,7 @@ Privilege escalation means gaining access beyond what was originally authorized.
 
 **Misconfiguration** — The most common route. Systems with improper access controls, permissive defaults, or unreviewed configurations create exploitable gaps. Most real-world breaches happen through misconfiguration, not sophisticated attacks.
 
-The defense is architectural: build the system so that privilege escalation is structurally impossible rather than just technically difficult. An agent that literally doesn't have the credentials to send data externally cannot be manipulated into doing so. An agent with read-only database access cannot be tricked into deleting records. The right architecture makes many attack classes moot.
+The defense is architectural: build the system so that privilege escalation is structurally impossible rather than just technically difficult. An agent with read-only database access cannot be tricked into *modifying* records — but read-only access does not prevent **data exfiltration**: the agent can still read sensitive data and surface it in a response, log it to an external API, or be manipulated into revealing it through a crafted output. Architectural defense must be paired with network egress controls (restrict what external endpoints the agent can reach) and output scanning (detect if sensitive data patterns appear in responses). The right architecture removes whole attack classes — but no single constraint removes all of them.
 
 ---
 

@@ -161,7 +161,7 @@ Start with a single frontier model. Multi-model adds complexity that only pays o
 
 Strong reasoning model decomposes tasks and coordinates execution by weaker, cheaper models in parallel.
 
-**NVIDIA ToolOrchestra research finding:** 8B orchestrator + 1B specialists outperformed larger single models: 78.2% accuracy at $9.20/1000 queries vs. 72.5% accuracy at $17.80/1000 queries.
+**NVIDIA ToolOrchestra (arXiv 2511.21689):** Nemotron-Orchestrator-8B routing to domain-specialist models outperformed larger monolithic models on benchmark tasks (FRAMES: 76.3%, tau2-Bench: 80.2%). The finding: routing intelligence in a small orchestrator beats raw scale in a single model.
 
 **Token overhead:** ~15× more tokens than single-agent. Worth it when: complex research requiring parallel domain expertise, quality-critical tasks where deterministic outcomes justify cost, tasks with high parallelization potential.
 
@@ -182,7 +182,7 @@ Route to fast/cheap model first. Escalate to expensive model only when quality g
 
 Planning model (expensive) → structured intermediate representation → Execution model (cheap)
 
-**Research finding:** GPT-4o planning + GPT-3.5 execution → 96.3% success rate vs. 41.1% for single model.
+The quality lift comes from plan quality — a structured plan converts an ambiguous goal into unambiguous steps a cheaper model can follow. Measure gains against your own tasks; specific accuracy numbers vary significantly by workload.
 
 ---
 

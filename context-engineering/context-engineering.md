@@ -168,7 +168,7 @@ Think of it like a well-organized office. You don't spread every file you've eve
 | Embedding-based retrieval | Large knowledge bases | Convert content to vector embeddings; find closest match to current query |
 | Knowledge graphs | Structured relational data | Traverse relationships to find connected information |
 
-**A counterintuitive insight on tool selection:** You can apply the same retrieval approach to *tool descriptions*, not just data. Research shows that applying RAG to tool descriptions (retrieving only the most relevant tool descriptions for each task) improved tool call accuracy **3×** over always including all tool descriptions. The model gets confused when it has to choose among 46 tools — giving it only the 5-10 relevant ones dramatically improves performance.
+**A counterintuitive insight on tool selection:** You can apply the same retrieval approach to *tool descriptions*, not just data. RAG-MCP research (arXiv 2505.03275) found that retrieving only the most relevant tool descriptions improved tool call accuracy **3×** over always loading all tools (43.1% vs. 13.6% baseline in large-toolset conditions) while cutting prompt tokens by over 50%. Note: the 13.6% baseline reflects a stressed scenario with many tools loaded simultaneously — production gains will vary, but the directional finding is robust. The model gets confused when it has to choose among dozens of tools; giving it only the relevant subset dramatically improves selection accuracy.
 
 ---
 
@@ -194,7 +194,7 @@ Sometimes the best way to manage context is to keep separate concerns in separat
 
 **Multi-agent isolation:** Instead of one agent trying to do everything in one giant context window, spawn multiple agents each with a focused, contained context. Anthropic's research showed that their parallel multi-agent approach (several agents with isolated contexts working simultaneously) outperformed a single agent trying to handle everything in one context.
 
-The trade-off: isolation is expensive. Multi-agent architectures use up to **15× more tokens** than a single-agent approach because you're running multiple context windows in parallel. You pay more, but you get cleaner reasoning in each agent.
+The trade-off: isolation is expensive. Multi-agent architectures use up to **15× more tokens** than a single-agent approach (Anthropic Engineering, 2025) because you're running multiple context windows in parallel. You pay more, but you get cleaner reasoning in each agent.
 
 **Sandbox isolation:** For tasks involving large data objects — images, audio, video — keep those objects in a separate execution environment and only pass structured descriptions or results into the LLM's context. HuggingFace's CodeAgent does this: the LLM writes code to process an image, but the image itself never enters the LLM's context window.
 
