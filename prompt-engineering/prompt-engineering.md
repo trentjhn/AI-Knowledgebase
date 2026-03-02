@@ -366,6 +366,61 @@ The LLM sees what's worked and what hasn't, reasons about patterns in that histo
 
 ---
 
+### Graph of Thoughts (GoT)
+
+Where Chain of Thought is linear and Tree of Thoughts is branching, **Graph of Thoughts** represents reasoning as a directed acyclic graph — nodes are individual thought units, edges represent the relationships between them. This allows non-linear thinking patterns that neither chains nor trees can capture: a thought can be informed by multiple prior thoughts from different branches, and different reasoning paths can converge and recombine.
+
+The practical implication: GoT is suited for problems where partial results from multiple separate reasoning lines need to be synthesized. A chain produces one answer. A tree explores alternatives independently. A graph allows those alternatives to feed into each other. Current implementations use a two-stage framework: first generating rationale nodes (individual reasoning steps), then combining selected rationale nodes to produce the final answer. GoT is more computationally expensive than ToT and requires more sophisticated orchestration — but it better models how human problem-solving actually works, where insights from one direction inform exploration in another.
+
+**When to use it:** Complex synthesis tasks where you need to combine partial insights from multiple independent reasoning directions. For most production use cases, CoT or self-consistency delivers sufficient improvement at lower cost.
+
+---
+
+### Chain-of-Verification (CoVe)
+
+**Chain-of-Verification** addresses hallucination at the reasoning level. The model generates an initial response, then constructs and answers a series of independent verification questions designed to fact-check the original response — without access to the original answer to avoid anchoring bias. Finally, it generates a corrected final response incorporating what it learned from the verification queries.
+
+The key design principle is the independence of the verification step: the model answers verification questions as if approaching the topic fresh, rather than defending the original answer. This prevents the model from rationalizing errors it just made. The pattern:
+
+1. Generate an initial draft response
+2. Derive specific, focused verification questions from the claims in the draft ("What year was X founded?" rather than "Is the answer correct?")
+3. Answer those verification questions independently
+4. Produce a final revised response that incorporates corrections
+
+CoVe is most valuable for responses that make specific factual claims — names, dates, figures, causal relationships — where incorrect initial guesses are likely. For creative or open-ended tasks, the verification step adds latency without meaningful benefit.
+
+---
+
+### ART — Automatic Multi-step Reasoning and Tool-use
+
+**ART** combines chain-of-thought prompting with automatic tool use, generalizing both into a single zero-shot framework. Given a new task, ART automatically retrieves task-relevant demonstrations from a library of existing few-shot CoT examples, uses those demonstrations to generate intermediate reasoning steps, and integrates external tool calls at appropriate points during inference — without requiring task-specific human annotation.
+
+The conceptual contribution: ART treats tool selection as part of the reasoning decomposition, not as a separate layer. When a reasoning step requires computation or lookup, ART routes to a tool; when the result is returned, reasoning resumes. The tool library can include calculators, code interpreters, search engines, and domain APIs. ART achieves zero-shot generalization by relying entirely on the retrieved library demonstrations rather than task-specific examples — the quality of the library is what limits performance.
+
+**When to use it:** When you want ReAct-style tool integration for a new task type without writing custom demonstrations. ART's library-retrieval approach means it can adapt to new tasks that resemble previous ones, at the cost of being limited by what's in the library.
+
+---
+
+### Active Prompting
+
+Standard few-shot prompting uses fixed human-annotated examples for all queries. **Active Prompting** improves on this by identifying which examples are most uncertain — and therefore most valuable to have annotated — rather than using a static set.
+
+The process: query the model multiple times (k times) on the training examples without demonstrations, and measure disagreement across the k responses. High disagreement indicates that the model is uncertain on that example, which makes it a high-value annotation target. Humans then annotate the most uncertain examples with chain-of-thought reasoning, and those annotated examples become the few-shot demonstrations.
+
+The result: demonstrations that cover the failure modes and ambiguous cases the model actually struggles with, rather than examples that happen to be easy for the human to write. This is essentially active learning applied to prompt engineering — prioritizing annotation effort where it has the most impact. The tradeoff is that it requires the initial round of model queries before you can select which examples to annotate, adding overhead to the setup process.
+
+---
+
+### Chain-of-Knowledge (CoK)
+
+Standard retrieval-augmented generation retrieves from a single knowledge source. **Chain-of-Knowledge** extends this to grounding reasoning across multiple heterogeneous knowledge sources — structured databases, unstructured text corpora, domain-specific knowledge bases — within a single generation process.
+
+CoK operates in three stages: **reasoning preparation** (analyzing the query to determine what types of knowledge are needed and from which sources), **dynamic knowledge adapting** (retrieving from those sources and incrementally refining the rationale as each source adds information), and **answer consolidation** (synthesizing the refined rationale into a final grounded answer). Each stage can refine the previous one — if initial rationale from one source is contradicted by a second source, the model updates its working rationale before consolidating.
+
+The practical value: CoK is appropriate when answering a question requires combining structured data (a product database) with unstructured context (support documentation) and domain knowledge (technical specifications). Single-source RAG retrieves from one vector store; CoK orchestrates across multiple sources with explicit rationale refinement between stages.
+
+---
+
 ## 5. Code Prompting
 
 LLMs trained on large amounts of code are remarkably effective at generating, explaining, translating, and debugging code. The same prompting principles apply, but with a few specific patterns worth knowing.

@@ -109,6 +109,22 @@ Modern evaluation focuses on dimensions of quality that are more meaningful for 
 
 **Perplexity** is a technical metric measuring how "surprised" a model is by a sequence of text — lower perplexity means the model found the text predictable, which is loosely correlated with fluency. However, perplexity is a property of the model's internal probability estimates, not of the output's usefulness or correctness. A very low perplexity response could still be wrong or harmful. It is most useful as an internal diagnostic, not as a customer-facing quality signal.
 
+### Alignment as a Multi-Dimensional Metric
+
+Beyond the task-quality dimensions above, alignment evaluation treats the model's conformance to human values as its own measurement domain. The **TRUSTLLM framework** organizes alignment into nine measurable dimensions, each requiring separate proxy tasks and benchmark datasets because no single metric captures alignment holistically:
+
+1. **Truthfulness** — resistance to misinformation, hallucination, sycophancy, and adversarial factuality attacks
+2. **Safety** — avoidance of unsafe or illegal outputs across diverse attack vectors
+3. **Fairness** — prevention of stereotyping and demographic bias in outputs
+4. **Robustness** — stability of outputs across rephrasing, paraphrasing, and input perturbation
+5. **Privacy** — protection of human autonomy and sensitivity to personally identifiable information
+6. **Machine Ethics** — adherence to both implicit and explicit ethical norms, including emotional awareness
+7. **Transparency** — availability of information about the model's capabilities, limitations, and reasoning
+8. **Accountability** — ability to provide explanations for outputs that allow verification and attribution
+9. **Regulations and Laws** — compliance with organizational policies, national laws, and industry standards
+
+The TRUSTLLM framing is operationally important because it prevents conflating these dimensions. A model can score well on truthfulness while failing on fairness — and both failures have different root causes requiring different fixes. Each dimension uses indirect proxy benchmarks (since mathematical quantification of most dimensions remains unsolved), which means alignment evaluation inherits all the proxy limitations of general LLM evaluation.
+
 ### Task-Specific Metrics
 
 Beyond these general dimensions, some metrics apply specifically to certain tasks.
@@ -156,6 +172,12 @@ DeepEval's G-Eval is a prominent implementation of this pattern. It uses the jud
 - **Sycophancy**: If the evaluand (the response being judged) is prefaced with confident framing ("As an expert, I would say..."), the judge may inflate its score even if the content is mediocre. This is the mirror of the problem documented in RLHF research: models trained on human feedback learn to appeal to human biases, and judge models can exhibit similar patterns.
 
 The practical takeaway: LLM-as-a-judge is powerful but should never be used naively. Design binary (pass/fail) criteria rather than 1-5 scales when possible. Validate your judge's agreement with human labels on a golden dataset. Use an ensemble of judges for high-stakes decisions.
+
+### SelfCheckGPT — Consistency-Based Hallucination Detection
+
+A complementary approach to LLM-as-a-judge for hallucination detection is **SelfCheckGPT**: generate multiple independent responses to the same prompt (at higher temperature), then measure consistency across those responses. The insight is that factual claims the model genuinely "knows" will be stated consistently across runs, while hallucinated details — which are effectively confabulations sampled from the model's probability distribution — will vary widely from run to run.
+
+The method does not require external references or a judge model. It works on the premise that if five independent generations all agree that "X" is true, that consensus is meaningful evidence for X. If the five generations disagree on a detail, that disagreement is a hallucination signal. This makes SelfCheckGPT reference-free — applicable in domains where ground truth is unavailable — and relatively cheap (it requires only multiple sampling passes, not a separate judge model). The tradeoff is that it cannot detect hallucinations the model states confidently and consistently: systematic biases in training data cause the model to consistently confabulate the same false claims, which consistency-based checks will miss. Use SelfCheckGPT as one layer of a hallucination defense stack, not as the only check.
 
 ### Human Evaluation
 
@@ -254,6 +276,8 @@ A practical heuristic for agent evaluation: evaluate at both the step level (did
 The academic community has developed specific benchmarks for agent evaluation. **AgentBench** (ICLR 2024) evaluates LLM agents across 8 distinct environments including web browsing, operating system interaction, database queries, knowledge graphs, and card games. Its key finding: there is a dramatic performance gap between the top commercial models and open-source alternatives — roughly 4.5x difference in average task success (top commercial models ~2.32 vs. open-source ~0.51 on the paper's scoring scale).
 
 **TheAgentCompany** is a more recent benchmark that evaluates agents on "consequential real world tasks" simulating the kinds of tasks an employee at a software company might perform — browsing internal wikis, using web browsers, interacting with simulated colleagues. These environment-grounded benchmarks are closer to real-world utility than synthetic Q&A tasks.
+
+The broader agent evaluation benchmark landscape includes: **IGLU** (interactive grounded language understanding in a 3D environment), **ClemBench** (chat-oriented LLM evaluation using collaborative dialogue games), **ToolBench** (evaluating tool use across thousands of real-world APIs), and **GentBench** (generalist agent evaluation across diverse task types). Each targets a different capability dimension — choosing the right benchmark depends on whether you care about embodied reasoning, dialogue-based collaboration, API tool use, or generalist task performance.
 
 ---
 
