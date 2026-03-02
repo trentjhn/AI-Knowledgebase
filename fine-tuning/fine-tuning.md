@@ -461,7 +461,7 @@ This is called distribution shift — the difference between what the model was 
 
 ### The Alignment Tax
 
-Fine-tuning for capability can degrade safety behaviors. Research published in 2023 (Yang et al., Stanford) demonstrated that fine-tuning GPT-3.5 Turbo on as few as 10 adversarially designed examples, costing less than $0.20, was sufficient to jailbreak the model's safety guardrails. Even benign fine-tuning on non-adversarial data was found to degrade safety behaviors — by 2024, research showed this was consistent across multiple alignment approaches.
+Fine-tuning for capability can degrade safety behaviors. Research published in 2023 (Qi et al., Princeton — arXiv:2310.03693) demonstrated that fine-tuning GPT-3.5 Turbo on as few as 10 adversarially designed examples, costing less than $0.20, was sufficient to jailbreak the model's safety guardrails. Even benign fine-tuning on non-adversarial data was found to degrade safety behaviors — by 2024, research showed this was consistent across multiple alignment approaches.
 
 The mechanism is related to catastrophic forgetting: the safety alignment behaviors are encoded in the model's weights just like any other capability. When fine-tuning updates those weights, safety behaviors can be overwritten. Researchers found that safety guardrails are most vulnerable when the fine-tuning dataset is highly similar to the alignment dataset — the model overfits on the format and loses the substance.
 
@@ -539,7 +539,7 @@ The early results suggest that smaller models can develop strong reasoning capab
 
 - Wei et al. (2021). *Finetuned Language Models Are Zero-Shot Learners (FLAN).* [https://arxiv.org/abs/2109.01652](https://arxiv.org/abs/2109.01652) — Instruction tuning on 60+ tasks producing strong zero-shot generalization.
 
-- Yang et al. (2023). *Fine-tuning Aligned Language Models Compromises Safety, Even When Users Do Not Intend To.* [https://arxiv.org/abs/2310.03693](https://arxiv.org/abs/2310.03693) — Safety degradation from benign and adversarial fine-tuning.
+- Qi et al. (2023). *Fine-tuning Aligned Language Models Compromises Safety, Even When Users Do Not Intend To.* [https://arxiv.org/abs/2310.03693](https://arxiv.org/abs/2310.03693) — Safety degradation from benign and adversarial fine-tuning. (Princeton; note: sometimes misattributed as "Yang et al.")
 
 - Xu et al. (2024). *Scaling Laws for Forgetting When Fine-Tuning Large Language Models.* [https://arxiv.org/html/2401.05605v1](https://arxiv.org/html/2401.05605v1) — Empirical study of catastrophic forgetting at scale.
 

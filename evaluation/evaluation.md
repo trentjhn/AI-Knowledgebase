@@ -251,7 +251,7 @@ A practical heuristic for agent evaluation: evaluate at both the step level (did
 
 ### AgentBench and Emerging Benchmarks
 
-The academic community has developed specific benchmarks for agent evaluation. **AgentBench** (ICLR 2024) evaluates LLM agents across 8 distinct environments including web browsing, operating system interaction, database queries, knowledge graphs, and card games. Its key finding: there is a dramatic performance gap between the top commercial models and open-source alternatives — roughly 3.5x difference in task success on the hardest environments.
+The academic community has developed specific benchmarks for agent evaluation. **AgentBench** (ICLR 2024) evaluates LLM agents across 8 distinct environments including web browsing, operating system interaction, database queries, knowledge graphs, and card games. Its key finding: there is a dramatic performance gap between the top commercial models and open-source alternatives — roughly 4.5x difference in average task success (top commercial models ~2.32 vs. open-source ~0.51 on the paper's scoring scale).
 
 **TheAgentCompany** is a more recent benchmark that evaluates agents on "consequential real world tasks" simulating the kinds of tasks an employee at a software company might perform — browsing internal wikis, using web browsers, interacting with simulated colleagues. These environment-grounded benchmarks are closer to real-world utility than synthetic Q&A tasks.
 
