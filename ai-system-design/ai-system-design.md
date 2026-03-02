@@ -1,6 +1,6 @@
 # AI System Design and Architectural Patterns
 
-> **Distilled from:** Chip Huyen (*AI Engineering*, 2025; *Designing Machine Learning Systems*, 2022) · Eugene Yan (*Patterns for Building LLM-based Systems*, 2023; *What We've Learned From A Year of Building with LLMs*, 2024) · Martin Fowler (*Emerging Patterns in Building GenAI Products*, Feb 2025) · Uber Engineering (*Michelangelo* platform case study) · Netflix Engineering (*Supporting Diverse ML Systems*, 2024) · Airbnb Engineering (*Bighead* ML platform) · Meta Engineering (*Building Meta's GenAI Infrastructure*, 2024) · LinkedIn Engineering (*AI/ML Data Platform*, 2024) · Applied LLMs collaborative guide (Yan, Bischof, Frye, Husain, Liu, Shankar, 2024) · 12-Factor Agents (HumanLayer, 2025) · Google Cloud Well-Architected Framework AI/ML Perspective (2024) · Lilian Weng, *LLM Powered Autonomous Agents* (2023) · MLSys 2024 Conference papers · Stanford CS329S (Machine Learning Systems Design)
+> **Distilled from:** Chip Huyen (*AI Engineering*, 2025; *Designing Machine Learning Systems*, 2022) · Eugene Yan (*Patterns for Building LLM-based Systems*, 2023; *What We've Learned From A Year of Building with LLMs*, 2024) · Martin Fowler (*Emerging Patterns in Building GenAI Products*, Feb 2025) · Uber Engineering (*Michelangelo* platform case study) · Netflix Engineering (*Supporting Diverse ML Systems*, 2024) · Airbnb Engineering (*Bighead* ML platform) · Meta Engineering (*Building Meta's GenAI Infrastructure*, 2024) · LinkedIn Engineering (*AI/ML Data Platform*, 2024) · Applied LLMs collaborative guide (Yan, Bischof, Frye, Husain, Liu, Shankar, 2024) · 12-Factor Agents (HumanLayer, 2025) · Google Cloud Well-Architected Framework AI/ML Perspective (2024) · Lilian Weng, *LLM Powered Autonomous Agents* (2023) · MLSys 2024 Conference papers · Stanford CS329S (Machine Learning Systems Design) · GokuMohandas, *Made With ML* (2023–2025)
 
 ---
 
@@ -17,6 +17,7 @@
 9. [Anti-Patterns — What to Avoid and Why](#9-anti-patterns)
 10. [The 12-Factor Agent Standard](#10-the-12-factor-agent-standard)
 11. [Key Takeaways for Practitioners](#11-key-takeaways)
+12. [MLOps Engineering Patterns](#12-mlops-engineering-patterns)
 
 ---
 
@@ -571,6 +572,137 @@ These are the principles a working AI engineer or AI PM should internalize:
 
 ---
 
+---
+
+## 12. MLOps Engineering Patterns
+
+> **Distilled from:** GokuMohandas, *Made With ML* (madewithml.com, 2023–2025) — a production MLOps course building a text classification system from notebook through distributed serving and CI/CD. Source code at github.com/GokuMohandas/Made-With-ML.
+
+This section covers the engineering mechanics of taking an ML model into production — the practices that sit between "the model works in a notebook" and "the model is reliably serving production traffic." These patterns are distinct from the architectural patterns in Section 3: they are about the MLOps lifecycle, not the system topology.
+
+---
+
+### Experiment Tracking with MLflow
+
+**The core problem.** ML experimentation is inherently exploratory — you try many combinations of hyperparameters, architectures, and preprocessing choices. Without systematic tracking, you lose the ability to reproduce the best result, compare runs objectively, or understand which variable changed between a good run and a bad one.
+
+**MLflow as the tracking substrate.** MLflow provides four components that together solve this: the **Tracking Server** (logs experiments, runs, metrics, parameters, and artifacts), the **Model Registry** (versions trained models and manages their promotion lifecycle), the **Projects** format (reproducible packaging), and the **Models** format (standardized serialization for multi-framework serving).
+
+Every training run should log at minimum: hyperparameter configuration, epoch-level metrics (train loss, validation loss, learning rate), final evaluation metrics, and the model checkpoint as an artifact. The Made-With-ML pattern uses `MLflowLoggerCallback` integrated into the Ray Train distributed trainer — metrics are emitted per epoch, artifacts are saved at run end. Runs are organized within named experiments for clean comparison.
+
+**Best run retrieval.** The registry enables programmatic selection: `get_best_run_id()` queries an experiment, sorts runs by a specified metric (validation loss in ascending order, or F1 in descending), and returns the run ID. The model checkpoint is then fetched via `get_best_checkpoint()` which resolves the artifact URI from the run metadata. This pattern separates training from deployment — the deployment system asks "what is the best model?" and the registry answers, without requiring knowledge of how or when it was trained.
+
+**Distributed training integration.** When training is distributed across workers (Ray Train, Horovod, etc.), MLflow integration must be configured at the trainer level, not in individual worker functions. Only the rank-0 worker should write to the registry; others report metrics through the distributed trainer's native reporting mechanism (`train.report()` in Ray). The tracking URI must be set identically on all workers, typically via a shared file system path or a hosted tracking server.
+
+**Checkpoint retention policy.** Keep only the best N checkpoints during training (`num_to_keep=1` is common) to avoid filling storage with intermediate models. The scoring metric determines which checkpoint is "best" — validation loss for most tasks, task-specific metrics (F1, AUROC) for imbalanced classification.
+
+---
+
+### Three-Tier ML Testing
+
+Testing ML systems requires three distinct test categories that complement each other. Most teams implement only one or two.
+
+**Tier 1: Code tests.** Standard software tests applied to the ML codebase — unit tests for preprocessing functions, data transformation utilities, batch collation logic, and serialization. These use standard pytest patterns: parametrize for multiple input cases, temporary fixtures for I/O, numpy/torch equality assertions for array operations. Critical to include: seed reproducibility tests (verify that `set_seeds()` produces identical random sequences), and data format tests (verify tensor dtype, device placement, and shape after batching).
+
+**Tier 2: Data tests.** Validation that the dataset used for training meets structural and distributional requirements before training begins. This includes: class distribution checks (each class must have sufficient representation after train/test split — `stratify_split()` enforces this), schema validation (required columns exist), and range checks on features. Running data tests in CI catches upstream data quality issues before they propagate to model performance silently.
+
+**Tier 3: Model behavioral tests — slice-based evaluation.** This is the most underused tier and the most powerful for catching real-world failure modes. Rather than reporting only aggregate metrics (overall precision/recall/F1), slice-based evaluation computes metrics on **specific subsets** of the test data defined by domain-relevant attributes.
+
+The Made-With-ML implementation uses Snorkel's `PandasSFApplier` to define **slicing functions** — predicates that label which rows belong to a slice:
+- `nlp_llm` slice: projects mentioning transformers, LLMs, or BERT (the high-attention domain)
+- `short_text` slice: projects with fewer than 8 words in combined title and description
+
+Each slice is evaluated independently with its own precision, recall, and F1 (using micro averaging for slice-level metrics). Slices that underperform aggregate metrics reveal failure modes that aggregate metrics hide. A model with 88% overall F1 might have 61% F1 on short-text inputs — a critical bug for a production text classifier that would never surface in headline metrics.
+
+**Implementing the three-tier testing structure:**
+```
+tests/
+  code/     ← pytest unit tests for functions and utilities
+  data/     ← dataset validation tests run before training
+  model/    ← slice-based behavioral tests and performance thresholds
+```
+
+---
+
+### Confidence-Based Output Filtering
+
+A practical pattern for classification systems where low-confidence predictions are worse than no prediction at all. Instead of always returning the top predicted class, the serving layer applies a **confidence threshold**: if the maximum predicted probability across all classes is below the threshold, the prediction is reclassified as "other" (or an explicit abstention).
+
+In the Made-With-ML implementation: the model predicts probability distributions across topic classes. If `max(probabilities) < 0.9`, the output is overridden to "other" rather than returning a low-confidence tag. This threshold is a configurable runtime parameter passed to the serving layer — it can be changed without redeploying the model.
+
+The design implications: (1) the "other" class must be handled downstream by the consuming application, (2) the threshold is itself a hyperparameter that trades off coverage (predictions made) against precision (predictions that are correct), and (3) operating the threshold in production requires monitoring the distribution of "other" outputs — a spike in "other" rate is a signal of distribution shift.
+
+This pattern applies beyond classification: confidence-based filtering in RAG systems (abstaining from answering when retrieval quality is low), in summarization (flagging outputs where the model's self-consistency score is below threshold), and in agentic systems (escalating to human review when the agent's confidence in a plan is low).
+
+---
+
+### Distributed Model Serving with Ray Serve
+
+**The architecture.** Ray Serve is a scalable model serving library built on Ray. The `@serve.deployment` decorator converts a Python class into a distributed serving deployment with configurable replicas and resource allocation. The class receives HTTP requests, runs preprocessing and inference, and returns responses. A FastAPI `@serve.ingress` wrapper adds typed request/response schemas and automatic documentation.
+
+**Resource specification.** Each deployment specifies CPU and GPU requirements at the actor level: `ray_actor_options={"num_cpus": 8, "num_gpus": 0}`. This enables the serving cluster to pack multiple model replicas onto available hardware. For GPU-intensive models, setting `num_gpus=1` pins each replica to a dedicated GPU. The number of replicas scales horizontally — Ray Serve handles request routing across replicas automatically.
+
+**Endpoint design for ML serving.** Beyond the inference endpoint, production ML APIs should expose:
+- `GET /` — health check returning service status and version
+- `GET /run_id/` — the active model's registry identifier (enabling correlation between predictions and the model that made them)
+- `POST /predict/` — inference endpoint with typed request schema
+- `POST /evaluate/` — trigger evaluation on a labeled dataset (useful for online evaluation without redeployment)
+
+**Model loading from registry at startup.** The serving class constructor calls `get_best_checkpoint()` from the model registry, initializing the predictor once at startup. All subsequent requests reuse the loaded model. This means updating the serving model requires redeploying the deployment (or implementing a more sophisticated hot-swap pattern). The `run_id` parameter makes the active model explicit and auditable.
+
+---
+
+### CI/CD for ML: Automated Training and Evaluation in Pull Requests
+
+The most operationally mature pattern from Made-With-ML is treating model training and evaluation as a CI/CD artifact. When a developer opens a pull request, GitHub Actions automatically:
+
+1. Submits a distributed training job (`anyscale jobs submit deploy/jobs/workloads.yaml --wait`)
+2. Waits for completion and fetches results from S3
+3. Converts JSON training and evaluation metrics to a markdown summary
+4. **Posts the metrics as a PR comment**, making model performance visible to code reviewers
+
+This pattern fundamentally changes the development feedback loop. Instead of asking "does the code run?", the CI pipeline asks "does the model perform acceptably?" Reviewers see training loss, validation metrics, and slice-level performance without needing to run anything locally. Performance regressions are visible before code merges to main.
+
+**Two separate pipelines.** ML CI/CD separates training from serving:
+- `workloads.yaml`: triggered on pull requests → runs training + evaluation → reports metrics to PR
+- `serve.yaml`: triggered on push to main → deploys the new model to the serving cluster
+
+The serving pipeline uses Anyscale's `rollout` command with a declarative `serve_model.yaml` configuration, authenticating via IAM role (not long-lived credentials). This separates the decision to merge code from the decision to deploy — code merges when metrics are acceptable; deployment is automatic after merge.
+
+**Infrastructure setup per workflow run:**
+- AWS IAM role assumption via OIDC (not access keys)
+- Python pinned to a specific minor version (3.10.11)
+- Dependencies pinned by version in requirements files
+- Secrets (cluster tokens, API keys) stored in GitHub repository secrets, not in code
+
+---
+
+### Reproducibility Engineering
+
+**Reproducibility is not automatic** in ML systems. The same code can produce different results across runs due to: non-deterministic GPU operations, random weight initialization, shuffled data loading, and probabilistic sampling during training. Production ML systems require explicit reproducibility controls.
+
+**Seed management.** A `set_seeds()` utility must set seeds for every random number generator in the stack: Python's `random`, NumPy, PyTorch CPU, and PyTorch CUDA. Setting only one is insufficient — they are independent RNG streams. Unit tests for seed management verify that two runs with identical seeds produce identical outputs before and after seed reset.
+
+**Dependency pinning.** All dependencies — ML frameworks, utility libraries, data processing — must be pinned to exact versions in `requirements.txt`. Major library updates (PyTorch, Transformers, Ray) regularly change numeric results for the same model configuration. Pre-commit hooks validate that pinned versions are used before code is committed.
+
+**Experiment registry as the source of truth.** The MLflow model registry provides the authoritative record of what model is running in production: the exact run ID, the hyperparameter configuration, the training data version, the evaluation metrics, and the checkpoint artifact. Any production incident investigation starts here, not with code. The run ID exposed by the serving API's `/run_id/` endpoint makes this linkage operational.
+
+**Configuration management.** A single `config.py` module is the canonical location for all paths, constants, external service URIs, and logging configuration. Domain-specific constraints (stopword lists, class definitions, confidence thresholds) live here rather than scattered across the codebase. This enables environment-specific overrides (local vs. cluster storage paths, local vs. hosted MLflow URI) without modifying application code.
+
+---
+
+### Hyperparameter Optimization
+
+**HyperOpt with warm starting.** Rather than random search, production hyperparameter optimization uses Bayesian optimization: `HyperOptSearch` with initial points specified by the practitioner. This provides: (1) domain knowledge injection — if you know from prior experiments that learning rate of 1e-4 is a good starting point, you encode that as an initial point, (2) convergence acceleration — Bayesian methods find good configurations in fewer trials than random search.
+
+**AsyncHyperBand for early stopping.** `AsyncHyperBandScheduler` terminates underperforming trials early based on intermediate metric values. Trials that diverge or stagnate are stopped before they consume their full compute budget, freeing resources for more promising configurations. The scheduler promotes trials that pass a grace period with acceptable metrics. This pattern makes hyperparameter search tractable at scale — you can explore a larger search space with the same compute budget by pruning bad trials aggressively.
+
+**Search space design.** The Made-With-ML search space targets: dropout probability (0.3–0.9 uniform), learning rate (1e-5 to 5e-4 log-uniform), LR decay factor (0.1–0.9 uniform), and scheduler patience (1–10 integer). Log-uniform scaling for learning rate is critical — learning rates differ by orders of magnitude in impact, and linear sampling wastes budget on large-LR configurations that typically underperform.
+
+**Concurrency limits.** Set explicit concurrency limits on parallel trials to avoid resource contention: too many parallel trials on a single cluster starves each trial of compute, producing noisy metrics that mislead the Bayesian optimizer. Two to four concurrent trials per GPU cluster is a reasonable default.
+
+---
+
 ## Sources
 
 - [AI Engineering (Chip Huyen, O'Reilly, 2025)](https://www.oreilly.com/library/view/ai-engineering/9781098166298/) — Architecture patterns, RAG, agents, evaluation, model routing
@@ -593,3 +725,4 @@ These are the principles a working AI engineer or AI PM should internalize:
 - [Rethinking the Twelve-Factor App Framework for AI (Google Cloud Blog)](https://cloud.google.com/transform/from-the-twelve-to-sixteen-factor-app) — Extended 12-factor principles for AI systems
 - [An Introduction to Observability for LLM-based Applications using OpenTelemetry (2024)](https://opentelemetry.io/blog/2024/llm-observability/) — LLM observability standards and instrumentation
 - [Solving the Training-Serving Skew Problem with Feast Feature Store (Medium, 2025)](https://medium.com/@scoopnisker/solving-the-training-serving-skew-problem-with-feast-feature-store-3719b47e23a2) — Feature store patterns, skew prevention
+- [Made With ML — GokuMohandas (madewithml.com, 2023–2025)](https://github.com/GokuMohandas/Made-With-ML) — MLOps engineering patterns: experiment tracking, three-tier ML testing, slice-based evaluation, distributed serving with Ray Serve, CI/CD for ML, confidence-based filtering, reproducibility engineering, hyperparameter optimization with HyperOpt + AsyncHyperBand
