@@ -1729,68 +1729,69 @@ Four major frameworks for building agentic systems, each with a distinct philoso
 
 ### LangChain vs LangGraph
 
-These two are often confused — they're from the same ecosystem but solve different problems, and they work together rather than compete.
+These two come from the same ecosystem but are typically chosen as **alternatives for workflow orchestration** — you pick one based on how complex your workflow is. The common mental model in practice: LangChain for simple, LangGraph for complex.
 
-#### LangChain — The Integration Ecosystem
+#### The Core Architectural Difference: DAG vs Cyclic Graph
 
-LangChain (2022) is a **component library** for building LLM applications. It provides:
+This is the root of everything:
 
-- **Prompt templates** — parameterized prompt construction, versioning, composition
-- **Chains** — sequential pipelines: prompt → LLM → parser → next prompt (simple LCEL syntax)
-- **Retrievers** — standardized interface over 50+ vector stores, search engines, databases
-- **Tools and tool calling** — wrappers for APIs, code execution, web search
-- **Memory** — conversation history management (buffer, summary, vector-based)
-- **Integrations** — connectors to OpenAI, Anthropic, Cohere, Pinecone, Weaviate, etc.
+**LangChain chains (LCEL)** execute as a **DAG — Directed Acyclic Graph**. Data flows in one direction, step by step, with no loops. Input → A → B → C → Output. That's it. Great when your workflow is predictable and sequential. Awkward or impossible when it needs to branch conditionally or retry.
 
-LangChain's value is **breadth**. If you want to swap your vector store, change your LLM provider, or add a new data source, LangChain has the adapter. It handles the plumbing so you don't have to.
+**LangGraph** executes as a **cyclic graph**. Nodes connect via edges that can loop back. This is what enables: retrieve → grade → if bad, rewrite and retrieve again → if good, generate. The cycle is native to the model, not bolted on.
 
-**Where LangChain falls short:** It buries control flow inside abstraction layers. Debugging a multi-step chain means wading through nested callbacks. Complex conditional logic (if the retriever found nothing, rewrite the query; otherwise grade the results) is awkward to express in chains. State across steps is implicit, not modeled.
+The loop capability is the primary reason people reach for LangGraph.
 
-#### LangGraph — The Workflow Engine
+#### LangChain — Simple, Linear Workflows
 
-LangGraph (2024) is a **stateful graph runtime** built on top of LangChain's primitives. It solves the control flow problem LangChain couldn't:
+LangChain (2022) is a **component library + chain runner** for building LLM applications:
 
-- **Explicit state** — you define a typed `State` object that flows through every node
-- **Nodes** — pure functions: take state, return updated state
-- **Edges** — direct (A → B always) or conditional (A → B or C based on state values)
-- **Cycles** — unlike chains, graphs can loop (retrieve → grade → rewrite → retrieve again)
-- **Checkpointing** — pause execution mid-graph, persist state, resume later (critical for human-in-the-loop)
-- **Streaming** — emit intermediate state at each node step by step
+- **LCEL chains** — compose components into sequential pipelines: prompt → LLM → parser
+- **Retrievers** — standardized interface over 50+ vector stores and search engines
+- **Tools** — wrappers for APIs, code execution, web search
+- **Memory** — conversation history (buffer, summary, vector-based)
+- **Integrations** — connectors to every major LLM provider and data source
 
-LangGraph gives you a **visual, debuggable mental model** of your workflow. Every decision point is an explicit edge. Every intermediate state is inspectable. This is what makes complex agentic loops tractable.
+Ideal for: chatbots, summarization, single-pass Q&A, simple RAG, content generation — any workflow that takes an input, processes it linearly, and returns an output.
 
-#### How They Fit Together
+**The ceiling:** When your workflow needs to make a decision mid-run and loop back (query rewriting, retries, multi-step reasoning), LangChain chains hit a wall. The DAG structure prevents it.
 
-```
-LangChain provides:          LangGraph orchestrates:
-─────────────────────        ──────────────────────────────
-LLM calls                 →  Nodes (Python functions that call LangChain)
-Retrievers                →  Embedded inside "retrieve" nodes
-Prompt templates          →  Used inside node implementations
-Tool wrappers             →  Called within agent nodes
-Memory                    →  Replaced by LangGraph State (more explicit)
-```
+#### LangGraph — Complex, Stateful Workflows
 
-LangGraph imports LangChain components directly. A node that calls Claude is just a function that calls `ChatAnthropic` (a LangChain class). LangGraph adds the execution engine on top.
+LangGraph (2024) is a **stateful graph runtime** for workflows that need control flow:
 
-**LangSmith** (the observability layer from the same team) traces both. Every LangChain call and every LangGraph node transition gets captured automatically.
+- **Explicit state** — a typed `State` object flows through every node; every node can read and modify it
+- **Nodes** — Python functions: receive state, return updated state
+- **Edges** — direct (always go to B) or conditional (go to B or C based on state)
+- **Cycles** — loops are first-class. Retrieve → grade → rewrite → retrieve again is trivial to model
+- **Checkpointing** — pause mid-graph, persist state, resume later (essential for human-in-the-loop)
+- **Streaming** — emit partial state at each step
+
+Ideal for: agentic RAG with grading and rewriting, multi-agent systems, long-running workflows with human approval gates, anything that adapts based on intermediate results.
+
+#### The "Together" Nuance
+
+LangGraph was built on top of LangChain's primitives, so technically they can coexist — a LangGraph node can call `ChatAnthropic` or use a LangChain retriever internally. But in practice, **you pick one as your orchestration layer** and use it consistently. You don't usually run both chain orchestration and graph orchestration in the same pipeline.
+
+**LangSmith** (observability) works with both regardless of which you choose.
 
 #### When to Use Each
 
 | Scenario | Use |
 |---|---|
-| Simple chatbot with memory and tool use | LangChain alone — LCEL chains are sufficient |
-| RAG pipeline with no branching | LangChain alone — retriever + prompt + LLM |
-| RAG with query rewriting and grading | LangGraph — the loop requires cycles and state |
-| Multi-agent orchestration | LangGraph — explicit handoffs between agents as nodes |
-| Prototype that needs to swap LLM providers fast | LangChain — one-line provider swap |
-| Production workflow needing human approval at step 3 | LangGraph — checkpointing, pause/resume |
-| Debugging a complex failure in a 6-step pipeline | LangGraph — every state transition is logged and inspectable |
-| Connecting to 20 external data sources | LangChain — that's what it's built for |
+| Chatbot, Q&A bot, summarization tool | LangChain — linear chain is sufficient |
+| Simple RAG (retrieve → prompt → answer) | LangChain — no looping needed |
+| RAG with query rewriting and relevance grading | LangGraph — requires cycles |
+| Multi-agent system with handoffs and state | LangGraph — explicit node/edge model |
+| Workflow that needs to pause for human review | LangGraph — checkpointing |
+| Rapid prototype needing many integrations fast | LangChain — breadth of connectors |
+| Production agent with conditional retry logic | LangGraph — cycles + explicit state |
+| Debugging a 6-step pipeline with state visibility | LangGraph — every transition is inspectable |
 
-#### Key Distinction in One Line
+#### Decision Rule
 
-> **LangChain** tells the LLM what to do (prompts, tools, data access).
-> **LangGraph** controls when and in what order each step runs (workflow logic, state, loops).
+**Start with the question: does your workflow need to loop?**
 
-Use them together: LangChain for the *what*, LangGraph for the *how and when*.
+- No loops, no branching → LangChain chains are simpler and faster to build
+- Loops, conditional paths, or stateful persistence → LangGraph
+
+Most real agents eventually need loops. That's usually when teams migrate from LangChain to LangGraph.
