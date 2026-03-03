@@ -866,6 +866,7 @@ Agentic patterns are recurring solutions to common agent architecture problems. 
 | Task Characteristics | Best Pattern |
 |---|---|
 | Standard feature implementation | Plan-Build-Review |
+| Production coding with mandatory process steps (lint, CI, compliance) | Blueprints |
 | Complex analysis requiring multiple expert perspectives | Orchestrator |
 | Information-gathering with unknown scope | ReAct |
 | High-stakes irreversible operations | Human-in-the-Loop |
@@ -1279,6 +1280,59 @@ In practice, many setups use a hybrid: count-based as a safety net (consolidate 
 - Short-lived workflows where persistent memory adds overhead without benefit
 
 **You don't need a third-party service to implement this.** The complete pattern — three memory types organized into files, git-tracked folder, two-tier loading convention, reflection agent triggered by count or event — is buildable with any LLM and standard file tools. Managed platforms (like Letta) add conveniences such as server-side backup, visual memory interfaces, and bootstrapping from historical sessions, but the core architecture is entirely self-hostable.
+
+---
+
+### Blueprints Pattern (Hybrid Deterministic/Agentic State Machine)
+
+This pattern addresses a core reliability problem in production agentic systems: pure agent loops are unpredictable and expensive, but pure deterministic workflows can't handle ambiguity. The solution is a single workflow graph with two explicitly typed nodes — deterministic and agentic — and a design discipline that determines which tasks belong in each.
+
+**Named by Stripe** as "Blueprints" in their Minions coding agent system (1,300+ agent-written PRs per week, 2025). The underlying concept is converging as a standard production pattern across the industry under various names: "hybrid state machines" (Tomasz Tunguz), "compound AI systems" (deepset), "workflow agents" (Google Cloud, Oracle). The name varies; the pattern is the same.
+
+**How common is this in production?** An analysis of 14 production agentic workflows found that ~65% of all nodes run as pure deterministic code on average — only 14% of workflows are fully agentic. The implication: most real production "AI" systems are mostly code, with LLMs used surgically at the steps that genuinely need judgment. As Tunguz put it: *"Is AI doing less? Yes. Is the system doing more? Also yes."*
+
+**The two node types:**
+
+- **Deterministic nodes** — fixed execution with no LLM involvement. Linting, formatting, git operations, running tests, pushing code. These always behave identically, cost zero tokens, and are fully predictable. Hard-code anything with a known, correct procedure.
+- **Agentic nodes** — free-form LLM reasoning with tool access. "Implement this task," "diagnose these CI failures," "write tests for this function." Use LLMs only where the task genuinely requires judgment.
+
+```
+Blueprint: Implement Feature
+─────────────────────────────────────────────
+[Deterministic] Pre-hydrate context (run MCP tools, load relevant docs)
+      ↓
+[Agentic]       Implement task (LLM with full tool access)
+      ↓
+[Deterministic] Lint + format (run linter, auto-fix, push)
+      ↓
+[Deterministic] Submit to CI
+      ↓
+[Agentic]       Fix CI failures (LLM diagnoses failures, patches code)
+      ↓
+[Deterministic] Final push → PR creation
+─────────────────────────────────────────────
+Hard limit: 2 CI iterations maximum
+```
+
+**Why this beats a pure agent loop:**
+
+A pure agent loop uses LLM reasoning for every step — including things like "run the linter" that have exactly one correct answer. This wastes tokens, introduces unnecessary variance, and makes the system harder to debug. Blueprints hard-code every deterministic step so the LLM only spends context and compute on decisions that actually require judgment.
+
+**Context pre-hydration.** The first deterministic node runs relevant tools *before* the agentic phase begins — fetching documentation, loading ticket context, pulling code search results. The LLM starts reasoning with a full picture rather than spending its first actions collecting what it needs. Pre-hydration is what makes one-shot completion rates practical at Stripe's scale.
+
+**The two-iteration CI cap.** Hard limit: two CI runs per task. If the agent can't fix failures in two rounds, it escalates to a human. The reasoning: diminishing returns — additional iterations rarely succeed and burn compute. Hard caps prevent infinite loops and make failure escalation a *designed feature*, not a fallback.
+
+**"What's good for humans is good for agents."** Run agents on the same machines and tooling human engineers already use. Agents inherit all the existing optimizations, compliance controls, and debugging infrastructure without requiring agent-specific builds.
+
+**The prerequisite: establish the deterministic harness first.** Blueprints don't create the deterministic infrastructure — they assume it exists. CI, linting, and a test suite must be in place before Blueprint-style agent workflows can run. This has an important sequencing implication for greenfield projects: build the deterministic harness first (test framework, CI pipeline, linter config), then use Blueprint-pattern agents to build features against it. Once the harness exists, agents can run in parallel against the same infrastructure — which is how systems like Stripe scale to hundreds of concurrent tasks. The larger and more complex the codebase, the more valuable the pattern becomes, because the agentic reasoning burden grows while the deterministic steps stay constant.
+
+**When to use Blueprints:**
+- Production coding agents with high-reliability or compliance requirements
+- Any workflow mixing creative implementation with mandatory process steps (linting, CI, compliance checks)
+- Greenfield projects after the test/CI harness is established
+- When you want to reduce token cost and variance without sacrificing agent flexibility on the hard parts
+
+**How it relates to LangGraph:** Blueprints and LangGraph implement the same graph execution model (nodes + edges). The distinction: Blueprints makes the deterministic/agentic split a named, first-class design decision rather than an implementation detail. In LangGraph terms, some nodes call the LLM, others are pure Python — Blueprints says you should be *intentional* about which is which and why.
 
 ---
 
