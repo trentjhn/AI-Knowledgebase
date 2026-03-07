@@ -17,16 +17,20 @@
 
 **Goal:** Build a single-page web app where users practice prompt engineering by writing prompts for scenarios, seeing real Claude API responses, and comparing to expert solutions.
 
+**Design System:** Educational brutalism — monospace-first, high contrast, zero decoration. Aesthetic is intentional and non-negotiable. See `/docs/promptarena-design-system.md` for complete color, typography, spacing, motion, and component specifications.
+
 **Architecture:**
-Frontend (React 18 + Vite + TypeScript + Tailwind) renders scenarios and captures user prompts. Backend (Vercel serverless functions) submits prompts to Claude API. User evaluates against rubric, sees expert solution. Progress tracked in localStorage (client-side, no auth).
+Frontend (React 18 + Vite + TypeScript) renders scenarios and captures user prompts. Styling is custom CSS (no Tailwind or shadcn/ui) following design system. Backend (Vercel serverless functions) submits prompts to Claude API. User evaluates against rubric, sees expert solution. Progress tracked in localStorage (client-side, no auth).
 
 **Tech Stack:**
-- Frontend: React 18, TypeScript, Tailwind CSS, Vite
+- Frontend: React 18, TypeScript, custom CSS (design-system-driven), Vite
 - Backend: Vercel Serverless Functions (Node.js)
 - API: Anthropic Claude API (claude-sonnet-4-6)
 - Testing: Vitest + React Testing Library
 - Hosting: Vercel (full stack)
 - Package Manager: npm
+- Fonts: IBM Plex Mono (body), Playfair Display (headings) from Google Fonts
+- Design: No UI libraries (no shadcn, no Tailwind); custom CSS only
 
 **Testing Strategy:**
 - Unit tests: API client, progress tracking utility
@@ -164,7 +168,59 @@ VITE_ANTHROPIC_API_KEY=your_api_key_here
 VITE_API_URL=http://localhost:3001
 ```
 
-**Step 5: Commit**
+**Step 5: Create global CSS with font imports and design tokens**
+
+```css
+/* src/styles/globals.css */
+
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Playfair+Display:wght@700&display=swap");
+
+:root {
+  /* Colors */
+  --color-black: #000000;
+  --color-white: #ffffff;
+  --color-blue: #2563eb;
+  --color-blue-dark: #1d4ed8;
+  --color-green: #16a34a;
+  --color-red: #dc2626;
+  --color-gray-light: #f9fafb;
+  --color-gray-lighter: #f3f4f6;
+  --color-gray: #6b7280;
+
+  /* Typography */
+  --font-display: "Playfair Display", serif;
+  --font-body: "IBM Plex Mono", monospace;
+
+  /* Spacing */
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-black);
+  background: var(--color-white);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+```
+
+**Step 6: Commit**
 
 ```bash
 git add package.json tsconfig.json .gitignore
@@ -482,12 +538,20 @@ git commit -m "feat: add Claude API backend wrapper"
 
 ## Task 4: Build Core UI Components
 
+**CRITICAL DESIGN REFERENCE:** All components must follow the design system in `/docs/promptarena-design-system.md`. Key points:
+- Use CSS custom properties (--color-*, --font-*, --space-*)
+- No Tailwind utilities; use custom CSS only
+- Monospace typography throughout (IBM Plex Mono)
+- High contrast, minimal styling
+- Follow motion/hover specifications exactly
+
 **Files:**
 - Create: `src/components/ScenarioCard.tsx`
 - Create: `src/components/PromptEditor.tsx`
 - Create: `src/components/ResponseDisplay.tsx`
 - Create: `src/components/RubricDisplay.tsx`
 - Create: `src/components/SolutionModal.tsx`
+- Create: `src/components/ScenarioCard.css` (and .css for each component)
 
 **Step 1: Create ScenarioCard component**
 
