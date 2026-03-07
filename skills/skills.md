@@ -342,6 +342,123 @@ Key techniques: domain expertise embedded directly in the logic, compliance chec
 
 ---
 
+## The Two-Skill Pattern: Agent Skills vs. Invoked Skills
+
+This is a critical architectural decision in Claude Code that generalizes to any agentic system with preloaded context.
+
+### Agent Skills (Preloaded in Context)
+
+**What they are:** Skills that are loaded into an agent's context **at startup** and persist for the entire session. They become part of the agent's "knowledge base" before any task runs.
+
+**Characteristics:**
+- Always available, zero latency to invoke
+- Consume tokens from the base context window
+- Used for frequently-accessed knowledge or core procedures
+- Example: A mining operations agent has "ore variability analysis" preloaded
+
+**When to use:**
+- Core domain knowledge the agent needs constantly
+- Procedures that run on almost every invocation
+- Operational constraints that must never be forgotten
+- High-frequency tools or workflows
+
+**Cost/Benefit:**
+- **Cost:** Base context token consumption (you pay even if not used)
+- **Benefit:** Instant access, no latency, guaranteed availability
+
+### Invoked Skills (Called On-Demand)
+
+**What they are:** Skills that are loaded **only when explicitly invoked** via `/skill-name` or through explicit instruction in the conversation.
+
+**Characteristics:**
+- Loaded when needed, discarded after use
+- Lower base context cost
+- Higher per-invocation cost (context switching overhead)
+- Example: A mining operations agent invokes "emergency halt procedure" only in failure scenarios
+
+**When to use:**
+- Specialized knowledge needed infrequently
+- Large reference materials (algorithms, lookup tables)
+- Domain-specific workflows that don't run every invocation
+- Specialized output formatters
+
+**Cost/Benefit:**
+- **Cost:** Per-invocation overhead, context switching
+- **Benefit:** Lean base context, knowledge available when needed
+
+### Design Pattern: Right-Sizing Your Agent
+
+The question: **What should be preloaded vs. invoked?**
+
+**Preload (agent skill):**
+- Core RL reward function in a process control system
+- Ore analysis framework in a mining operations system
+- Safety constraints in an autonomous system
+- Frequently-used validation rules
+
+**Invoke (skill):**
+- Failsafe/recovery procedures (used on error)
+- Rare edge case handling
+- Specialized output formats (SVG generation, LaTeX typesetting)
+- Reference materials (lookup tables, encyclopedic knowledge)
+
+**Real example — MineOS system with 1,000 control variables:**
+
+```
+Agent Skills (preloaded):
+├── Core RL optimization algorithm
+├── Ore variability model
+├── Real-time safety constraints
+└── Production target framework
+
+Invoked Skills (on-demand):
+├── Emergency halt procedure
+├── Ore anomaly detection
+├── Recovery and restart sequence
+└── Historical performance analysis
+```
+
+The agent always has the core optimization logic. It invokes specialized procedures only when needed.
+
+### Scope Precedence: Where Skills Live
+
+Skills can be scoped at three levels:
+
+| Level | Where | Visibility | Scope |
+|-------|-------|-----------|-------|
+| **Project** | `.claude/skills/` | Entire team | Shared across all agents and commands |
+| **Agent** | Agent frontmatter `skills:` | Single agent | Only this agent can preload these agent skills |
+| **User** | Personal skills folder | You only | Personal workflows and experiments |
+
+**Design pattern for teams:**
+```
+.claude/skills/                        # Project-wide: mining operations framework
+  ├── ore-analysis/
+  ├── safety-constraints/
+  └── rl-guidelines/
+
+.claude/agents/mine-ops.md             # Agent-specific preload
+  skills:
+    - ore-analysis/framework
+    - safety-constraints/core
+```
+
+Other agents get project skills but not necessarily the agent-specific preloads. This prevents knowledge collision.
+
+### The Environment Diagnostic
+
+If an agent consistently fails at a particular procedure:
+- **Is the skill preloaded or invoked?** Preloaded skills guarantee availability; invoked skills depend on explicit invocation.
+- **Is the skill's scope correct?** Agent-specific skills only load if the agent is assigned. Project skills load everywhere.
+- **Is the skill's context lean?** Skills over 200 lines lose precision. Break into multiple smaller skills.
+
+The fix is usually environment, not the agent's reasoning:
+- Missing skill preload → add to agent frontmatter
+- Skill never invoked → update agent's instructions to invoke it explicitly
+- Skill too large → split into focused sub-skills
+
+---
+
 ## 10. Testing and Iteration
 
 ### The Right Testing Philosophy

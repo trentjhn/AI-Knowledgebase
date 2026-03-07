@@ -432,6 +432,93 @@ Effective CLAUDE.md design has a few non-obvious constraints worth knowing:
 
 ---
 
+## CLAUDE.md Loading Mechanisms in Practice
+
+One of the most underrated aspects of context management is **how context actually gets loaded** when you're working with monorepos or complex project structures. This applies specifically to Claude Code, but the principles generalize to any agentic system with modular knowledge.
+
+### The Ancestor/Descendant Model (Claude Code)
+
+Claude Code loads CLAUDE.md files in a specific hierarchy:
+
+**Ancestor Loading (Immediate):**
+- Your root repository `/.claude/CLAUDE.md` always loads at startup
+- Parent directory `CLAUDE.md` files load automatically
+- This is "ancestor first" — constraints and rules from parents cascade down
+
+**Descendant Loading (Lazy):**
+- Subdirectory CLAUDE.md files only load when you access files in that directory
+- Once loaded, they persist for the session
+- This prevents context bloat in monorepos with 50+ subdirectories
+
+**Sibling Isolation:**
+- CLAUDE.md files in non-ancestor, non-descendant directories don't load
+- Prevents cross-contamination in parallel development
+
+### Why This Matters
+
+In a monorepo with frontend, backend, and data services:
+
+```
+root/
+├── .claude/CLAUDE.md                 # Loads immediately: core values, definitions
+├── frontend/
+│   └── .claude/CLAUDE.md             # Loads only when you touch frontend/*
+├── backend/
+│   └── .claude/CLAUDE.md             # Loads only when you touch backend/*
+└── data-services/
+    └── .claude/CLAUDE.md             # Loads only when you touch data-services/*
+```
+
+**Without lazy loading:** The agent would hold frontend + backend + data instructions in context simultaneously, even when working only on frontend. Wasted tokens and conflicting guidance.
+
+**With lazy loading:** Only the relevant domain's CLAUDE.md loads. Context stays lean. The agent doesn't get confused by irrelevant constraints.
+
+### Practical Design Pattern: <200 Lines Per File
+
+The rule: **keep each CLAUDE.md under 200 lines** (60 lines in intensive domains like data science).
+
+Why? Because:
+
+1. **Determinism degrades with length** — instructions get ignored or reinterpreted at higher token counts (empirical: 80% adherence at 150 lines, 60% at 400 lines)
+2. **Context bloat kills precision** — more instructions = lower fidelity to any single instruction
+3. **Monorepo solution** — split domain-specific knowledge into separate files, load lazily
+
+**Example structure for a complex project:**
+
+```
+root/.claude/CLAUDE.md (120 lines)
+├── Core values, definitions, key decisions
+├── Global constraints (security, data, compliance)
+
+root/.claude/rules/safety.md (70 lines)
+├── Never-execute rules (hard boundaries)
+
+root/services/mining-ops/.claude/CLAUDE.md (150 lines)
+├── Mine planning domain knowledge, operational constraints
+
+root/services/plant-ops/.claude/CLAUDE.md (140 lines)
+├── Process control domain knowledge, RL behavior guidelines
+```
+
+Each file stays under 200 lines. The agent loads only what's needed. Instructions stay crisp.
+
+### The Diagnostic: Context vs. Instruction Quality
+
+If an agentic system keeps failing at the same step, ask: **Is this a model failure or an environment failure?**
+
+- **Model failure:** The model is given correct context but still reasons incorrectly (rare with modern models)
+- **Environment failure:** The context is incomplete, contradictory, or poorly formatted (common)
+
+Environment failures are permanent fixes:
+- Undocumented setup steps → document them
+- Missing type annotations → add them
+- Vague success criteria → define metrics clearly
+- Conflicting constraints → clarify or remove
+
+Environment failures are 10x cheaper to fix than trying to prompt your way out of them.
+
+---
+
 ## Key Takeaways
 
 Context engineering is the practice of intentionally designing what an LLM can see, in what form, and at what moment. It's the primary lever for AI agent performance — more impactful than model selection for most real-world applications.
