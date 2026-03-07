@@ -1,18 +1,82 @@
 # PromptArena Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+> **For Coding Assistant (Claude Code or External):**
+>
+> REQUIRED WORKFLOW SKILLS:
+> 1. `superpowers:executing-plans` — Execute this plan task-by-task. Use TDD for each step.
+> 2. `superpowers:test-driven-development` — Write failing test first, then minimal implementation, then commit.
+> 3. `pr-review-toolkit:code-reviewer` — After completing Task 7, review all code for quality before deployment.
+> 4. `pr-review-toolkit:code-simplifier` — After code review passes, simplify and refactor for clarity.
+>
+> WORKFLOW DISCIPLINE:
+> - Write failing test BEFORE implementation (red → green → refactor)
+> - Commit after every step (small, atomic commits)
+> - Run full test suite after each task
+> - Do NOT skip ahead; follow strict task ordering
+> - Stop and review if any test fails
 
 **Goal:** Build a single-page web app where users practice prompt engineering by writing prompts for scenarios, seeing real Claude API responses, and comparing to expert solutions.
 
 **Architecture:**
-Frontend (React + Tailwind) renders scenarios and captures user prompts. Backend (Express + Node) submits prompts to Claude API and returns responses. User evaluates their attempt against a rubric, then sees the expert solution. Progress is tracked in localStorage (no auth needed for MVP).
+Frontend (React 18 + Vite + TypeScript + Tailwind) renders scenarios and captures user prompts. Backend (Vercel serverless functions) submits prompts to Claude API. User evaluates against rubric, sees expert solution. Progress tracked in localStorage (client-side, no auth).
 
 **Tech Stack:**
-- Frontend: React 18, TypeScript, Tailwind CSS, shadcn/ui
-- Backend: Express.js, Node.js
+- Frontend: React 18, TypeScript, Tailwind CSS, Vite
+- Backend: Vercel Serverless Functions (Node.js)
 - API: Anthropic Claude API (claude-sonnet-4-6)
-- Hosting: Vercel (frontend + backend serverless)
+- Testing: Vitest + React Testing Library
+- Hosting: Vercel (full stack)
 - Package Manager: npm
+
+**Testing Strategy:**
+- Unit tests: API client, progress tracking utility
+- Integration tests: Form submission → API → response display
+- Manual tests: Scenario selection, progress persistence, solution modal
+
+**Code Quality Standards:**
+- TypeScript strict mode enabled
+- No `any` types without justification
+- All components documented with JSDoc
+- All async operations must have error handling
+- All user inputs validated before API submission
+
+---
+
+## Testing & Quality Checkpoints
+
+### Tests Required (Before "Task 7: Testing")
+
+**API Client Tests** (`src/__tests__/api-client.test.ts`):
+- `submitPromptToApi`: calls `/api/submit-prompt` with correct payload
+- `submitPromptToApi`: parses response correctly (response + tokensUsed)
+- `submitPromptToApi`: throws error on network failure
+- `submitPromptToApi`: throws error on invalid response format
+
+**Progress Utility Tests** (`src/__tests__/progress.test.ts`):
+- `loadProgress`: returns empty progress on first call
+- `saveProgress`: persists to localStorage
+- `markScenarioComplete`: updates score in progress
+- `isScenarioCompleted`: returns true only after marking complete
+
+**Component Tests** (smoke tests, minimal):
+- `ScenarioCard`: renders scenario title and difficulty
+- `PromptEditor`: button disabled when textarea empty
+- `ResponseDisplay`: displays response text and token count
+- `SolutionModal`: closes when close button clicked
+
+### Code Quality Checklist (Before Deploy)
+
+```
+[ ] No console.error without try-catch context
+[ ] All async/await wrapped in try-catch
+[ ] All TypeScript errors resolved (tsc --noEmit passes)
+[ ] No unused imports
+[ ] All components have prop types defined
+[ ] No direct fetch() calls (use api-client wrapper)
+[ ] All user inputs validated before API submission
+[ ] Error messages are user-friendly (not raw error stacks)
+[ ] localStorage keys are consistent (use STORAGE_KEY const)
+```
 
 ---
 
@@ -1020,47 +1084,301 @@ git commit -m "chore: setup Vite and Vercel configuration"
 
 ---
 
-## Task 7: Testing and Final Polish
+## Task 7: Code Review & Quality Verification
+
+**CRITICAL:** Before this task, all other tasks must be complete and all tests passing.
+
+**Files to Review:**
+- All TypeScript source files in `src/`
+- All test files in `src/__tests__/`
+- API handler in `api/submit-prompt.ts`
+- Configuration files: `tailwind.config.js`, `vite.config.ts`, `vercel.json`
+
+**Code Review Checklist:**
+
+### Type Safety
+- [ ] No `any` types (use `unknown` or proper types)
+- [ ] All function parameters typed
+- [ ] All return types explicitly specified
+- [ ] Interfaces used for component props
+
+### API & Async
+- [ ] All fetch/API calls wrapped in try-catch
+- [ ] Error states handled and displayed to user
+- [ ] Loading states managed (disable button during submission)
+- [ ] API key not exposed in frontend code
+
+### Component Design
+- [ ] Components are focused (single responsibility)
+- [ ] Props interface defined for each component
+- [ ] No hardcoded strings (use constants)
+- [ ] Event handlers properly typed
+- [ ] No prop drilling (max 2 levels deep)
+
+### State Management
+- [ ] localStorage key constant defined (`STORAGE_KEY`)
+- [ ] Progress updates are atomic (save/load integrity)
+- [ ] No unnecessary re-renders (useEffect dependencies correct)
+- [ ] No state mutations (immutable updates)
+
+### Testing
+- [ ] All unit tests in `src/__tests__/` pass
+- [ ] Test file names match component names (`Component.tsx` → `Component.test.ts`)
+- [ ] Tests are isolated (no cross-test dependencies)
+- [ ] Mock API responses defined clearly
+
+### Documentation
+- [ ] Scenario content is clear and achievable
+- [ ] Rubric criteria are specific and measurable
+- [ ] Expert prompts demonstrate best practices
+- [ ] Error messages are helpful (not generic)
+
+**Step 1: Use code-reviewer skill**
+
+The coding assistant should run:
+
+```
+pr-review-toolkit:code-reviewer to review all source code
+```
+
+This validates against project standards.
+
+**Step 2: Use code-simplifier skill**
+
+After review passes, run:
+
+```
+pr-review-toolkit:code-simplifier to refactor for clarity
+```
+
+This removes duplication, improves readability.
+
+**Step 3: Run full test suite**
+
+```bash
+npm test
+npm run type-check
+```
+
+Verify:
+- All tests pass
+- TypeScript has zero errors
+- No console warnings
+
+**Step 4: Commit review changes**
+
+```bash
+git add -A
+git commit -m "refactor: code review and simplification"
+```
+
+---
+
+## Task 8: Testing and Documentation
 
 **Files:**
 - Create: `src/__tests__/api-client.test.ts`
+- Create: `src/__tests__/progress.test.ts`
 - Create: `README.md`
 
-**Step 1: Add basic API client tests**
+**Step 1: Add API client tests (using Vitest)**
 
 ```typescript
 // src/__tests__/api-client.test.ts
 
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { submitPromptToApi } from "../utils/api-client";
 
-describe("submitPromptToApi", () => {
-  it("should call the API with correct payload", async () => {
-    const mockFetch = jest.fn();
-    global.fetch = mockFetch;
+describe("API Client", () => {
+  beforeEach(() => {
+    global.fetch = vi.fn();
+  });
 
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        response: "test response",
-        tokensUsed: 150,
-      }),
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe("submitPromptToApi", () => {
+    it("should submit prompt and return response with tokens", async () => {
+      const mockResponse = {
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          response: "Claude's response text",
+          tokensUsed: 342,
+        }),
+      };
+
+      (global.fetch as any).mockResolvedValueOnce(mockResponse);
+
+      const result = await submitPromptToApi(
+        "user prompt text",
+        "scenario task"
+      );
+
+      expect(global.fetch).toHaveBeenCalledWith("/api/submit-prompt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userPrompt: "user prompt text",
+          scenarioTask: "scenario task",
+        }),
+      });
+
+      expect(result.response).toBe("Claude's response text");
+      expect(result.tokensUsed).toBe(342);
     });
 
-    const result = await submitPromptToApi("test prompt", "test task");
+    it("should throw error on API failure", async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: "Internal Server Error",
+      });
 
-    expect(mockFetch).toHaveBeenCalledWith("/api/submit-prompt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userPrompt: "test prompt",
-        scenarioTask: "test task",
-      }),
+      await expect(
+        submitPromptToApi("prompt", "task")
+      ).rejects.toThrow(/API error/);
     });
 
-    expect(result.response).toBe("test response");
-    expect(result.tokensUsed).toBe(150);
+    it("should throw error on network failure", async () => {
+      (global.fetch as any).mockRejectedValueOnce(
+        new Error("Network error")
+      );
+
+      await expect(
+        submitPromptToApi("prompt", "task")
+      ).rejects.toThrow(/Network error/);
+    });
   });
 });
+```
+
+**Step 2: Add progress utility tests**
+
+```typescript
+// src/__tests__/progress.test.ts
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import {
+  loadProgress,
+  saveProgress,
+  markScenarioComplete,
+  isScenarioCompleted,
+} from "../utils/progress";
+
+describe("Progress Tracking", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  describe("loadProgress", () => {
+    it("should return empty progress on first call", () => {
+      const progress = loadProgress();
+      expect(progress.completedScenarios).toEqual({});
+    });
+
+    it("should return saved progress from localStorage", () => {
+      const testProgress = { completedScenarios: { "test-id": 85 } };
+      localStorage.setItem("promptarena_progress", JSON.stringify(testProgress));
+
+      const loaded = loadProgress();
+      expect(loaded.completedScenarios["test-id"]).toBe(85);
+    });
+  });
+
+  describe("saveProgress", () => {
+    it("should save progress to localStorage", () => {
+      const progress = { completedScenarios: { "scenario-1": 90 } };
+      saveProgress(progress);
+
+      const stored = JSON.parse(
+        localStorage.getItem("promptarena_progress") || "{}"
+      );
+      expect(stored.completedScenarios["scenario-1"]).toBe(90);
+    });
+  });
+
+  describe("markScenarioComplete", () => {
+    it("should update score for scenario", () => {
+      markScenarioComplete("scenario-1", 75);
+
+      const progress = loadProgress();
+      expect(progress.completedScenarios["scenario-1"]).toBe(75);
+    });
+
+    it("should overwrite existing score", () => {
+      markScenarioComplete("scenario-1", 60);
+      markScenarioComplete("scenario-1", 95);
+
+      const progress = loadProgress();
+      expect(progress.completedScenarios["scenario-1"]).toBe(95);
+    });
+  });
+
+  describe("isScenarioCompleted", () => {
+    it("should return false for uncompleted scenario", () => {
+      expect(isScenarioCompleted("nonexistent")).toBe(false);
+    });
+
+    it("should return true for completed scenario", () => {
+      markScenarioComplete("scenario-1", 80);
+      expect(isScenarioCompleted("scenario-1")).toBe(true);
+    });
+  });
+});
+```
+
+**Step 3: Create Vitest config**
+
+```typescript
+// vitest.config.ts
+
+import { defineConfig } from "vitest/config";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: "jsdom",
+    setupFiles: [],
+  },
+});
+```
+
+**Step 4: Update package.json with test scripts**
+
+```json
+{
+  "scripts": {
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
+  },
+  "devDependencies": {
+    "vitest": "^1.x.x",
+    "@testing-library/react": "^14.x.x",
+    "@testing-library/jest-dom": "^6.x.x"
+  }
+}
+```
+
+**Step 5: Run tests**
+
+```bash
+npm test
+```
+
+Expected output:
+```
+✓ API Client (3 tests) 45ms
+✓ Progress Tracking (5 tests) 12ms
+
+✓ 8 passed
 ```
 
 **Step 2: Create README**
@@ -1151,7 +1469,52 @@ git commit -m "test: add basic unit tests and documentation"
 
 ---
 
-## Task 8: Deployment Checklist
+## Task 9: Final Code Review & Simplification
+
+**MUST COMPLETE TASK 7 FIRST**
+
+**Step 1: Invoke code-reviewer skill**
+
+```
+The assistant should use: pr-review-toolkit:code-reviewer
+
+This reviews all source code in src/ and api/ against project standards:
+- Type safety (no any types)
+- Error handling (all async wrapped in try-catch)
+- Component design (single responsibility, proper prop types)
+- Testing coverage (required tests exist and pass)
+- Documentation (comments where logic isn't self-evident)
+```
+
+**Step 2: Invoke code-simplifier skill**
+
+```
+After code review passes, use: pr-review-toolkit:code-simplifier
+
+This refactors for clarity and removes duplication:
+- Extract repeated logic into utilities
+- Simplify conditional expressions
+- Remove unused variables/imports
+- Improve naming for clarity
+```
+
+**Step 3: Verify all tests still pass**
+
+```bash
+npm test
+npm run type-check
+```
+
+**Step 4: Commit refactored code**
+
+```bash
+git add -A
+git commit -m "refactor: code review pass and simplification"
+```
+
+---
+
+## Task 10: Deployment Checklist
 
 **Files:**
 - Verify: `.env.local` is in `.gitignore`
@@ -1203,29 +1566,65 @@ git push origin main
 
 **Total implementation:**
 - Frontend: 8 React components + pages
-- Backend: 1 serverless function
+- Backend: 1 serverless function (API wrapper)
 - Utilities: API client, progress tracking, types
-- Content: 10 production-quality scenarios
-- Styling: Tailwind CSS + responsive design
-- Testing: Basic unit tests
-- Docs: README with setup instructions
+- Content: 3 starter scenarios (extensible to 10)
+- Testing: API client tests + progress utility tests
+- Code Quality: Full review + simplification cycle
+- Docs: README with setup and testing instructions
 
-**Estimated build time: 3-4 hours** (with this spec, zero ambiguity)
+**Estimated build time: 4-5 hours** (includes TDD, tests, code review)
 
 **Cost to run: ~$0.20 per user per full playthrough** (10 scenarios)
 
 **Hosting: Free tier on Vercel** (unless you get heavy traffic)
 
+**Testing Coverage:**
+- Unit: API client, progress tracking
+- Integration: Scenario selection → API submission → response display
+- Manual: Rubric grading, solution modal, progress persistence
+- Quality: TypeScript strict mode, no `any` types, comprehensive error handling
+
+**Code Quality Standards:**
+- TDD throughout (failing test → implementation → refactor)
+- All async operations wrapped in try-catch
+- All props properly typed (no implicit `any`)
+- All user inputs validated before API submission
+- No hardcoded strings (constants used throughout)
+- Code review + simplification pass before deployment
+
 ---
 
-## Execution Handoff
+## Execution Workflow (For Coding Assistant)
 
-Plan complete and saved to `docs/plans/2026-03-07-promptarena.md`.
+**Skills Required (in this order):**
+1. `superpowers:executing-plans` — Execute task-by-task following TDD
+2. `superpowers:test-driven-development` — Write failing test first, then minimal implementation
+3. `pr-review-toolkit:code-reviewer` — Review all code after Task 7 passes
+4. `pr-review-toolkit:code-simplifier` — Simplify/refactor after review passes
 
-**Two execution options:**
+**Discipline:**
+- One task per execution cycle
+- Test MUST pass before moving to next task
+- Commit after every task (small, atomic commits)
+- Stop if any test fails; diagnose before proceeding
+- Follow exact file paths and code from spec (no improvisation)
 
-**1. Subagent-Driven (this session)** — I dispatch fresh subagent per task, review between tasks, fast iteration
+**Execution Options:**
 
-**2. Parallel Session (separate)** — Open new session with executing-plans, batch execution with checkpoints
+**Option 1: Subagent-Driven (Recommended)**
+- Claude Code dispatches fresh subagent per task (1-2 tasks at a time)
+- Review between tasks for quality/correctness
+- Estimated: 4-5 hours across 2-3 sessions
 
-**Which approach would you prefer?**
+**Option 2: Batch Execution (Single Session)**
+- Single subagent executes all 10 tasks sequentially
+- Checkpoints after Task 5 and Task 7 (tests must pass)
+- Estimated: 3-4 hours uninterrupted
+
+**Option 3: Self-Serve Build**
+- You execute using this spec as a tutorial
+- You learn the codebase while building
+- Estimated: 6-8 hours (slower, more learning)
+
+Which approach would you prefer?
