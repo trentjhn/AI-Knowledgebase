@@ -994,3 +994,196 @@ Benefit:
 - ROI: Pays for itself on 2nd similar feature
 
 ---
+
+## 16. Agent Quality Metrics & Observability
+
+**Adapted from [Claude Code Ultimate Guide](https://github.com/FlorianBruniaux/claude-code-ultimate-guide) by Florian Bruniaux**
+
+Evaluating AI agents requires metrics beyond traditional code quality. This section defines four metric categories, implementation patterns, and observability strategies for custom agents.
+
+### Four Metric Categories
+
+#### 1. Response Quality
+Measures accuracy, relevance, and usefulness of agent outputs.
+
+**Metrics**:
+- Accuracy: % of outputs that are factually correct
+- Relevance: % of outputs that address the user's request
+- Coherence: % of outputs that are logically structured
+- Completeness: % of requests fully resolved without escalation
+
+**Tools**: LLM-as-judge, human review, automated tests
+
+#### 2. Tool Usage
+Tracks how effectively agents use available tools.
+
+**Metrics**:
+- Tool selection accuracy: % of correct tool choices for task
+- Parameter correctness: % of correct arguments passed to tools
+- Error recovery: % of errors handled gracefully (vs. failures)
+- Tool latency impact: Agent response time with/without tools
+
+**Example**: For a database query agent, measure:
+- % of queries using indices (vs. full table scans)
+- % of queries returning expected result set size
+- % of queries completing within SLA
+
+#### 3. Performance
+Measures operational efficiency.
+
+**Metrics**:
+- Latency: Response time (p50, p95, p99)
+- Token efficiency: Tokens used per task (input + output)
+- Cost per task: API cost / successful completion
+- Throughput: Requests processed per unit time
+
+**JSON Schema**:
+```json
+{
+  "performance": {
+    "latency_ms": 1250,
+    "tokens": {
+      "input": 450,
+      "output": 320,
+      "total": 770
+    },
+    "cost_usd": 0.0035,
+    "throughput": "240 req/min"
+  }
+}
+```
+
+#### 4. User Satisfaction
+Captures real-world user feedback.
+
+**Metrics**:
+- Satisfaction score: 1-5 rating of response quality
+- Resolution rate: % of requests resolved on first try
+- Escalation rate: % of requests requiring human intervention
+- Return rate: % of users who interact with agent again
+
+### Implementation Patterns
+
+#### Pattern 1: Logging Hooks
+
+Instrument the agent to log metrics on every interaction:
+
+```python
+# In your agent's tool-call handler
+import json
+from datetime import datetime
+
+def log_metric(agent_name, task, tool_name, success, latency_ms, tokens):
+    metric = {
+        "timestamp": datetime.now().isoformat(),
+        "agent": agent_name,
+        "task": task,
+        "tool": tool_name,
+        "success": success,
+        "latency_ms": latency_ms,
+        "tokens": tokens
+    }
+    with open(f"logs/{agent_name}-metrics.jsonl", "a") as f:
+        f.write(json.dumps(metric) + "\n")
+
+# Usage
+log_metric("analytics_agent", "revenue_analysis", "sql_query", True, 1250, 770)
+```
+
+#### Pattern 2: A/B Testing
+
+Compare two agent versions on the same tasks:
+
+```
+Version A (baseline): Current implementation
+Version B (candidate): New prompt, tools, or logic
+
+Split traffic: 50% A, 50% B
+Measure: Accuracy, latency, cost, satisfaction
+Statistical significance: p < 0.05 before rollout
+```
+
+#### Pattern 3: Feedback Loops
+
+Collect human feedback to refine metrics:
+
+```
+User rates agent response: 👍 Helpful / 👎 Not helpful
+→ Log feedback with metrics from that interaction
+→ Analyze: Which agent configurations lead to 👍?
+→ Retrain/reprompt agent based on patterns
+```
+
+#### Pattern 4: Continuous Monitoring
+
+Dashboard showing real-time metrics:
+
+```
+Agent: Payment Processing Agent
+├─ Uptime: 99.8%
+├─ Avg Response Time: 1.2s
+├─ Accuracy: 98.5%
+├─ Cost/Task: $0.042
+└─ User Satisfaction: 4.3/5.0 (1,247 ratings)
+
+Alerts triggered when:
+├─ Accuracy drops >5%
+├─ Response time >2s (p95)
+├─ Cost/task increases >10%
+└─ Satisfaction <4.0
+```
+
+### Example: Analytics Agent Evaluation
+
+**Agent**: Analyzes customer data and generates insights
+
+**Metrics Setup**:
+```json
+{
+  "agent": "analytics_agent",
+  "eval_metrics": {
+    "response_quality": {
+      "accuracy": 0.95,
+      "relevance": 0.92,
+      "coherence": 0.94
+    },
+    "tool_usage": {
+      "correct_sql_queries": 0.89,
+      "query_optimization": 0.82
+    },
+    "performance": {
+      "latency_p50_ms": 850,
+      "tokens_per_task": 620,
+      "cost_usd": 0.031
+    },
+    "satisfaction": {
+      "user_rating": 4.4,
+      "resolution_rate": 0.91
+    }
+  }
+}
+```
+
+**Monitoring**:
+```bash
+# Run daily eval job
+analytics_agent_eval.sh
+
+# Output CSV for trending
+date,accuracy,latency_ms,cost_usd,satisfaction
+2026-03-07,0.95,850,0.031,4.4
+2026-03-08,0.94,920,0.033,4.3
+2026-03-09,0.96,810,0.030,4.5
+```
+
+### Tools & Frameworks
+
+| Tool | Best For | Notes |
+|------|----------|-------|
+| **Weights & Biases** | Dashboard + experiment tracking | Integrates with most agent frameworks |
+| **LangSmith** (LangChain) | Agent-native eval + tracing | Built for LangChain agents |
+| **Braintrust** | Evals + comparison | Lightweight, good for startups |
+| **Custom logging** | Full control | JSONL + analytics dashboard |
+
+---
+
