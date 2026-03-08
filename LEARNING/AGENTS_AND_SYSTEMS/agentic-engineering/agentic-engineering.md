@@ -30,6 +30,10 @@ This makes agents dramatically more powerful than chatbots — but also dramatic
 8. [Practices](#8-practices)
 9. [Mental Models](#9-mental-models)
 10. [Agent Frameworks](#10-agent-frameworks)
+11. [Development Methodologies](#11-development-methodologies)
+12. [Dual-Instance Planning](#12-dual-instance-planning)
+13. [Event-Driven Agents](#13-event-driven-agents)
+14. [Team AI Coordination](#14-team-ai-coordination)
 
 ---
 
@@ -2055,3 +2059,212 @@ LangGraph was built on top of LangChain's primitives, so technically they can co
 - Loops, conditional paths, or stateful persistence → LangGraph
 
 Most real agents eventually need loops. That's usually when teams migrate from LangChain to LangGraph.
+
+---
+
+## 11. Development Methodologies
+
+> **Adapted from:** Claude Code Ultimate Guide by Florian Bruniaux (CC BY-SA 4.0)
+
+Building reliable agents requires choosing the right development methodology — the process you follow when writing and testing code. There is no single "best" methodology, but there are worse and better choices depending on what you're building.
+
+### Fifteen Methodologies Arranged by Tier
+
+The methodologies form a pyramid. The base (Tier 1) represents foundational practices every team should follow. The upper tiers add discipline and structure as the stakes increase.
+
+**Tier 1: Foundational (Essential)**
+- **BMAD** (Build-Measure-Analyze-Decide) — The product development cycle: build a feature, measure how it performs, analyze results, decide next steps
+- **GSD** (Get Stuff Done) — Pragmatism over process; useful for early prototypes and discovery phases
+- **SDD** (Specification-Driven Development) — Specs are written before code; the spec is the contract
+
+**Tier 2: Quality-Focused**
+- **TDD** (Test-Driven Development) — Write tests first, implement to pass tests
+- **BDD** (Behavior-Driven Development) — Tests express business behavior in human-readable language (Given/When/Then)
+- **DDD** (Domain-Driven Development) — Code is organized around domain concepts; developers deeply understand the business domain
+
+**Tier 3: Architecture & Scale**
+- **CQRS** (Command Query Responsibility Segregation) — Read and write operations use different data models; useful when read and write patterns diverge dramatically
+- **Event Sourcing** — All changes are recorded as immutable events; current state is derived from the event stream
+- **Saga Pattern** — Long-running distributed transactions are coordinated as a series of local transactions with compensating actions
+
+**Tier 4: Resilience & Safety**
+- **LOSA** (Layers of Observation, Simulation, Adaptation) — Multi-layer safety: observe system behavior, simulate failures, adapt based on observations
+- **Chaos Engineering** — Deliberately break things in production to understand failure modes before they cause customer impact
+- **Circuit Breaker Pattern** — Monitoring + automatic degradation: detect failure patterns and fail fast rather than waiting for timeout
+
+**Tier 5-6: Advanced**
+- **Declarative Infrastructure** — Infrastructure is code; immutable and version controlled
+- **Observability Engineering** — Metrics, logs, traces are first-class concerns built into architecture from the start
+
+### How to Choose the Right Methodology
+
+The decision tree is simple:
+
+**Step 1: What's the stakes?**
+- Low (prototype, internal tool) → GSD + BMAD
+- Medium (production service, moderate risk) → SDD + TDD + BDD
+- High (financial system, healthcare, irreversible actions) → Add DDD, CQRS, Chaos Engineering
+
+**Step 2: How fast does it need to evolve?**
+- Very fast (startup MVP) → Minimize process, maximize iteration
+- Moderate (steady-state product) → SDD + TDD for predictability
+- Stable (mature system) → Maximize observability and resilience; accept slower iteration
+
+**Step 3: How critical is correctness?**
+- Correctness doesn't matter much (entertainment, content generation) → GSD works
+- Correctness matters (data consistency, financial accuracy) → Require tests and specs
+- Correctness is non-negotiable (life-safety, regulatory) → DDD, CQRS, Chaos Engineering, full observability
+
+### Plan-First Methodology
+
+From Boris Cherny's observations on production code: **"Once the plan is good, the code is good."** This is the single highest-leverage principle across all tiers.
+
+The pattern:
+1. **Write the specification** — What are we building? What are the success criteria? What are the constraints?
+2. **Design the interface** — What does the code expose? What are the inputs and outputs?
+3. **Plan the implementation** — Break it into small, verifiable steps (TDD calls these "tests," but the structure is the same)
+4. **Implement** — Execute the plan; each step produces code that passes the corresponding test
+5. **Refactor** — Now that it works, make it clean
+
+The cognitive science: Writing the plan forces you to think deeply about the problem before you start coding. This eliminates rework. Coders who skip the plan spend more time debugging than coders who plan thoroughly.
+
+**Implementation:** Use specs-first workflows (Section 9 of *Mental Models* covers this). Spec first, then tests, then code. The spec is the contract; the tests verify the contract is met; the code implements it.
+
+---
+
+## 12. Dual-Instance Planning
+
+> **Adapted from:** Claude Code Ultimate Guide by Florian Bruniaux (CC BY-SA 4.0)
+
+When building complex agents or features, splitting the work into a **Planner** and an **Implementer** significantly improves quality. The Planner's job is pure strategic thinking; the Implementer's job is execution.
+
+### The Pattern
+
+**Planner instance:**
+- Writes the specification, design document, and implementation plan
+- Designs the system architecture and component interactions
+- Reviews the implementer's work against the spec
+- Never implements code; only reviews it
+
+**Implementer instance:**
+- Reads the plan and builds exactly what the plan says
+- Can suggest refinements to the plan, but the planner approves
+- Tests extensively; writes code that passes tests
+- Never diverges from the plan without planner approval
+
+### When It Pays Off
+
+The overhead is ~$100–200/month in token costs (running two instances instead of one). It pays off when:
+
+- **Complexity is high** — More than 2,000 lines of code, multiple components interacting
+- **Correctness is critical** — Financial code, security-sensitive code, complex business logic
+- **You want better code reviews** — The planner catches architectural issues; the implementer catches implementation bugs
+
+**Cost-benefit:** Dual-instance planning breaks even after 2–3 correction cycles. If you would normally need to fix architectural mistakes by hand, the planner catches them at the design stage and saves more time than it costs.
+
+### Quality-Over-Speed Decision Matrix
+
+| Scenario | Single Instance | Dual Instance |
+|----------|---|---|
+| Prototype, low risk | ✓ Faster | ✗ Overkill |
+| Feature, medium risk | Mixed | ✓ Recommended |
+| Complex feature, high risk | ✗ Error-prone | ✓ Strongly recommended |
+| Critical system, regulatory | ✗ Insufficient | ✓ Essential |
+
+**Implementation:**
+- Start with a single instance writing the spec
+- Once the spec is solid, switch to dual instance (planner reviews, implementer builds)
+- If reviews reveal major architectural issues, the planner revises the spec
+- The implementer tests and iterates until the code passes the plan
+
+---
+
+## 13. Event-Driven Agents
+
+> **Adapted from:** Claude Code Ultimate Guide by Florian Bruniaux (CC BY-SA 4.0)
+
+Most agents are **pull-based**: they wake up when a user asks a question, retrieve information, and respond. Event-driven agents are **push-based**: they listen to external events (Linear cards being created, PRs being opened, CI/CD pipelines finishing, database changes) and act on those events autonomously.
+
+### The Pattern
+
+External event sources (Linear, GitHub, Slack, databases) emit events. An agent subscribes to those events, decides whether to act, and executes actions. The cycle is:
+
+1. **Event arrives** — A card is assigned, a PR is created, a test fails, a database query completes
+2. **Agent detects event** — Via webhook, polling, or event stream subscription
+3. **Agent evaluates** — Does this event require my action? Is it aligned with my constraints?
+4. **Agent acts** — Execute the appropriate action (create a task, leave a comment, run a cleanup, post to Slack)
+5. **Cycle repeats**
+
+### Key Guardrails
+
+**Idempotency:** An agent must be safe to run multiple times on the same event without producing duplicate actions. Use idempotency keys: every action is tagged with a unique identifier. Before acting, check if the action was already taken.
+
+**Concurrency limits:** If multiple events arrive simultaneously, the agent shouldn't spawn a thousand parallel operations. Implement a queue with bounded concurrency (e.g., "process at most 5 events in parallel").
+
+**Circuit breaker:** If the agent fails repeatedly on the same event, it should stop trying and escalate. Don't let it retry infinitely; that's how runaway costs happen.
+
+**Self-reinforcing loops:** An agent's action can trigger another event, which triggers the agent again. This is useful for iterative refinement, but implement a depth limit: "after 3 rounds of refinement, stop and ask for human input."
+
+### Real Examples
+
+**Continuous document generation:** A webhook fires when a KB doc is updated. The agent regenerates related diagrams, cheatsheets, and Q&A. Users always see consistent, up-to-date artifacts.
+
+**Auto-remediation:** Monitoring system detects a spike in error rate. The agent automatically checks logs, identifies the issue, rolls back the most recent deployment, and posts a summary to Slack. Human reviews and approves the action.
+
+**PR review bot:** When a PR is created, the agent analyzes the code, runs linters, checks for security issues, and leaves comments. No human needed until the PR is ready for merge.
+
+---
+
+## 14. Team AI Coordination
+
+> **Adapted from:** Claude Code Ultimate Guide by Florian Bruniaux (CC BY-SA 4.0)
+
+As teams grow beyond 3–5 developers, using a single shared agent configuration becomes unwieldy. Different developers have different needs: Alice needs security-focused guidance, Bob needs infrastructure expertise, Charlie needs to understand data pipelines. Team AI Coordination uses **profile-based module assembly** to give each developer a customized agent.
+
+### The Pattern
+
+A **profile** is a YAML file that describes a developer's role and tools. The profile assembles reusable modules:
+- Shared modules (everyone uses these: basic Python linting, git helpers)
+- Role-specific modules (security modules for Alice, infrastructure modules for Bob)
+- Skill modules (optional domain knowledge: "ML systems" module, "payment processing" module)
+
+When a developer starts their session, a script reads their profile and assembles a customized agent configuration.
+
+### Four Components
+
+**1. Shared modules** — Reusable instruction sets: Python best practices, git workflow, testing patterns, code review checklists.
+
+**2. YAML profiles** — Role definitions:
+```yaml
+developer:
+  name: alice
+  role: security-engineer
+  modules:
+    - shared/python
+    - shared/git
+    - security/threat-modeling
+    - security/owasp
+    - database/access-control
+```
+
+**3. Skeleton template** — A base prompt that every agent gets, regardless of profile. It establishes tone and fundamental constraints.
+
+**4. Assembler script** — Reads the profile, loads the modules in the right order, and constructs the final system prompt.
+
+### Why This Works
+
+**Scalability:** With centralized management, you update a module once and every developer using that module benefits.
+
+**Consistency:** All developers follow the same patterns; no silos where one team has better processes than another.
+
+**Specialization:** Security engineers get security-focused guidance; infrastructure engineers get infrastructure-focused guidance. The same underlying system, customized to context.
+
+**Maintenance:** 59% token reduction compared to a single bloated agent configuration that tries to handle everything. Only load the knowledge needed for the current role.
+
+**Zero drift:** The YAML files are the source of truth. Developers can't accidentally diverge because they're executing a shared assembly, not managing individual configs.
+
+### When to Adopt
+
+**Scaling threshold:** Teams with 5+ developers or multi-tool scenarios (some developers use Claude Code, others use GitHub Copilot, others use custom tools).
+
+**Before threshold:** A single shared configuration with optional toggles is simpler.

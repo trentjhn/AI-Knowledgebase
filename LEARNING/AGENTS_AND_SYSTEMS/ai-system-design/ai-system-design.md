@@ -773,6 +773,105 @@ The serving pipeline uses Anyscale's `rollout` command with a declarative `serve
 
 ---
 
+## 13. Production Safety Rules & Non-Negotiable Constraints
+
+> **Adapted from:** Claude Code Ultimate Guide by Florian Bruniaux (CC BY-SA 4.0)
+
+Six rules that separate systems you can ship from systems that will break in production. Each rule has a "why" and multiple implementation strategies. The hardest part: these rules require you to enforce them before they're intuitive.
+
+### The Six Non-Negotiable Rules
+
+**Rule 1: Port Stability — Nothing Gets New Port Numbers**
+
+The problem: Developers add a new service, pick a random port (5050, 8765, 9090), and deploy. Within weeks, the system has 20 different ports. Operations can't manage it. Firewall rules become unmaintainable. New team members have no idea which port serves what.
+
+The rule: Every service port is reserved at initialization and frozen. If a service needs a port, it claims it once — during onboarding — and keeps it permanently.
+
+Implementation options:
+- **Deny by default** — A reserved port registry (PORTS.md or a YAML file) is the source of truth. New code must claim a port through a PR that updates the registry. Hook: pre-commit hook validates that no other service claims the same port.
+- **Automated assignment** — A service initialization script reads a config file and assigns ports sequentially (8000, 8001, 8002...). Prevents conflicts by construction.
+- **Infrastructure-level lock** — DNS or container orchestration (Kubernetes) makes the port stable regardless of where the service runs.
+
+**Rule 2: Database Safety — Schema Changes Are Immutable**
+
+The problem: A developer modifies a column type, deploys, and half the data is corrupted. Or migrations are rolled back non-deterministically. Or prod uses a different schema than staging.
+
+The rule: Database schemas are versioned. Every change is a new migration. Migrations are forward-only — never destructive in place. Rollbacks create new migrations, not reversions.
+
+Implementation options:
+- **Alembic + pre-commit** — Schema changes generate migrations through SQLAlchemy. A pre-commit hook runs migrations locally to verify they work before commit. A GitHub action runs full schema verification against a clean staging database.
+- **GitOps schema** — The source of truth is `schema.sql` in git. Any production schema change is first tested against a test database, then a git commit and merge to main triggers the deployment. The git history is the audit trail.
+- **Immutable migration lock** — Once a migration is deployed to prod, it becomes read-only. Any rollback creates a new migration file. This prevents the "run old migration downward" trap.
+
+**Rule 3: Feature Completeness — Features Must Be Tested Before Touching Prod**
+
+The problem: Features go to production half-finished. The backend is done, but the frontend isn't. Or the API works but the database isn't initialized. Or the new feature works but no one tested the rollback scenario.
+
+The rule: A feature is either fully ready or not in production. Staging and production must have identical code and identical data schemas.
+
+Implementation options:
+- **Feature flags with enforcement** — Features are hidden behind flags. The flag is checked at the entry point (middleware, authorization layer). A hook prevents merge to main unless the feature is either fully implemented or wrapped in an off-by-default flag.
+- **Pre-flight testing checklist** — Deployment requires a checklist: migrations run, feature tests pass, rollback scenario tested, documentation updated, observability logging added. Automation checks as much as possible; humans verify the rest.
+- **Staging == Prod** — Data schemas must be identical (same column types, same constraints). Infrastructure must be identical (same database version, same caching layer). Deploy to staging, run full integration tests, then deploy the exact same code and data to prod.
+
+**Rule 4: Infrastructure Lock — Infrastructure Is Code, Not Configuration**
+
+The problem: A developer manually spins up a new database instance or changes load balancer settings via the console. The change isn't in git. A month later, someone else deletes it by accident. Or no one remembers why it was set up that way.
+
+The rule: Infrastructure is declared in code — Terraform, CloudFormation, Docker Compose — and version controlled. Manual infrastructure changes are forbidden. Any change goes through code review.
+
+Implementation options:
+- **Terraform as source of truth** — All infrastructure (servers, databases, networks, security groups) is defined in `.tf` files in git. Manual changes are detected by diffs (`terraform plan`). A pre-commit hook prevents commits that don't match real infrastructure.
+- **GitOps deployment** — A git commit to `infrastructure/` triggers an automatic plan/apply cycle. The robot applies changes, not humans. The git log is the audit trail.
+- **Policy-as-code enforcement** — Tools like OPA (Open Policy Agent) enforce rules: "all databases must have backups enabled," "all servers must have security patches," "all storage must be encrypted." Violations prevent deployment.
+
+**Rule 5: Dependency Safety — Dependency Upgrades Require Tests**
+
+The problem: A transitive dependency updates and introduces a breaking change. Or a library patches a known CVE. Developers panic about whether it's safe to upgrade. No one knows which code actually uses this library.
+
+The rule: Dependencies are pinned by exact version. Upgrades are intentional, reviewed, and tested. Scanning for security updates is automated.
+
+Implementation options:
+- **Exact version pinning + lock files** — `requirements.txt` and `package-lock.json` are sacred. No floating versions. Upgrades are done explicitly via `pip freeze` → review → commit. Pre-commit hook validates that versions are pinned.
+- **Dependabot + CI/CD** — Dependabot creates PRs for dependency updates automatically. The CI/CD pipeline runs the full test suite. Only if tests pass is the PR mergeable.
+- **Supply chain scanning** — `pip audit`, npm audit, or Snyk scans for known vulnerabilities. Security updates are applied automatically (to a staging branch first). The scan report is part of deployment approval.
+
+**Rule 6: Pattern Following — Code Must Fit the Established Shape**
+
+The problem: Developer A follows the established service pattern (API layer, business logic layer, data layer). Developer B bypasses the pattern and puts business logic directly in the API route handler. Developer C adds a new service that breaks the module naming convention.
+
+The rule: The codebase has an established shape. New code must fit that shape. Deviations require justification and approval.
+
+Implementation options:
+- **Linting + code generation** — Define the pattern in a style guide. Enforce it with linters (ESLint, Pylint, Clippy). For complex patterns, provide generators: `generate-service --name=auth` produces a new service with the right directory structure, imports, and boilerplate.
+- **Architecture decision records (ADRs)** — The patterns are documented in `docs/adr/`. New code is reviewed against the relevant ADRs. If it doesn't fit, the reviewer asks: "Should we add a new pattern to the ADRs?" or "Does this really need to be an exception?"
+- **Template-based generation** — Use cookiecutters or scaffolding tools. New modules are generated from templates that embed the pattern. Developers can't deviate without explicitly editing the template (which requires justifying the deviation).
+
+### The Verification Paradox
+
+**The observation:** As AI systems become more capable and reliable, you would expect human code review to become less important. But the opposite happens: human review becomes *more* critical.
+
+**Why:** As AI-generated code becomes more sophisticated, humans develop false confidence in it. They skip reading it carefully. They trust it more than they trust code from junior developers. This is a systematic bias — we calibrate our skepticism based on past experience. When something is usually right, we review it less carefully. This is correct for expert human code but backward for AI code.
+
+**The problem:**
+- Hallucinations become harder to spot (a nonsensical function name is obvious; a subtly wrong business logic is not)
+- Errors become more subtle (off-by-one errors, edge case handling, state mutation bugs)
+- Human review quality *degrades* with each successful AI generation
+
+**The solution:** Don't rely on human review to catch AI errors. Build automated safety systems that catch errors *before* code reaches humans.
+
+**Concrete practices:**
+1. **Type checking** — Strict static analysis (Mypy, TypeScript strict mode, Pylint). Types catch entire classes of bugs automatically.
+2. **Comprehensive tests** — AI code should be tested more thoroughly, not less. Test-driven development is non-negotiable.
+3. **Linting + formatting** — Automated style checking catches obvious mistakes (undefined variables, unused imports, syntax errors).
+4. **Property-based testing** — Generate thousands of test cases automatically and verify that invariants hold. This catches edge cases humans won't think of.
+5. **Code coverage requirements** — Enforce that new code maintains a high coverage threshold. Tools like Coverage.py or Codecov prevent under-tested code from being merged.
+6. **Automated security scanning** — SAST (static application security testing) tools like Semgrep and Checkmarx find security vulnerabilities before code review.
+
+**The final rule:** Assume human review is fallible. Build systems where automated checks do 80% of the catching, and human review is the 20% that catches what automation missed.
+
+---
+
 ## Sources
 
 - [AI Engineering (Chip Huyen, O'Reilly, 2025)](https://www.oreilly.com/library/view/ai-engineering/9781098166298/) — Architecture patterns, RAG, agents, evaluation, model routing

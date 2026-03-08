@@ -71,7 +71,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,000+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,270 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -86,12 +86,15 @@ Prerequisites: Complete FOUNDATIONS first.
 | 842–1269 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
 | 1270–1525 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
 | 1526–1726 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
-| **NEW:** | Agent Orchestration Patterns: sub-agent context problem, iterative retrieval, sequential phase orchestration |
-| **NEW:** | Agent Abstraction Tierlist: Tier 1 (easy wins) vs. Tier 2 (high skill floor) |
+| 1967–2058 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
+| 2060–2130 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
+| 2131–2185 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
+| 2186–2225 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
+| 2226–2270 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/ai-system-design.md (1,200+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/ai-system-design.md (897 lines)
 
 **Architectural patterns for AI systems at scale**
 
@@ -102,8 +105,8 @@ Prerequisites: Complete FOUNDATIONS first.
 | 413–678 | Data pipelines: ingestion, processing, retrieval, monitoring |
 | 679–834 | Observability: logging, tracing, alerting, metrics |
 | 835–1000 | Scalability: caching, batching, parallel processing, resource management |
-| 1001–1200 | Trade-offs: cost vs. quality, latency vs. accuracy, consistency vs. availability |
-| **NEW:** | Model Selection & Cost Trade-offs: Opus/Sonnet/Haiku routing, subagent optimization, 75% cost reduction example |
+| 776–799 | MLOps Engineering Patterns: reproducibility, hyperparameter optimization |
+| 800–897 | Production Safety Rules: 6 non-negotiable rules (port stability, database safety, feature completeness, infrastructure lock, dependency safety, pattern following) + Verification Paradox |
 
 ---
 
