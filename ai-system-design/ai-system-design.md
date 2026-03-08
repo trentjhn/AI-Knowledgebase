@@ -290,6 +290,76 @@ Traditional software testing assumes determinism — same input, same output, ev
 
 Martin Fowler (2025): "As software products using generative AI move from proof-of-concepts into production systems, evals play a central role in ensuring that non-deterministic systems operate within sensible boundaries."
 
+### Model Selection & Cost Trade-offs
+
+**The Model Hierarchy**
+
+Modern LLM pricing has created a clear three-tier hierarchy. Until recently, model choice dominated everything — get the biggest, most capable model and most problems would resolve. That's no longer true. The cost differences between tiers are significant, but more importantly, *capability per dollar* has inverted: smaller models now solve more problems per dollar than the largest models.
+
+**Tier 1: Frontier Models (Opus, GPT-4 Turbo)**
+- Cost: ~$15 per million output tokens (Opus 4.6)
+- Best for: Complex reasoning, architectural decisions, first-time attempts at hard problems, security-critical code
+- Why use: Highest capability floor. If you're not sure whether a problem is solvable with a smaller model, start here to validate it's possible. Then potentially downgrade.
+- Typical use: Limit to 10-20% of your inference volume (only the hard problems)
+
+**Tier 2: Mid-Tier Models (Sonnet, GPT-4o)**
+- Cost: ~$3-5 per million input tokens, $15 per million output tokens (Sonnet 4.6)
+- Best for: 90% of coding tasks, multi-step workflows, general reasoning, most feature implementation
+- Why use: Best value-to-capability ratio in practice. Capable enough to handle complex work but costs only 20% of Opus. Empirically, Sonnet catches its own mistakes and self-corrects better than smaller models.
+- Typical use: Default model for most work. Only upgrade to Opus if first attempt fails.
+
+**Tier 3: Fast Models (Haiku)**
+- Cost: ~$0.80 per million input tokens, $4 per million output tokens (Haiku 4.5)
+- Best for: Repetitive tasks with clear instructions, classification, routing, multi-agent "worker" nodes, high-throughput scenarios
+- Why use: 5× cheaper than Opus. Fast. Good enough for well-defined, low-ambiguity work.
+- Typical use: Orchestrators, classifiers, sub-agents doing routine work in parallel.
+
+**The Subagent Architecture Cost Optimization Pattern**
+
+The key insight: **delegate to the cheapest sufficient model at each step.** In a multi-step workflow:
+- Routing step → Haiku (classify input, decide which expert to invoke)
+- Expert reasoning → Sonnet (most work happens here)
+- Quality check → Sonnet (verify output meets criteria)
+- Explanation generation → Haiku (convert structured result to text)
+
+This achieves significant cost reduction without sacrificing quality: a workflow that used Opus for every step might cost $0.50 per task. The same workflow with intelligent model routing might cost $0.15 per task. 70% savings from one architectural decision.
+
+**Cost-Benefit Decision Framework**
+
+When choosing a model, ask:
+
+| Question | If Yes | If No |
+|---|---|---|
+| Is this the first attempt at this type of task? | Use Opus | Use Sonnet/Haiku |
+| Does this task genuinely require complex reasoning? | Use Sonnet minimum | Probably use Haiku |
+| Is the task well-defined with clear success criteria? | Use Haiku | Use Sonnet/Opus |
+| Will this be called 1000s of times? | Use Haiku/Sonnet | Opus is fine |
+| Is there a financial penalty for wrong answers? | Use Opus for validation | Sonnet is enough |
+
+**Real-World ROI Example (from Anthropic production data)**
+
+A company processing 10,000 documents per day where each document needs to be classified, summarized, and fact-checked:
+
+Using Opus for all steps:
+- 10,000 docs × 3 steps × $0.015 per step = $450/day = $164K/year
+
+Using hybrid (Haiku for classification, Sonnet for summarization, Sonnet for fact-check):
+- 10,000 × (Haiku: $0.001 + Sonnet: $0.005 + Sonnet: $0.005) = $110/day = $40K/year
+
+Same quality output (probably better, because each model does its specific job), **75% cost reduction**.
+
+**When Model Choice is NOT a Cost Decision**
+
+Important caveat: for many internal tools and low-volume tasks, the cost difference between models is trivial relative to engineering time.
+
+- Analyst spending 2 hours per week using an AI tool: $100/week in API costs is irrelevant vs. $2,000+ in engineer loaded cost.
+- Development team doing code review: $50/month in API costs is not the constraint.
+- Production feature serving 1000 users per day at <10 requests per user: Opus vs. Haiku is a $10-50/month decision.
+
+The cost optimization pattern above applies when: (1) high volume (>1K queries/day), (2) thin margins (batch processing, cost-per-request economics), or (3) cost-sensitive deployments (consumer products, edge compute).
+
+For everything else, choose the model that makes you the most productive. Upgrade to Opus if it saves 30 minutes of debugging per week.
+
 ---
 
 ## 5. Data Architecture for AI Systems
