@@ -1415,6 +1415,117 @@ A useful diagnostic: if an agent keeps failing at the same step, ask whether the
 
 ---
 
+### Agent Orchestration Patterns
+
+When you move from single agents to multi-agent systems, you need explicit patterns for how agents communicate, pass work between each other, and handle failures. This is called **agent orchestration** — the discipline of coordinating multiple specialized agents toward a shared goal.
+
+**The Sub-Agent Context Problem**
+
+Multi-agent systems face a fundamental architectural challenge: each sub-agent exists in isolation, with limited context about why it was invoked. The orchestrator has semantic understanding (the "why"), but sub-agents only get the literal query (the "what"). This mismatch causes sub-agents to produce summaries that miss key details the orchestrator needed.
+
+Example: An orchestrator asks a research sub-agent, "Find information on user retention factors." The sub-agent doesn't know the full context — is this for a B2B SaaS company? A social platform? A games studio? Each would need different research, but the sub-agent receives no hint. It returns a generic summary that the orchestrator then has to iterate on.
+
+**The Iterative Retrieval Pattern**
+
+The solution is to treat sub-agent returns as *provisional summaries that might need follow-up questions*, not final answers:
+
+```
+1. Orchestrator dispatches query + objective to sub-agent
+2. Sub-agent returns summary
+3. Orchestrator evaluates: "Is this sufficient?"
+4. If no: ask targeted follow-up questions
+5. Sub-agent refetches data, returns clarified summary
+6. Loop until sufficient (max 3 cycles to prevent infinite loops)
+```
+
+This transforms the architecture from "one-shot delegation" to "iterative refinement." The cost is higher (more back-and-forth), but the quality is dramatically better because the sub-agent eventually understands what the orchestrator actually needs.
+
+**Sequential Phase Orchestration**
+
+The most robust multi-agent pattern structures work as sequential phases, with a shared artifact flowing between them:
+
+```
+Phase 1: RESEARCH (Explore Agent)
+├─ Gather context from codebase
+├─ Identify patterns
+└─ Output: research-summary.md
+
+Phase 2: PLAN (Planning Agent)
+├─ Read research-summary.md
+├─ Create implementation spec
+└─ Output: plan.md
+
+Phase 3: IMPLEMENT (Build Agent)
+├─ Read plan.md
+├─ Write tests first (TDD)
+├─ Implement code
+└─ Output: code changes + test results
+
+Phase 4: REVIEW (Review Agent)
+├─ Read plan.md and code changes
+├─ Evaluate against spec
+└─ Output: review comments
+
+Phase 5: VERIFY (Verification Agent)
+├─ Run test suite
+├─ Fix failures or escalate
+└─ Output: test results (pass/fail)
+```
+
+Each agent receives one clear input and produces one clear output. The outputs become inputs for the next phase. This prevents context contamination where multiple agents are trying to work from partially-understood shared state.
+
+**Design discipline for orchestration:**
+
+1. **One clear input per agent** — The agent knows exactly what is being asked. Include both the specific query AND the broader objective context.
+2. **One clear output per agent** — Define the exact format (markdown, JSON, code file). Parsing failures downstream multiply quickly.
+3. **Shared artifact progression** — Files (like a `plan.md` or `research-summary.md`) become the "source of truth" that flows through phases. All agents reference the same artifact, preventing divergence.
+4. **Phase gates** — Before transitioning to the next phase, verify the previous phase's output is acceptable. If not, loop within that phase rather than pushing forward with bad data.
+5. **Max iterations** — Set hard limits on how many times you'll loop (usually 3). If a phase can't succeed in 3 iterations, escalate rather than retrying infinitely.
+
+---
+
+### Agent Abstraction Tierlist
+
+Not all agent patterns are equally accessible or necessary. Some agent architectures have high skill floors — they require deep understanding of orchestration, context management, and failure modes. Others are straightforward wins with minimal complexity.
+
+This tierlist helps you choose: **start in Tier 1, only graduate to Tier 2 when you have mastery and a genuine need.**
+
+**Tier 1: Easy Wins (Pick These First)**
+
+These patterns have low skill floors and deliver high value-to-complexity ratio. Most teams should start here.
+
+- **Subagents** — Delegate specialized tasks to focused agents (2-3 independent tasks max). "Use one agent for research, one for coding, one for review." High value because it isolates context and reduces failure surface. Low complexity because each agent is simple and independent. *Start here* if moving from single-agent to multi-agent.
+
+- **Metaprompting** — Use a cheap prompt to "pre-think" what a more expensive prompt should do. "Before running the code-writing prompt, spend a cheap prompt thinking through the design." High value because it improves the main agent's reasoning without adding agents. Low complexity because it's just better prompt discipline.
+
+- **Better scoping questions** — Ask the user more at the beginning instead of iterating. "Before I start, tell me: Is this for internal use or customer-facing? What's the context?" Eliminates mid-task pivots. No code complexity; pure communication improvement.
+
+- **Plan documents as shared state** — Agents read from a shared plan file rather than from oral instructions. Reduces ambiguity, enables parallelism, makes failures debuggable. Very low code complexity; big leverage from better structure.
+
+**Tier 2: High Skill Floor (Graduate Only When Ready)**
+
+These patterns unlock powerful capabilities but require deep understanding of agent failure modes, orchestration, and state management. The cost of getting them wrong is high.
+
+- **Long-running agents** — Agents that execute over hours or days, accumulating context and recovering from failures. Requires careful memory management, session lifecycle understanding, and ability to diagnose failures from limited logs. *When to use:* Long-running projects, overnight batch jobs, agents that need to learn from previous runs. *When NOT to use:* Simple one-shot tasks (Tier 1 subagents are better).
+
+- **Parallel multi-agent systems** — Multiple agents working simultaneously on the same codebase or shared state. Requires isolation via git worktrees, careful merging strategy, and ability to debug race conditions where two agents write conflicting changes. High variance in outcomes. *When to use:* Large, well-segmented tasks where agents can work independently. *When NOT to use:* Highly interdependent tasks (agents need to constantly sync state).
+
+- **Role-based multi-agent systems** — Agents that take on personas ("you are the security expert," "you are the performance specialist") and collaborate. Requires careful prompt engineering to prevent agents from contradicting each other or inventing false consensus. Fails badly when assumptions about role expertise are wrong. *When to use:* Design reviews, architecture decisions where multiple perspectives matter. *When NOT to use:* Most feature implementation (simpler patterns work better).
+
+- **Computer-use agents** — Agents that control the mouse and keyboard, navigate GUIs, interact with web apps, manage terminals. Very early paradigm (as of 2025), requires wrangling. Low success rates on complex tasks. *When to use:* GUI automation, testing against unfamiliar systems where API access isn't available. *When NOT to use:* As a replacement for APIs or programmatic interfaces (subagents are more reliable).
+
+**The Graduation Rule**
+
+You're ready to graduate to Tier 2 when:
+1. You have successfully deployed a Tier 1 pattern in production
+2. You've debugged at least one non-trivial failure
+3. The current pattern is genuinely the bottleneck (not just "wouldn't it be cool to...")
+4. You can articulate why the specific Tier 2 pattern solves the problem better than Tier 1
+
+If you answer "I don't know" to any of those, stay in Tier 1. The patterns there scale further than most teams realize, and mastering them is worth more than superficially trying advanced patterns.
+
+---
+
 ## 8. Practices
 
 ### Debugging Agents
