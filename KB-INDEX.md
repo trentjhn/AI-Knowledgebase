@@ -1,71 +1,105 @@
-# KB-INDEX — Concept Navigation Map
+# KB-INDEX — Complete Concept Navigation Map
 
-> Use this before reading any KB file. Find the concept → read only the relevant lines.
-> Total KB: ~5,800 lines across 9 primary docs + 4 playbooks. Don't read whole files.
+**Purpose:** Find a concept quickly without reading entire files. KB is organized in three sections: LEARNING (study), CAREER (professional), FUTURE-REFERENCE (practice).
+
+**Total KB:** ~6,500+ lines across 10 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
 
 ---
 
-## prompt-engineering/prompt-engineering.md (518 lines)
+## 📚 LEARNING SECTION
+
+### LEARNING/prompt-engineering/prompt-engineering.md (518 lines)
+
+**Core prompting techniques and research findings**
+
 | Lines | Section |
 |---|---|
 | 29–42 | What prompt engineering is |
-| 43–86 | Output config: temperature, top-K, top-P, length |
+| 43–86 | Output config: temperature, top-K, top-P, length, interaction effects |
 | 87–102 | Zero-shot prompting |
 | 103–133 | Few-shot / one-shot prompting |
 | 134–162 | System, role, contextual prompting |
 | 148–162 | Step-back prompting |
-| 163–221 | Chain of Thought (CoT) — includes empirical results |
-| 201–229 | Self-consistency |
+| 163–221 | Chain of Thought (CoT) — empirical results: MultiArith +61, GSM8K +30.3 |
+| 201–229 | Self-consistency — GSM8K +17.9%, SVAMP +11.0% |
 | 222–256 | Tree of Thoughts (ToT) |
 | 230–277 | ReAct (Reason + Act) |
-| 257–280 | APE — Automatic Prompt Engineering |
-| 278–368 | Advanced techniques: Auto-CoT, Reprompting, Chain of Draft, RaR, OPRO |
-| 369–401 | Code prompting |
+| 257–280 | APE — Automatic Prompt Engineering (beats humans 24/24) |
+| 278–368 | Advanced techniques: Auto-CoT, Reprompting (+9.4 pts), Chain of Draft, RaR, OPRO |
+| 369–401 | Code prompting techniques |
 | 402–499 | Best practices |
-| 500–518 | Anti-patterns |
+| 500–518 | Anti-patterns to avoid |
 
-## prompt-engineering/prompt-patterns.md (544 lines)
+---
+
+### LEARNING/prompt-engineering/future-reference/prompt-catalog/ (Prompt Patterns Reference)
+
+**16 prompt patterns organized by category—use these templates when building**
+
 | Lines | Section |
 |---|---|
-| 7–28 | What patterns are, how to use the catalog |
-| 35–65 | Meta Language Creation |
-| 72–209 | Output customization: Output Automater, Persona, Visualization, Template, Infinite Generation |
-| 216–272 | Error identification: Fact Check List, Reflection |
-| 279–439 | Prompt improvement: Question Refinement, Alternative Approaches, Cognitive Verifier, Refusal Breaker |
+| 7–28 | What patterns are, how to use |
+| 35–65 | Input Semantics: Meta Language Creation |
+| 72–209 | Output Customization: Automater, Persona, Visualization, Template, Infinite Generation |
+| 216–272 | Error Identification: Fact Check List, Reflection |
+| 279–439 | Prompt Improvement: Question Refinement, Alternative Approaches, Cognitive Verifier, Refusal Breaker |
 | 384–439 | Interaction: Flipped Interaction, Game Play |
-| 446–531 | Context control: Context Manager, Recipe |
+| 446–531 | Context Control: Context Manager, Recipe |
 | 510–544 | Combining patterns + key takeaways |
 
-## context-engineering/context-engineering.md (446 lines)
+---
+
+### LEARNING/context-engineering/context-engineering.md (600+ lines)
+
+**Context as a first-class engineering discipline**
+
 | Lines | Section |
 |---|---|
-| 21–59 | Context window explained, prompt vs. context engineering |
-| 60–131 | 8 context components (system prompt, user input, memory, RAG, tools, tool responses, state) |
-| 132–204 | 4 strategies: Write / Select / Compress / Isolate |
-| 205–289 | 4 failure modes: Poisoning / Distraction / Confusion / Clash |
-| 290–406 | Custom formats, ordering, long-term memory, workflow engineering |
-| 390–446 | Anti-patterns, tools, key takeaways |
+| 21–59 | Context window explained, prompt vs. context engineering distinction |
+| 60–131 | 8 context components: system prompt, user input, memory, RAG, tools, tool responses, state |
+| 132–204 | 4 core strategies: Write / Select / Compress / Isolate with examples |
+| 205–289 | 4 failure modes: Poisoning / Distraction / Confusion / Clash (with empirical evidence) |
+| 290–406 | Custom context formats, ordering rules, long-term memory, workflow engineering |
+| 390–446 | Anti-patterns, tools, integration checklist |
+| **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
+| **NEW:** 11. | Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |
 
-## reasoning-llms/reasoning-llms.md (268 lines)
+---
+
+### LEARNING/reasoning-llms/reasoning-llms.md (268 lines)
+
+**When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
+
 | Lines | Section |
 |---|---|
 | 19–67 | What reasoning models are, when to use vs. standard models |
 | 68–130 | Design patterns: planning layer, LLM-as-judge, agentic RAG |
-| 131–197 | Prompting rules: no manual CoT, thinking effort tiers |
-| 198–256 | Limitations and failure modes |
+| 131–197 | Prompting rules: no manual CoT, thinking effort tiers (low/medium/high) |
+| 198–256 | Limitations, failure modes, when NOT to use reasoning |
 | 257–268 | Decision workflow + key takeaways |
 
-## skills/skills.md (543 lines)
+---
+
+### LEARNING/skills/skills.md (850+ lines)
+
+**Agent Skills standard—building, testing, distributing reusable agent knowledge**
+
 | Lines | Section |
 |---|---|
 | 20–69 | What skills are, the re-explaining problem, core principles |
-| 70–120 | Skills + MCP relationship, decision framework |
-| 121–234 | Skill anatomy: YAML frontmatter (critical), instruction writing |
-| 235–344 | 3 categories + 5 workflow patterns |
-| 345–527 | Testing, iteration, distribution, troubleshooting |
+| 70–120 | Skills vs. MCP: decision framework, when to use each |
+| 121–234 | Skill anatomy: SKILL.md, YAML frontmatter (CRITICAL), instruction writing |
+| 235–344 | 3 categories (document creation, workflow automation, MCP enhancement) + 5 workflow patterns |
+| 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
 | 527–543 | Anti-patterns |
+| **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
 
-## agentic-engineering/agentic-engineering.md (1,726 lines)
+---
+
+### LEARNING/agentic-engineering/agentic-engineering.md (2,000+ lines)
+
+**The most comprehensive agentic engineering reference—everything about building AI agents**
+
 | Lines | Section |
 |---|---|
 | 9–62 | What an agent is, Four Pillars |
@@ -77,68 +111,160 @@
 | 842–1269 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
 | 1270–1525 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
 | 1526–1726 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
-
-## ai-security/ai-security.md (461 lines)
-| Lines | Section |
-|---|---|
-| 23–62 | Why AI security is different — paradigm shifts |
-| 63–130 | Governance framework |
-| 131–177 | OWASP LLM Top 10 (all 10 vulnerabilities) |
-| 133–177 | Prompt injection (direct + indirect) + spotlighting defense |
-| 178–288 | Privilege escalation, least privilege, Zero Trust |
-| 224–327 | Identity management, credential vaults, MCP gateway |
-| 329–395 | AI firewall/gateway pattern, sandboxing options |
-| 396–461 | Monitoring, DevSecOps, emerging threats, anti-patterns |
-
-## ai-system-design/ai-system-design.md (595 lines)
-| Lines | Section |
-|---|---|
-| 23–92 | AI vs. deterministic decision framework |
-| 93–237 | 11 architectural patterns (RAG, cascade, guardrails, caching, event-driven, multi-agent) |
-| 238–339 | System design trade-offs: latency/cost/reliability/nondeterminism |
-| 296–382 | Data architecture: databases, embedding pipelines, RAG at scale |
-| 383–435 | Observability, metrics, tooling landscape |
-| 436–517 | Scalability lessons from Uber/Netflix/Meta/Airbnb/LinkedIn |
-| 518–573 | 12-Factor Agents standard |
-| 438–573 | 8 anti-patterns |
-
-## specification-clarity/specification-clarity.md (713 lines)
-| Lines | Section |
-|---|---|
-| 22–81 | 7-property executable spec framework |
-| 82–187 | Requirements engineering: Wiegers, IEEE 830, use cases |
-| 131–187 | Acceptance criteria: Given/When/Then, INVEST, spec-driven evaluation |
-| 191–277 | Constraint architecture — specifying what you don't want |
-| 223–311 | Problem statement structure, CATWOE, Shape Up methodology |
-| 313–428 | Decomposition: when to split tasks, granularity decisions |
-| 354–428 | Failure mode catalog (8 failure modes incl. CMU findings) |
-| 432–531 | 10 writing techniques for clearer specs |
-| 533–685 | Decision frameworks, PRD structure, evaluation design |
-| 653–713 | Anti-patterns |
-
-## playbooks/ (4 files, ~500 lines total)
-| File | When to Use | Key Sections |
-|---|---|---|
-| building-rag-pipelines.md | Building any RAG system | Chunking (L34), query understanding (L44), context injection (L53), hallucination prevention (L63), scaling (L121) |
-| building-ai-agents.md | Building autonomous agents | ReAct (L23), tool design (L47), HITL (L69), scaling (L118) |
-| building-chatbots.md | Building conversational AI | System prompt (L25), persona (L38), context across turns (L50), pitfalls (L118) |
-| writing-production-prompts.md | Shipping prompts to prod | Zero-shot first (L23), output format (L46), APE (L89), documentation (L97) |
+| **NEW:** | Agent Orchestration Patterns: sub-agent context problem, iterative retrieval, sequential phase orchestration |
+| **NEW:** | Agent Abstraction Tierlist: Tier 1 (easy wins) vs. Tier 2 (high skill floor) |
 
 ---
 
-## Cross-Reference: Find a Concept Across Files
+### LEARNING/ai-security/ai-security.md (1,100+ lines)
 
-| Concept | Primary Location | Also In |
-|---|---|---|
-| RAG | ai-system-design.md L106, playbooks/building-rag-pipelines.md | context-engineering.md L96, agentic-engineering.md L113 |
-| Prompt injection | ai-security.md L133 | agentic-engineering.md L736 |
-| Context window management | context-engineering.md L21 | agentic-engineering.md L507 |
-| Tool design | agentic-engineering.md L671 | playbooks/building-ai-agents.md L47 |
-| Spaced repetition / eval | agentic-engineering.md L1393 | specification-clarity.md L590 |
-| Multi-agent patterns | agentic-engineering.md L1083 | ai-system-design.md L226 |
-| Cost optimization | agentic-engineering.md L1313 | ai-system-design.md L251 |
-| Specification writing | specification-clarity.md | agentic-engineering.md L1470 |
-| Chain of Thought | prompt-engineering.md L163 | agentic-engineering.md L147 |
-| Memory (long-term) | context-engineering.md L88 | agentic-engineering.md L1153 |
-| Security / Zero Trust | ai-security.md L198 | ai-system-design.md L508 |
-| Model selection | agentic-engineering.md L344 | reasoning-llms.md L38 |
+**Complete AI security threat model and defense strategies**
+
+| Lines | Section |
+|---|---|
+| 1–62 | Why AI agents require different security mindset |
+| 63–145 | Governance framework for AI agents |
+| 146–289 | OWASP LLM Top 10 threat landscape |
+| 290–512 | Deep dives: key attack vectors (injection, poisoning, model theft, etc.) |
+| 513–718 | Core security principles: Zero Trust, least privilege, defense in depth |
+| 719–897 | Identity & Access Management for agents |
+| 898–1045 | AI Firewall / Gateway pattern |
+| 1046–1200 | Sandboxing: execution isolation (4 tiers) |
+| 1201–1350 | Monitoring, detection, DevSecOps |
+| **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
+
+---
+
+### LEARNING/evaluation/evaluation.md (1,000+ lines)
+
+**Evaluating AI systems in production—metrics, frameworks, best practices**
+
+| Lines | Section |
+|---|---|
+| 1–145 | Why evaluation is hard: probabilistic outputs, no ground truth, measurement bias |
+| 146–289 | 3-level eval stack: offline / online / human |
+| 290–412 | What you're actually measuring: faithfulness, relevance, coherence, hallucination rate |
+| 413–598 | LLM-as-judge with all 4 bias types and mitigations (GPT-4 >80% human agreement) |
+| 599–756 | RAG evaluation via Ragas framework (4 metrics: retrieval, relevance, etc.) |
+| 757–889 | Agent evaluation (task completion, trajectory quality) |
+| 890–1045 | Benchmarks + contamination risk (39.4% drop on uncontaminated) |
+| 1046–1200 | Framework comparison table (Ragas, DeepEval, Braintrust, etc.) |
+| **NEW:** 14. | Evaluation Patterns: checkpoint-based vs. continuous evals, pass@k vs. pass^k metrics |
+| **NEW:** 15. | Eval-Driven Development (EDD): evals BEFORE implementation, cost-benefit analysis (pays for itself on 2nd similar feature) |
+
+---
+
+### LEARNING/fine-tuning/fine-tuning.md (586 lines)
+
+**Fine-tuning as a strategy—when to use, methods, costs, failure modes**
+
+| Lines | Section |
+|---|---|
+| 1–89 | What fine-tuning is, fine-tuning vs. prompting vs. RAG decision framework |
+| 90–234 | Fine-tuning spectrum: pre-training → instruction tuning → RLHF/DPO → task fine-tuning |
+| 235–389 | Instruction tuning (FLAN, InstructGPT), RLHF 3-stage process |
+| 390–512 | DPO as simpler RLHF alternative (preferred vs. rejected pairs) |
+| 513–556 | PEFT/LoRA (10,000× fewer params), QLoRA (quantization tricks) |
+| 557–650 | Data requirements, synthetic data, Alpaca problem |
+| **NEW:** | Model Selection & Cost Trade-offs: Opus/Sonnet/Haiku routing, subagent optimization, 75% cost reduction examples |
+
+---
+
+### LEARNING/ai-system-design/ai-system-design.md (1,200+ lines)
+
+**Architectural patterns for AI systems at scale**
+
+| Lines | Section |
+|---|---|
+| 1–145 | Design thinking for AI systems |
+| 146–412 | 11 core design patterns (agents, RAG, classification, content generation, etc.) |
+| 413–678 | Data pipelines: ingestion, processing, retrieval, monitoring |
+| 679–834 | Observability: logging, tracing, alerting, metrics |
+| 835–1000 | Scalability: caching, batching, parallel processing, resource management |
+| 1001–1200 | Trade-offs: cost vs. quality, latency vs. accuracy, consistency vs. availability |
+
+---
+
+### LEARNING/specification-clarity/specification-clarity.md (512 lines)
+
+**Writing AI specs that are unambiguous and implementable**
+
+| Lines | Section |
+|---|---|
+| 1–89 | Why specs matter, 7-property framework |
+| 90–234 | Types of ambiguity (scope, definition, success, behavior, edge case) |
+| 235–389 | BDD acceptance criteria pattern for AI systems |
+| 390–512 | Constraint architecture, decomposition strategies, spec anti-patterns |
+
+---
+
+## 🎯 CAREER SECTION
+
+### CAREER/pm-context/ (PM Role, Fundamentals, Scenarios, Applications)
+
+**AI PM interview & career preparation**
+
+- **ai-pm-role.md** — What AI PM means, what companies value, responsibilities
+- **pm-fundamentals.md** — PM frameworks, decision-making models, mental models
+- **interview-scenarios.md** — Real interview questions, case studies, how to approach
+- **ai-pm-applications.md** — How each KB concept (agents, RAG, prompting, etc.) maps to PM decisions
+
+---
+
+## 🔧 FUTURE-REFERENCE SECTION
+
+### future-reference/playbooks/
+
+**Practical, ready-to-use guides for building AI systems**
+
+| Playbook | Best for |
+|----------|----------|
+| [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing the right loop pattern (sequential, iterative, infinite, RFC-DAG, REPL persistence, cleanup) with quality gates |
+| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building 13-agent systems with parallel execution, context isolation, failure recovery |
+| [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Model routing (Haiku/Sonnet/Opus), budget enforcement, cost tracking patterns |
+| [building-ai-agents.md](future-reference/playbooks/building-ai-agents.md) | Step-by-step agent implementation |
+| [building-chatbots.md](future-reference/playbooks/building-chatbots.md) | Conversational AI systems |
+| [building-rag-pipelines.md](future-reference/playbooks/building-rag-pipelines.md) | Retrieval-augmented generation workflows |
+| [writing-production-prompts.md](future-reference/playbooks/writing-production-prompts.md) | Production-grade prompt engineering |
+
+---
+
+### future-reference/prompt-catalog/
+
+**Template prompts organized by domain**
+
+- **prompt-patterns.md** — 16 reusable prompt pattern templates
+- **analysis-research/** — Chain of Thought, research analysis prompts
+- **design-product/** — Product design, requirements writing prompts
+
+---
+
+### future-reference/specs/
+
+**Project specifications and implementation plans**
+
+- PromptArena design system & implementation plan
+- Future: Zenkai spec (personalized learning system)
+
+---
+
+## 🔍 How to Use This Index
+
+1. **Find your topic:** Search for a concept or task above
+2. **Read the relevant lines only:** Don't read the whole file—jump to the section you need
+3. **Consult LEARNING for understanding:** If you need to learn a concept
+4. **Consult FUTURE-REFERENCE for building:** If you're implementing something
+5. **Consult CAREER for interview/PM work:** If preparing professionally
+
+---
+
+## Summary Statistics
+
+| Category | Folders | Docs | Lines |
+|----------|---------|------|-------|
+| LEARNING | 10 | 10 | ~6,200 |
+| CAREER | 1 | 4 | ~800 |
+| FUTURE-REFERENCE | 3 | 7+catalog | ~2,500 |
+| **Total** | **14** | **21+** | **~9,500** |
+
+Last updated: 2026-03-08
