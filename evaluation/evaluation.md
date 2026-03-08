@@ -800,3 +800,197 @@ DoorDash has documented one of the more detailed public accounts of this approac
 17. [LLM Benchmarks: MMLU, HellaSwag, and Beyond — Confident AI](https://www.confident-ai.com/blog/llm-benchmarks-mmlu-hellaswag-and-beyond) — Practical guide to major benchmarks, what they measure, and their limitations.
 
 18. [Anthropic Model Card and Red Teaming — Anthropic](https://www.anthropic.com/claude-2-model-card) — Anthropic's transparency documentation on model evaluation, red teaming methodology, and safety measurement using Constitutional AI.
+
+---
+
+## 15. Eval-Driven Development (EDD) Framework
+
+**Adapted from [everything-claude-code](https://github.com/affaan-m/everything-claude-code)**
+
+Eval-Driven Development is a discipline where **evals are written BEFORE implementation**, and every change is validated against those evals. It's the AI equivalent of Test-Driven Development (TDD).
+
+### The EDD Workflow
+
+```
+Step 1: DEFINE SUCCESS CRITERIA
+├─ What does "done" look like?
+├─ Write eval rubric (3-5 specific criteria)
+└─ Create test dataset (10-20 examples)
+   Example: Feature Implementation
+   ├─ "Passes all unit tests"
+   ├─ "No type errors"
+   ├─ "Performance < 100ms"
+   └─ "Code complexity score < 10"
+
+Step 2: BASELINE (Optional)
+├─ Run evals on current system (if it exists)
+├─ Record baseline scores
+└─ Understand "how bad is the problem?"
+
+Step 3: IMPLEMENT
+├─ Build feature/fix
+├─ Run evals continuously (not just at end)
+└─ Get signal immediately when regression happens
+
+Step 4: ITERATE
+├─ If evals fail → diagnose and fix
+├─ If evals improve → commit and continue
+└─ If stuck after 2 iterations → escalate
+
+Step 5: REVIEW & MERGE
+├─ Final eval run: confirm criteria met
+├─ Compare to baseline: measure improvement
+└─ Merge only if all evals pass
+```
+
+### EDD vs. Traditional Development
+
+| Aspect | Traditional | EDD |
+|---|---|---|
+| **When evals are written** | After implementation (if at all) | Before implementation |
+| **Eval frequency** | Rarely, before release | Continuously during implementation |
+| **Signal quality** | Late (found issues after code written) | Early (issues caught as they appear) |
+| **Code confidence** | Low (untested until late) | High (validated constantly) |
+| **Iteration cost** | High (rework late in cycle) | Low (caught and fixed early) |
+
+### Example: EDD for a Summarization Feature
+
+**Step 1: Define Evals**
+
+```python
+evals = {
+    "summary_length": {
+        "criterion": "Summary is 50-200 words",
+        "check": lambda summary: 50 <= len(summary.split()) <= 200,
+        "weight": 0.2
+    },
+    "contains_key_points": {
+        "criterion": "Summary mentions all 3+ key points from source",
+        "check": lambda summary, source: has_key_points(summary, source),
+        "weight": 0.3
+    },
+    "readability": {
+        "criterion": "Flesch reading ease > 60 (readable)",
+        "check": lambda summary: flesch_kincaid(summary) > 60,
+        "weight": 0.2
+    },
+    "factuality": {
+        "criterion": "No claims contradict source (factual accuracy > 0.9)",
+        "check": lambda summary, source: factuality_score(summary, source) > 0.9,
+        "weight": 0.3
+    }
+}
+
+test_cases = [
+    ("source1.txt", "reference_summary1.txt"),
+    ("source2.txt", "reference_summary2.txt"),
+    # ... 10-20 total
+]
+```
+
+**Step 2: Baseline**
+
+If you have an existing summarizer:
+```
+Run evals on current implementation:
+├─ Length: 0.95 (95% of summaries in range)
+├─ Key points: 0.72 (72% contain required points)
+├─ Readability: 0.68
+├─ Factuality: 0.85
+└─ Weighted score: 0.80
+```
+
+**Step 3: Implement + EDD Loop**
+
+```
+Attempt 1: Initial implementation
+├─ Run evals
+├─ Score: 0.62 (worse than baseline!)
+├─ Issue: "Key points score is 0.40 (dropped from 0.72)"
+└─ Action: Analyze failure cases, fix
+
+Attempt 2: Improved logic
+├─ Run evals
+├─ Score: 0.75 (getting closer)
+├─ Issue: "Factuality is 0.78, target is 0.90"
+└─ Action: Add fact-check step
+
+Attempt 3: With fact-checking
+├─ Run evals
+├─ Score: 0.85 (matches baseline!)
+├─ Issue: None critical
+└─ Action: Ready for review
+```
+
+**Step 4: Review**
+
+Human reviews:
+- Did quality improve? (0.80 → 0.85 ✓)
+- Any regressions? (No ✓)
+- Code quality OK? (Yes ✓)
+→ Merge
+
+### Key EDD Disciplines
+
+**1. Eval Early & Often**
+
+Don't wait until "implementation is done." Run evals after every meaningful change:
+- After first skeleton → catches obvious failures
+- After every feature add → prevents regression
+- Before every commit → gate quality
+
+**2. Prioritize High-Signal Evals**
+
+Not all evals are equal. Focus on the 3-5 that correlate with actual quality:
+```
+High-signal:
+├─ Passes test cases with known right answers
+├─ Doesn't crash or timeout
+├─ Matches success criteria
+
+Low-signal:
+├─ "Code is elegant" (subjective)
+├─ "I like this" (opinion)
+├─ Generic performance metrics (often noisy)
+```
+
+**3. Understand Failure Modes**
+
+When eval fails, diagnose the root cause:
+```
+Eval: "Factuality > 0.9" fails with score 0.75
+└─ Root cause could be:
+   ├─ Model hallucinating new facts (prompt issue)
+   ├─ Not enough source context (context issue)
+   ├─ Fact-checker is too strict (eval issue)
+   └─ Source is ambiguous (data issue)
+   
+Different root cause → different fix
+```
+
+**4. Gate Merges**
+
+Only merge if evals pass:
+```
+Merge checklist:
+├─ [ ] All custom evals pass (≥ threshold)
+├─ [ ] No regression vs. baseline
+├─ [ ] Code review approved
+└─ [ ] Tests pass
+```
+
+### EDD Cost vs. Benefit
+
+Cost:
+- Writing evals: 2-3 hours per feature
+- Running evals: 30-60 seconds per iteration
+- Total per feature: 4-6 hours
+
+Benefit:
+- Catches regressions immediately (vs. days/weeks later)
+- Prevents shipping low-quality features
+- Enables confident refactoring
+- Builds eval suite for future validation
+- ROI: Pays for itself on 2nd similar feature
+
+---

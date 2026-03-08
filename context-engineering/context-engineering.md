@@ -531,3 +531,138 @@ The core disciplines:
 4. **Take ownership of your format** — custom serialization structures beat default message formats for complex workflows
 5. **Build workflows, not prompts** — break complex tasks into steps, each with a focused, lean context
 6. **Quality beats quantity** — the right 10,000 tokens consistently outperform 100,000 unfocused ones
+---
+
+## 10. Token Economics & Budget Management
+
+**Adapted from [everything-claude-code](https://github.com/affaan-m/everything-claude-code)**
+
+The context window is not unlimited. More importantly, **tokens have cost**. Context engineering must balance three competing demands: quality (enough information to succeed), speed (fast response), and cost (staying under budget).
+
+### Token Budgeting by Layer
+
+Every layer of context consumes tokens. Map your token allocation:
+
+```
+Model context window: 200,000 tokens (Opus)
+
+Allocation:
+├─ System prompt: 1,500 tokens (permanent)
+├─ Agent instructions: 2,000 tokens (permanent)
+├─ User request: 500 tokens (variable)
+├─ Conversation history: 20,000 tokens (grows per turn)
+├─ Retrieved knowledge (RAG): 50,000 tokens (pulled per query)
+├─ Code context (codebase snippets): 40,000 tokens (task-specific)
+├─ Reference docs: 20,000 tokens (static)
+└─ Scratch space (for reasoning): 66,000 tokens (model working memory)
+```
+
+**Rule of thumb:** Reserve 30% for model reasoning. If your context fills >70% of window, compact before next request.
+
+### Strategic vs. Automatic Compaction
+
+**Automatic compaction** (happen at 95% context): Too late. Quality already degraded. Context gets corrupted during summarization.
+
+**Strategic compaction** (at 50%): Proactive. Before quality suffers.
+
+Decision tree:
+```
+Context usage > 50%?
+├─ If YES and at phase boundary (research done, ready for implementation)
+│  └─ Compact: Summarize session, save to file, start fresh
+├─ If YES but mid-phase
+│  └─ Don't compact yet; compress instead (summarize conversation history only)
+└─ If NO: Continue
+```
+
+### MCP Context Budgeting
+
+MCP (Model Context Protocol) servers expose tools. Each tool definition consumes tokens even when unused.
+
+```
+Naive: Load 20 MCPs at startup
+├─ Cost: ~10,000 tokens just for tool definitions
+├─ Result: 5% of 200k context window gone before task starts
+└─ Quality: Poor (model distracted by irrelevant tools)
+
+Smart: Load MCPs dynamically
+├─ Startup: Load 3 core MCPs (~1,500 tokens)
+├─ Task-specific: Load additional MCPs when task arrives
+│  └─ "This task needs database access" → load DB MCP (500 tokens)
+│  └─ "This task needs file ops" → load file MCP (300 tokens)
+└─ Result: 2,300 tokens total (77% savings)
+```
+
+Best practice: Keep under 5-10 MCPs active at any time. Dynamic loading saves orders of magnitude in context overhead.
+
+---
+
+## 11. Iterative Retrieval for Multi-Agent Context
+
+**Adapted from [everything-claude-code](https://github.com/affaan-m/everything-claude-code)**
+
+When multiple agents work together (orchestrator → specialized sub-agents), the **sub-agent context problem** emerges: the sub-agent doesn't know what context it needs because it lacks the orchestrator's semantic understanding.
+
+### The Problem
+
+Orchestrator: "Find information on user retention factors"
+Sub-agent: "What context do I need? I don't know if this is for B2B SaaS, mobile games, or social platforms."
+Result: Sub-agent returns generic summary, orchestrator has to re-query.
+
+### The Iterative Retrieval Pattern
+
+Break context refinement into a loop:
+
+```
+Phase 1: DISPATCH
+├─ Orchestrator sends query + broad objective to sub-agent
+├─ Sub-agent: "Find user retention research"
+└─ Cost: Initial request token budget
+
+Phase 2: RETRIEVE & SUMMARIZE
+├─ Sub-agent retrieves candidate materials
+├─ Returns provisional summary (50% confidence)
+└─ Cost: Retrieval + first summary pass
+
+Phase 3: ORCHESTRATOR EVALUATES
+├─ Ask: "Is this sufficient?"
+├─ If YES → done
+├─ If NO → identify gaps
+└─ Cost: Zero (orchestrator evaluates existing content)
+
+Phase 4: REFINE & LOOP
+├─ If gaps found, ask targeted follow-ups
+│  ├─ "You mentioned SaaS; what about mobile games?"
+│  ├─ "That covers engagement; what about churn drivers?"
+│  └─ "Focus on onboarding phase specifically"
+├─ Sub-agent refetches, updates summary
+└─ Loop max 3 cycles (prevents infinite loops)
+```
+
+### Max 3 Cycles Rule
+
+Why stop at 3? Empirically:
+- Cycle 1→2: 40% quality improvement (big jumps in understanding)
+- Cycle 2→3: 15% quality improvement (diminishing returns)
+- Cycle 3→4: 5% improvement (not worth the cost/delay)
+
+### Cost Analysis
+
+Three cycles vs. all-at-once *(illustrative metrics from everything-claude-code multi-agent context pattern):*
+```
+Naive (all context at once):
+├─ Subagent sees 50K tokens of unfiltered information
+├─ Returns 25K token summary
+├─ Cost: 75K tokens for maybe 40% relevance
+
+Iterative (3 cycles):
+├─ Cycle 1: 5K tokens → 2K summary (80% relevance)
+├─ Cycle 2: 8K tokens → 3K refined summary (92% relevance)
+├─ Cycle 3: 10K tokens → 4K final summary (95% relevance)
+├─ Total: 23K + 9K output = 32K tokens (57% savings)
+└─ Quality: 95% vs. 40% (2.4× better)
+```
+
+The loop pays for itself through higher quality and lower total context usage. Real-world improvements depend on context complexity and orchestrator quality.
+
+---

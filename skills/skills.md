@@ -658,3 +658,211 @@ Solutions:
 ---
 
 *Sources: Anthropic's "The Complete Guide to Building Skills for Claude" (PDF, 2025); agentskills.io (Agent Skills open standard); github.com/clasen/Skills SKILL.md (2025)*
+
+---
+
+## 14. Continuous Learning via Instincts (v2 Architecture)
+
+**Adapted from [everything-claude-code](https://github.com/affaan-m/everything-claude-code)**
+
+Skills are powerful but heavy: each one is 300-500 lines, structured formally, with versioning overhead. For rapid knowledge capture, you need something lighter: **instincts**.
+
+### What Are Instincts?
+
+An **instinct** is a micro-skill: a single, atomic behavior pattern with a confidence score (0.3-0.9). Instead of building a full 500-line skill after every learning, you capture atomic insights immediately, then promote them to skills only after confidence reaches threshold.
+
+**Instinct Example:**
+
+```yaml
+---
+name: avoid-eval-for-internal-paths
+confidence: 0.62
+category: error-handling
+trigger: ["error handling", "try-catch", "internal functions"]
+---
+
+# When to Avoid Error Handling
+
+For internal, trusted code paths (functions you control, within your codebase),
+avoid over-defensive error handling. Example:
+
+❌ BAD (unnecessary):
+```python
+result = my_internal_function(safe_arg)  # You wrote this function
+if result is None:  # But you check for None anyway
+    result = fallback
+```
+
+✓ GOOD (trust internal contracts):
+```python
+result = my_internal_function(safe_arg)  # Trust it works
+```
+
+Only handle errors at **system boundaries** (external APIs, user input, filesystem).
+```
+
+**Key properties:**
+- Atomic (one rule, not a procedure)
+- Scored (confidence: 0.62 = "pretty sure")
+- Lightweight (< 50 lines)
+- Triggerable (keywords to activate)
+
+### The Instinct Lifecycle
+
+```
+Stage 1: OBSERVATION (Confidence 0.3-0.4)
+├─ You solve a problem in a session
+├─ Agent catches the pattern
+├─ Create instinct: "Here's what worked"
+└─ Example: "Error handling inside custom code is waste"
+
+Stage 2: VALIDATION (Confidence 0.5-0.7)
+├─ Use instinct in 2-3 projects
+├─ Works most of the time?
+├─ Confidence increases: 0.5 → 0.7
+└─ If it fails, debug why (narrow the rule)
+
+Stage 3: PROMOTION (Confidence 0.8+)
+├─ Instinct proved useful in 3+ projects
+├─ Pattern stabilized
+├─ Promote to full skill (formalize, document, version)
+└─ Example: "Error Handling Patterns" skill
+
+Stage 4: ABSORPTION (Confidence 0.95)
+├─ Skill is so common it becomes implicit
+├─ Merge into system prompt or CLAUDE.md
+├─ Remove as separate skill (no longer needed)
+└─ Example: Now part of default "best practices"
+```
+
+### Implementation: Instinct YAML Format
+
+```yaml
+---
+name: pattern-identifier  # kebab-case, unique
+confidence: 0.65          # 0.0-1.0, updated per cycle
+category: coding | error-handling | performance | security | prompt-design
+triggers: ["keyword1", "keyword2"]  # When to activate
+phases: ["implementation", "review", "testing"]  # When in workflow
+project_count: 2          # How many projects has this helped?
+last_updated: 2026-03-08
+---
+
+# Human-Readable Pattern Name
+
+Short description (2-3 sentences) of the pattern and when it applies.
+
+## When to Use
+- Situation 1
+- Situation 2
+- NOT when: counter-example
+
+## Example
+[Code or explanation showing the pattern]
+
+## Why This Works
+Brief explanation of the underlying principle.
+```
+
+### Confidence Scoring
+
+How confidence evolves:
+
+```
+Instinct creation: confidence = 0.30 (guess)
+├─ Used in 1 project successfully: +0.15 → 0.45
+├─ Used in 2 projects, both succeed: +0.20 → 0.65
+├─ Used in 3 projects, all succeed: +0.25 → 0.90
+└─ Passed red-team / adversarial test: +0.10 → 1.00
+
+If it fails:
+├─ Narrow the rule: -0.10
+├─ Add exception clause: no change (more specific)
+└─ Abandon it: confidence stays but marked "under revision"
+```
+
+**Usage threshold:**
+- < 0.50: Private (only you use it)
+- 0.50-0.75: Project-scoped (share with team on this project)
+- 0.75-0.90: Global (recommend to other projects)
+- > 0.90: Promote to skill (formalize, version, document)
+
+### Storage & Activation
+
+**File structure:**
+
+```
+~/.claude/instincts/
+├─ error-handling/
+│  ├─ avoid-defensive-internals.yaml (0.65)
+│  ├─ wrap-system-boundaries.yaml (0.82)
+│  └─ use-custom-errors.yaml (0.71)
+├─ performance/
+│  ├─ lazy-load-large-contexts.yaml (0.78)
+│  └─ precompute-expensive-values.yaml (0.55)
+└─ prompt-design/
+   └─ structure-with-xml.yaml (0.88)
+```
+
+**Activation (via hook or agent trigger):**
+
+```
+When user's request mentions "error handling":
+├─ Scan instincts/ for matching `triggers`
+├─ Load instincts with confidence > 0.50
+├─ Inject into system prompt as "Known Patterns:"
+└─ Agent can apply or ignore (confidence tells it the strength)
+
+When agent finishes a task:
+├─ Log which instincts were mentioned/used
+├─ Update confidence based on success
+└─ If confidence jumped, flag for promotion
+```
+
+### Promotion: From Instinct to Skill
+
+When confidence reaches 0.85+:
+
+```
+OLD (Instinct):
+---
+name: use-custom-errors
+confidence: 0.88
+triggers: ["error", "exception", "catch"]
+---
+# Use Custom Error Classes
+Always define custom error classes (ApplicationError, APIError) instead of generic Exception.
+
+NEW (Skill):
+SKILL.md - "Error Handling Best Practices"
+
+## 1. Custom Error Classes
+Define domain-specific exceptions...
+[Full SKILL.md with references, examples, anti-patterns]
+
+CLAUDE.md inclusion:
+"When handling errors, always use custom classes from errors.py"
+```
+
+### Benefits Over Traditional Skills
+
+| Aspect | Skills Only | Instincts + Skills |
+|---|---|---|
+| **Capture speed** | Days (write full skill) | Seconds (YAML) |
+| **False positives** | Low (high bar to formalize) | Acceptable (0.3-0.7 OK) |
+| **Learning curve** | Agent learns from instances | Agent learns incrementally |
+| **Evolution** | Manual updates | Automatic confidence growth |
+| **Overhead** | High (500+ lines per skill) | Low (20-50 lines per instinct) |
+
+### Checklist: Instinct-Based Learning System
+
+- [ ] Create ~/.claude/instincts/ directory
+- [ ] Define instinct YAML format (confidence, triggers, category)
+- [ ] Set up hook to load instincts by trigger keywords
+- [ ] Log which instincts agent used in each session
+- [ ] Implement promotion logic (confidence > 0.85 → flag for skill)
+- [ ] Weekly review: promote mature instincts to skills
+- [ ] Deprecate: remove instincts that regress (confidence drops)
+- [ ] Document instinct evolution in session logs (learning history)
+
+---
