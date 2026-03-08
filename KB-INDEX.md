@@ -1,14 +1,16 @@
 # KB-INDEX — Complete Concept Navigation Map
 
-**Purpose:** Find a concept quickly without reading entire files. KB is organized in three sections: LEARNING (study), CAREER (professional), FUTURE-REFERENCE (practice).
+**Purpose:** Find a concept quickly without reading entire files. KB is organized by learning path: Foundations → Agents & Systems → Production.
 
-**Total KB:** ~6,500+ lines across 10 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
+**Total KB:** ~7,800 lines across 10 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
 
 ---
 
-## 📚 LEARNING SECTION
+## 📚 LEARNING / FOUNDATIONS — Core Concepts (Start Here)
 
-### LEARNING/prompt-engineering/prompt-engineering.md (518 lines)
+---
+
+### LEARNING/FOUNDATIONS/prompt-engineering/prompt-engineering.md (518 lines)
 
 **Core prompting techniques and research findings**
 
@@ -32,24 +34,7 @@
 
 ---
 
-### LEARNING/prompt-engineering/future-reference/prompt-catalog/ (Prompt Patterns Reference)
-
-**16 prompt patterns organized by category—use these templates when building**
-
-| Lines | Section |
-|---|---|
-| 7–28 | What patterns are, how to use |
-| 35–65 | Input Semantics: Meta Language Creation |
-| 72–209 | Output Customization: Automater, Persona, Visualization, Template, Infinite Generation |
-| 216–272 | Error Identification: Fact Check List, Reflection |
-| 279–439 | Prompt Improvement: Question Refinement, Alternative Approaches, Cognitive Verifier, Refusal Breaker |
-| 384–439 | Interaction: Flipped Interaction, Game Play |
-| 446–531 | Context Control: Context Manager, Recipe |
-| 510–544 | Combining patterns + key takeaways |
-
----
-
-### LEARNING/context-engineering/context-engineering.md (600+ lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (600+ lines)
 
 **Context as a first-class engineering discipline**
 
@@ -66,7 +51,7 @@
 
 ---
 
-### LEARNING/reasoning-llms/reasoning-llms.md (268 lines)
+### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (268 lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
 
@@ -80,23 +65,13 @@
 
 ---
 
-### LEARNING/skills/skills.md (850+ lines)
+## 📚 LEARNING / AGENTS & SYSTEMS — Building (Mid-Level)
 
-**Agent Skills standard—building, testing, distributing reusable agent knowledge**
-
-| Lines | Section |
-|---|---|
-| 20–69 | What skills are, the re-explaining problem, core principles |
-| 70–120 | Skills vs. MCP: decision framework, when to use each |
-| 121–234 | Skill anatomy: SKILL.md, YAML frontmatter (CRITICAL), instruction writing |
-| 235–344 | 3 categories (document creation, workflow automation, MCP enhancement) + 5 workflow patterns |
-| 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
-| 527–543 | Anti-patterns |
-| **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
+Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/agentic-engineering/agentic-engineering.md (2,000+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,000+ lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -116,26 +91,45 @@
 
 ---
 
-### LEARNING/ai-security/ai-security.md (1,100+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/ai-system-design.md (1,200+ lines)
 
-**Complete AI security threat model and defense strategies**
+**Architectural patterns for AI systems at scale**
 
 | Lines | Section |
 |---|---|
-| 1–62 | Why AI agents require different security mindset |
-| 63–145 | Governance framework for AI agents |
-| 146–289 | OWASP LLM Top 10 threat landscape |
-| 290–512 | Deep dives: key attack vectors (injection, poisoning, model theft, etc.) |
-| 513–718 | Core security principles: Zero Trust, least privilege, defense in depth |
-| 719–897 | Identity & Access Management for agents |
-| 898–1045 | AI Firewall / Gateway pattern |
-| 1046–1200 | Sandboxing: execution isolation (4 tiers) |
-| 1201–1350 | Monitoring, detection, DevSecOps |
-| **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
+| 1–145 | Design thinking for AI systems |
+| 146–412 | 11 core design patterns (agents, RAG, classification, content generation, etc.) |
+| 413–678 | Data pipelines: ingestion, processing, retrieval, monitoring |
+| 679–834 | Observability: logging, tracing, alerting, metrics |
+| 835–1000 | Scalability: caching, batching, parallel processing, resource management |
+| 1001–1200 | Trade-offs: cost vs. quality, latency vs. accuracy, consistency vs. availability |
+| **NEW:** | Model Selection & Cost Trade-offs: Opus/Sonnet/Haiku routing, subagent optimization, 75% cost reduction example |
 
 ---
 
-### LEARNING/evaluation/evaluation.md (1,000+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/skills/skills.md (850+ lines)
+
+**Agent Skills standard—building, testing, distributing reusable agent knowledge**
+
+| Lines | Section |
+|---|---|
+| 20–69 | What skills are, the re-explaining problem, core principles |
+| 70–120 | Skills vs. MCP: decision framework, when to use each |
+| 121–234 | Skill anatomy: SKILL.md, YAML frontmatter (CRITICAL), instruction writing |
+| 235–344 | 3 categories (document creation, workflow automation, MCP enhancement) + 5 workflow patterns |
+| 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
+| 527–543 | Anti-patterns |
+| **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
+
+---
+
+## 📚 LEARNING / PRODUCTION — Ship (Advanced)
+
+Prerequisites: Complete AGENTS_AND_SYSTEMS first.
+
+---
+
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1,000+ lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -154,38 +148,26 @@
 
 ---
 
-### LEARNING/fine-tuning/fine-tuning.md (586 lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1,100+ lines)
 
-**Fine-tuning as a strategy—when to use, methods, costs, failure modes**
-
-| Lines | Section |
-|---|---|
-| 1–89 | What fine-tuning is, fine-tuning vs. prompting vs. RAG decision framework |
-| 90–234 | Fine-tuning spectrum: pre-training → instruction tuning → RLHF/DPO → task fine-tuning |
-| 235–389 | Instruction tuning (FLAN, InstructGPT), RLHF 3-stage process |
-| 390–512 | DPO as simpler RLHF alternative (preferred vs. rejected pairs) |
-| 513–556 | PEFT/LoRA (10,000× fewer params), QLoRA (quantization tricks) |
-| 557–650 | Data requirements, synthetic data, Alpaca problem |
-| **NEW:** | Model Selection & Cost Trade-offs: Opus/Sonnet/Haiku routing, subagent optimization, 75% cost reduction examples |
-
----
-
-### LEARNING/ai-system-design/ai-system-design.md (1,200+ lines)
-
-**Architectural patterns for AI systems at scale**
+**Complete AI security threat model and defense strategies**
 
 | Lines | Section |
 |---|---|
-| 1–145 | Design thinking for AI systems |
-| 146–412 | 11 core design patterns (agents, RAG, classification, content generation, etc.) |
-| 413–678 | Data pipelines: ingestion, processing, retrieval, monitoring |
-| 679–834 | Observability: logging, tracing, alerting, metrics |
-| 835–1000 | Scalability: caching, batching, parallel processing, resource management |
-| 1001–1200 | Trade-offs: cost vs. quality, latency vs. accuracy, consistency vs. availability |
+| 1–62 | Why AI agents require different security mindset |
+| 63–145 | Governance framework for AI agents |
+| 146–289 | OWASP LLM Top 10 threat landscape |
+| 290–512 | Deep dives: key attack vectors (injection, poisoning, model theft, etc.) |
+| 513–718 | Core security principles: Zero Trust, least privilege, defense in depth |
+| 719–897 | Identity & Access Management for agents |
+| 898–1045 | AI Firewall / Gateway pattern |
+| 1046–1200 | Sandboxing: execution isolation (4 tiers) |
+| 1201–1350 | Monitoring, detection, DevSecOps |
+| **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
 
 ---
 
-### LEARNING/specification-clarity/specification-clarity.md (512 lines)
+### LEARNING/PRODUCTION/specification-clarity/specification-clarity.md (512 lines)
 
 **Writing AI specs that are unambiguous and implementable**
 
@@ -198,34 +180,53 @@
 
 ---
 
-## 🎯 CAREER SECTION
+### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (586 lines)
 
-### CAREER/pm-context/ (PM Role, Fundamentals, Scenarios, Applications)
+**Fine-tuning as a strategy—when to use, methods, costs, failure modes**
+
+| Lines | Section |
+|---|---|
+| 1–89 | What fine-tuning is, fine-tuning vs. prompting vs. RAG decision framework |
+| 90–234 | Fine-tuning spectrum: pre-training → instruction tuning → RLHF/DPO → task fine-tuning |
+| 235–389 | Instruction tuning (FLAN, InstructGPT), RLHF 3-stage process |
+| 390–512 | DPO as simpler RLHF alternative (preferred vs. rejected pairs) |
+| 513–556 | PEFT/LoRA (10,000× fewer params), QLoRA (quantization tricks) |
+| 557–650 | Data requirements, synthetic data, Alpaca problem |
+
+---
+
+## 🎯 CAREER — PM & Professional Development
+
+---
+
+### CAREER/pm-context/ (4 documents)
 
 **AI PM interview & career preparation**
 
-- **ai-pm-role.md** — What AI PM means, what companies value, responsibilities
+- **ai-pm-role.md** — What AI PM is, what companies value, responsibilities
 - **pm-fundamentals.md** — PM frameworks, decision-making models, mental models
 - **interview-scenarios.md** — Real interview questions, case studies, how to approach
 - **ai-pm-applications.md** — How each KB concept (agents, RAG, prompting, etc.) maps to PM decisions
 
 ---
 
-## 🔧 FUTURE-REFERENCE SECTION
+## 🔧 FUTURE-REFERENCE — Practical Tools
 
-### future-reference/playbooks/
+---
+
+### future-reference/playbooks/ (7 playbooks)
 
 **Practical, ready-to-use guides for building AI systems**
 
-| Playbook | Best for |
-|----------|----------|
-| [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing the right loop pattern (sequential, iterative, infinite, RFC-DAG, REPL persistence, cleanup) with quality gates |
-| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building 13-agent systems with parallel execution, context isolation, failure recovery |
-| [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Model routing (Haiku/Sonnet/Opus), budget enforcement, cost tracking patterns |
-| [building-ai-agents.md](future-reference/playbooks/building-ai-agents.md) | Step-by-step agent implementation |
-| [building-chatbots.md](future-reference/playbooks/building-chatbots.md) | Conversational AI systems |
-| [building-rag-pipelines.md](future-reference/playbooks/building-rag-pipelines.md) | Retrieval-augmented generation workflows |
-| [writing-production-prompts.md](future-reference/playbooks/writing-production-prompts.md) | Production-grade prompt engineering |
+| Playbook | Best for | Key Topics |
+|----------|----------|-----------|
+| [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
+| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery |
+| [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
+| [building-ai-agents.md](future-reference/playbooks/building-ai-agents.md) | Agent implementation | Step-by-step from scratch |
+| [building-chatbots.md](future-reference/playbooks/building-chatbots.md) | Conversational systems | Chatbot architecture and patterns |
+| [building-rag-pipelines.md](future-reference/playbooks/building-rag-pipelines.md) | RAG workflows | Retrieval-augmented generation patterns |
+| [writing-production-prompts.md](future-reference/playbooks/writing-production-prompts.md) | Production prompts | Crafting reliable prompts for deployment |
 
 ---
 
@@ -233,7 +234,7 @@
 
 **Template prompts organized by domain**
 
-- **prompt-patterns.md** — 16 reusable prompt pattern templates
+- **prompt-patterns.md** — 16 reusable prompt pattern templates (Output Automater, Persona, Visualization, etc.)
 - **analysis-research/** — Chain of Thought, research analysis prompts
 - **design-product/** — Product design, requirements writing prompts
 
@@ -258,13 +259,15 @@
 
 ---
 
-## Summary Statistics
+## Learning Path Quick Reference
 
-| Category | Folders | Docs | Lines |
-|----------|---------|------|-------|
-| LEARNING | 10 | 10 | ~6,200 |
-| CAREER | 1 | 4 | ~800 |
-| FUTURE-REFERENCE | 3 | 7+catalog | ~2,500 |
-| **Total** | **14** | **21+** | **~9,500** |
+| Phase | Topics | Lines | Time |
+|-------|--------|-------|------|
+| **FOUNDATIONS** | Prompt Eng, Context Eng, Reasoning | ~1,400 | 5h |
+| **AGENTS_AND_SYSTEMS** | Agentic Eng, System Design, Skills | ~4,000 | 9-10h |
+| **PRODUCTION** | Evaluation, Security, Specs, Fine-tuning | ~2,400 | 8-9h |
+| **CAREER** | PM preparation (4 docs) | ~800 | As needed |
+| **FUTURE-REFERENCE** | 7 playbooks + catalog + specs | ~2,500 | As needed |
+| **Total** | **10 learning topics + extras** | **~9,500** | **22-24h** |
 
 Last updated: 2026-03-08
