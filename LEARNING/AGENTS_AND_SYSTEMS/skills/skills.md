@@ -305,27 +305,71 @@ Key techniques: clear phase separation, explicit data passing between services, 
 
 Use when output quality improves with iteration — the agent produces a draft, evaluates it against quality criteria, improves it, and repeats until meeting a threshold.
 
+**Example: Report Generation**
 ```
-Draft → Quality Check (run validation script) → Identify Issues → Refine → Re-validate → Finalize
+## Initial Draft
+1. Fetch data via MCP
+2. Generate first draft report
+3. Save to temporary file
+
+## Quality Check
+1. Run validation script: `scripts/check_report.py`
+2. Identify issues:
+   - Missing sections
+   - Inconsistent formatting
+   - Data validation errors
+
+## Refinement Loop
+1. Address each identified issue
+2. Regenerate affected sections
+3. Re-validate
+4. Repeat until quality threshold met
+
+## Finalization
+1. Apply final formatting
+2. Generate summary
+3. Save final version
 ```
 
-Key techniques: explicit quality criteria the agent can evaluate against, validation scripts for objective checks, clear stopping conditions to prevent infinite loops.
+Key techniques: explicit quality criteria the agent can evaluate against, validation scripts for objective checks (not just subjective review), clear stopping conditions to prevent infinite loops, validation before iteration to avoid endless refinement cycles.
 
 ### Pattern 4: Context-Aware Tool Selection
 
-Use when the same outcome should be achieved via different tools depending on context.
+Use when the same outcome should be achieved via different tools depending on context. The skill embeds the decision logic so users don't have to.
 
+**Example: Smart File Storage**
 ```
-Decision tree:
-- Large file (>10MB): Use cloud storage MCP
-- Collaborative doc: Use Notion/Docs MCP
-- Code file: Use GitHub MCP
-- Temporary: Use local storage
+## Decision Tree
+1. Check file type and size
+2. Check collaboration needs
+3. Check access requirements
 
-Execute appropriate tool → Explain why that tool was chosen
+### Large files (>10MB)
+- Use cloud storage MCP
+- Generate shareable link
+- Apply service-specific metadata
+
+### Collaborative documents
+- Use Notion/Docs MCP
+- Create in team workspace
+- Set permissions based on context
+
+### Code files
+- Use GitHub MCP
+- Create in appropriate repo
+- Apply branch strategy
+
+### Temporary files
+- Use local storage
+- Auto-cleanup after task
+
+## Execute & Explain
+- Call appropriate MCP
+- Apply service-specific metadata
+- Explain why that tool was chosen
 ```
 
-Key techniques: clear decision criteria, defined fallback options, transparency with the user about which tool was selected and why.
+Key techniques: clear decision criteria based on context (file properties, user requirements, permissions), defined fallback options if primary choice fails, transparency about which tool was selected and why, service-specific handling to make tool choice effective.
 
 ### Pattern 5: Domain-Specific Intelligence
 
