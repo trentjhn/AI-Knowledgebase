@@ -218,12 +218,13 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### future-reference/playbooks/ (7 playbooks)
+### future-reference/playbooks/ (8 playbooks)
 
 **Practical, ready-to-use guides for building AI systems**
 
 | Playbook | Best for | Key Topics |
 |----------|----------|-----------|
+| [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
 | [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery |
 | [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
