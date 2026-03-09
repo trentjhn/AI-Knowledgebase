@@ -71,7 +71,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,270 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,603 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -91,6 +91,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 2131–2185 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
 | 2186–2225 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
 | 2226–2270 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
+| 2273–2603 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
 
 ---
 

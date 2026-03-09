@@ -34,6 +34,7 @@ This makes agents dramatically more powerful than chatbots — but also dramatic
 12. [Dual-Instance Planning](#12-dual-instance-planning)
 13. [Event-Driven Agents](#13-event-driven-agents)
 14. [Team AI Coordination](#14-team-ai-coordination)
+15. [Multi-Agent Shared Context & Query Routing](#15-multi-agent-shared-context--query-routing)
 
 ---
 
@@ -2268,3 +2269,335 @@ developer:
 **Scaling threshold:** Teams with 5+ developers or multi-tool scenarios (some developers use Claude Code, others use GitHub Copilot, others use custom tools).
 
 **Before threshold:** A single shared configuration with optional toggles is simpler.
+
+---
+
+## 15. Multi-Agent Shared Context & Query Routing
+
+> **Status:** Frontier problem. Not fully solved. Industry consensus emerging but no silver bullet yet.
+
+When you have multiple agents working on the same task, they need access to shared knowledge. But dumping your entire knowledge base into context is expensive (token bloat) and inefficient (noise). The alternative — **selective retrieval** — creates a harder problem: how do you know what to retrieve, and when?
+
+This is one of the most under-discussed challenges in multi-agent systems. Most teams encounter it in production and have to improvise solutions. Understanding the problem and tradeoffs is more valuable than pretending a magic solution exists.
+
+### The Core Problem: Query Routing Under Uncertainty
+
+Agent A is working on a task. It needs context. But:
+
+- **Query under-specification** — The agent doesn't know exactly what to ask for ("I need info about X" — but X is underspecified)
+- **Relevance uncertainty** — Even if the agent formulates a query, it doesn't know if the results will actually help
+- **Timing uncertainty** — Should it query now, or wait? Query early and you might retrieve docs that become stale. Query late and you might have already made a wrong decision.
+- **False negatives** — The agent doesn't think to query for something it needs (unknown unknowns)
+
+**Concrete failure:**
+```
+Agent A is designing a payment API.
+It thinks: "I need API design patterns"
+It queries KB: "API design"
+KB returns generic docs on REST, CRUD, etc.
+
+Agent A misses: "For payment systems, you must also check fraud flags before processing"
+That doc exists in KB but under "fraud detection" or "compliance" not "API design"
+Agent A never thought to query for fraud, so it didn't find it.
+
+Result: Agent ships incomplete design. You catch it in code review. Wasted time.
+```
+
+### Why This Is Hard: Four Fundamental Reasons
+
+**1. Query formulation is itself reasoning**
+
+To ask the right question, you need to already understand the problem deeply. But the point of querying is to *fill gaps* in understanding. This is circular.
+
+Example:
+```
+Junior engineer: "I need help with performance"
+Senior engineer: "Performance of what? Queries? Network? Rendering?"
+Junior engineer doesn't know, because they don't understand the problem deeply yet.
+
+Same thing happens with agent queries. The agent doesn't know what it doesn't know.
+```
+
+**2. Semantic matching is probabilistic, not deterministic**
+
+Vector databases use embedding similarity. But:
+```
+Agent queries: "How do we handle async operations?"
+KB has docs titled:
+- "Concurrency patterns" (0.87 similarity)
+- "Non-blocking I/O" (0.79 similarity)
+- "Task queues" (0.71 similarity)
+- "Threading best practices" (0.65 similarity)
+
+At what similarity threshold do you return results?
+If you set it at 0.80, you miss "Task queues."
+If you set it at 0.70, you get "Threading" which might not be relevant.
+```
+
+This is a signal/noise tradeoff. There's no universally correct threshold.
+
+**3. Timing creates a trilemma**
+
+You must choose one:
+
+| Approach | Pros | Cons |
+|---|---|---|
+| **Retrieve early** | All context available; no latency hits during reasoning | Docs might become stale; context bloat; you retrieve 50 docs to avoid missing 1 |
+| **Retrieve just-in-time** | Minimal context; up-to-date information | Latency hit every query; if KB is slow, agent is blocked; context keeps changing |
+| **Retrieve continuously** | Always current | Token explosion; unstable context (always changing); expensive |
+
+There's no solution that wins on all three dimensions.
+
+**4. Agents hallucinate queries (ask for docs that don't exist)**
+
+```
+Agent: "I need the 2024 security audit report"
+KB: No results found
+
+Agent then:
+Option A: Proceeds without the doc (incomplete reasoning)
+Option B: Hallucinates what was in the doc (confident false answer)
+Option C: Escalates to human
+
+Most agents do A or B. Neither is good.
+```
+
+---
+
+### What Actually Works Today (Honest Tradeoffs)
+
+**Option 1: Explicit Routing (Most Reliable)**
+
+You engineer the orchestration yourself:
+
+```python
+# Pseudo-code
+task = "Refactor authentication module"
+
+# Step 1: Agent thinks about the task
+agent_a = spawn_agent("architect", prompt=base_prompt)
+
+# Step 2: YOU decide what context is needed
+context = retrieve_from_kb(["auth-patterns", "security-best-practices"])
+
+# Step 3: Agent gets context, proceeds
+result = agent_a.work_on(task, context=context)
+
+# Step 4: At specific checkpoints, retrieve more context
+if step == "implementation":
+    context += retrieve_from_kb(["testing-patterns", "error-handling"])
+```
+
+**Pros:**
+- Predictable; no surprises
+- Debuggable; you see exactly what context each agent gets
+- Efficient; only retrieve what you know is needed
+
+**Cons:**
+- Not scalable; requires manual engineering per workflow
+- Brittle; if task changes, you need to update routing rules
+- Inflexible; agents can't ask for unexpected info
+
+**When to use:** Small number of well-defined workflows. High stakes (compliance, security). Teams with time to engineer orchestration.
+
+---
+
+**Option 2: LLM-Driven Routing (Most Flexible)**
+
+Let the agent decide when and what to retrieve:
+
+```python
+system_prompt = """
+You have access to a documentation KB.
+When you need information, use this format:
+QUERY_KB: <describe what you need>
+
+Example:
+"I need to understand rate-limiting strategies for APIs"
+QUERY_KB: rate limiting patterns for high-traffic APIs
+
+Then I will retrieve docs and feed them back.
+"""
+
+# Agent operates normally, occasionally emitting QUERY_KB requests
+# Orchestrator intercepts QUERY_KB, retrieves, feeds results back
+# Agent continues reasoning with new context
+```
+
+**Pros:**
+- Flexible; agents adapt to unexpected situations
+- Scalable; same approach works for many workflows
+- Reactive; agents ask for help when they realize they need it
+
+**Cons:**
+- Unreliable; agents often don't query when they should (confidence bias)
+- Costly; extra API calls for query decisions
+- Timing uncertainty; agent might proceed without context before realizing it needed it
+- Over-querying; agents sometimes query for things they can reason about themselves
+
+**Real-world problem:**
+```
+Agent A thinks: "I can figure this out based on my general knowledge"
+Agent A proceeds without querying
+Agent A makes a suboptimal decision
+Only at evaluation do you realize it needed context
+
+Versus:
+
+Agent B over-queries
+Agent B wastes tokens
+But Agent B gets the right answer
+
+Most teams find they can't tell which is happening until too late.
+```
+
+**When to use:** Exploratory workflows. Agents need autonomy. You have budget for extra queries. Evaluation is strong enough to catch errors.
+
+---
+
+**Option 3: Pre-Retrieval (Brute Force)**
+
+Retrieve all potentially relevant context upfront:
+
+```python
+task = "Design a payment system"
+
+# Retrieve everything that might be relevant
+all_relevant_docs = retrieve_from_kb([
+    "payment*",        # All payment-related docs
+    "compliance*",     # All compliance docs
+    "error-handling*", # All error handling docs
+    "security*"        # All security docs
+])
+
+# Dump into context
+context = f"Reference Documentation:\n{format_docs(all_relevant_docs)}"
+
+# Agent works with full context
+result = agent.work_on(task, context=context)
+```
+
+**Pros:**
+- Simple; no coordination logic
+- No timing issues; all info available upfront
+- No risk of missing context; agent has everything
+
+**Cons:**
+- Token explosion; you lose efficiency gains of retrieval
+- Noisy context; lots of irrelevant docs distract the agent
+- No scalability; this breaks with large knowledge bases
+
+**When to use:** Small knowledge bases. Agents are token-constrained anyway. Simplicity matters more than efficiency.
+
+---
+
+### How to Evaluate If It's Working
+
+You don't know until you measure:
+
+**1. Query quality** — Sample 20 agent queries and manually rate: was the query well-formed and relevant?
+```
+Good query: "What are the transaction rollback strategies for distributed payments?"
+Bad query: "Tell me about databases"
+```
+
+**2. Coverage** — Trace failures back to missing context. Did the agent miss relevant docs?
+```
+Agent designed payment system without checking compliance requirements.
+Was there a compliance doc the agent should have queried for?
+If yes, routing failed.
+```
+
+**3. Latency** — Measure wall-clock time for task completion. Did retrieval add significant overhead?
+```
+Task with explicit routing: 2.3 seconds
+Task with LLM-driven routing: 3.8 seconds (retrieval overhead)
+```
+
+**4. Token efficiency** — Compare token usage across approaches.
+```
+Pre-retrieval: 45K tokens (all docs upfront)
+Just-in-time: 28K tokens (selective retrieval)
+But just-in-time had 3 query misfires (agent asked for wrong things)
+```
+
+---
+
+### Real-World Failure Modes
+
+**Hallucinated queries:**
+```
+Agent: "QUERY_KB: how to implement JWT with RSA-4096 keys"
+KB: No docs on RSA-4096 specifically (only RSA-2048)
+Agent: Proceeds without results, hallucinates implementation
+Result: Security vulnerability
+```
+
+**Redundant retrieval:**
+```
+Agent A queries: "rate limiting patterns"
+Agent B (same task) queries: "rate limiting patterns"
+Same docs retrieved twice; wasted tokens
+```
+
+**Over-retrieval:**
+```
+Agent queries: "API design"
+KB returns: 47 docs
+Agent has to filter through signal/noise
+Likely missed relevant doc in the haystack
+```
+
+**Stale context:**
+```
+Agent retrieves docs at 10:00 AM
+Docs are updated at 10:15 AM
+Agent proceeds with stale info at 10:20 AM
+```
+
+---
+
+### Where the Industry Is
+
+**As of 2026:**
+
+1. **Most teams default to pre-retrieval** (Option 3) — It's simple and works, even if inefficient.
+
+2. **LLM-driven routing** (Option 2) is being researched but reliability is still unclear. Early results suggest agents under-query (~40% miss context they should have retrieved).
+
+3. **Explicit routing** (Option 1) is used by teams with high stakes and engineering resources (financial systems, healthcare).
+
+4. **Active research areas:**
+   - **Query prediction models** — Train classifiers to predict "does this agent need context on X?" But this requires labeled training data.
+   - **Adaptive retrieval** — Retrospectively retrieve context if agent makes mistakes, learn for next time.
+   - **Confidence-based retrieval** — Retrieve context when agent confidence is low. Problem: agent confidence is often uncalibrated.
+   - **Hierarchical routing** — Multi-level filtering (category → subcategory → docs) to reduce search space.
+
+---
+
+### Recommendation for Multi-Agent Systems
+
+**Start with explicit routing.** Build the orchestration manually for your specific workflows. You'll learn what context matters. Once you have patterns, you can generalize.
+
+**Then consider LLM-driven routing** only if:
+- Your workflows are too diverse for manual orchestration
+- You have strong evaluation to catch retrieval misses
+- Token budget is high enough to absorb over-querying
+
+**Avoid pre-retrieval** unless your knowledge base is small or context budget is already huge.
+
+---
+
+★ **Insight ─────────────────────────────────────**
+The multi-agent context problem is fundamentally a **prediction under uncertainty** problem. You're asking agents to predict what they'll need before they've fully reasoned through the problem. This is hard the same way predicting which test case will catch a bug is hard — you don't know until you need it. This is why the most reliable systems today either (a) have humans make routing decisions, or (b) dump everything and accept inefficiency. Neither is satisfying. This is a frontier problem where better solutions are emerging but no silver bullet exists yet. Acknowledging this in conversations with companies signals you understand the actual constraints of production agent systems, not the idealized version in papers.
+`─────────────────────────────────────────────────`
+
+---
+
+## References (Section 15)
+
+- **In-context learning limits:** Lim et al., "In-Context Learning Unlocked for Transformers" (2024) — Shows that more context doesn't always improve performance; threshold effects exist.
+- **RAG pitfalls:** Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (FAIR, 2020) — Original RAG paper; identifies relevance matching challenges.
+- **Multi-agent coordination:** Mirkovic & Virani, "Multi-Agent Reinforcement Learning" (2024) — Surveys coordination problems; context sharing is discussed but not fully solved.
+- **Query formulation in IR:** Navigli et al., "Word Sense Disambiguation: A Unified Evaluation Framework and Empirical Comparison" (JMLR, 2015) — Foundational work on how query formulation affects retrieval; applies to agent queries.
+- **Hallucination in RAG:** Bang et al., "A Multitask, Multilingual, Multimodal Evaluation of ChatGPT on Reasoning, Hallucination, and Interactivity" (ICLR, 2024) — Agents over-confident in hallucinated information when retrieval fails silently.
