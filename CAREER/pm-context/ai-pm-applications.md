@@ -90,6 +90,17 @@ The PM-specific framing: context is user data that creates value. Your instinct 
 
 **RAG scope.** If your AI pulls from a document corpus (product docs, knowledge base, prior tickets), you decide what's in that corpus. An outdated knowledge base that includes deprecated features produces confident wrong answers. You own the corpus maintenance policy.
 
+**RAG architecture maturity.** "Are we using RAG?" is not the whole question. RAG itself spans a maturity spectrum with materially different costs, latency profiles, and failure modes. As the PM, you need to understand which tier your feature requires — because your engineering team may default to a simpler tier that systematically fails on your users' actual query types.
+
+| Tier | What it is | Right for | Fails on | PM red flag |
+|---|---|---|---|---|
+| **1. Semantic-only** | Embedding similarity search | General Q&A over a static corpus | Exact entity names, product codes, error messages | Users complain AI can't find "obvious" things that are definitely in the docs |
+| **2. Hybrid (baseline)** | BM25 keyword + semantic, fused via RRF | Most production knowledge base applications | Relational queries, recency-sensitive queries | This is the minimum viable bar — if your team proposes semantic-only for production, push back |
+| **3. + Knowledge graph** | Entity relationships traversed alongside text retrieval | Queries spanning multiple entities or documents ("what affects X?", "who owns Y?") | Infrastructure overhead; requires graph construction | Users ask questions your team says "RAG can't handle" — often a signal that relational traversal is needed |
+| **4. + Temporal reasoning** | Date-weighted scoring + version-aware retrieval | Regulatory, compliance, policy, and spec docs; any "current" or "latest" query | Adds complexity to document ingestion pipeline | Users get confidently wrong answers citing outdated policies — almost always a temporal retrieval gap |
+
+**The PM decision:** When scoping a RAG feature, classify the dominant query types your users will ask. If queries are primarily factual lookups over a stable corpus, Tier 2 is right. If users ask organizational or relational questions ("what does this system connect to?", "which vendors supply this component?"), Tier 3. If users need current state ("what is the latest policy on X?", "what changed since last quarter?"), Tier 4. These are requirements conversations — the query type determines the tier, not the other way around.
+
 **Context freshness requirements.** Real-time data vs. cached data is a cost-latency-accuracy tradeoff. Do users need the AI to know their account status as of this second, or is data from 5 minutes ago acceptable? You make this call.
 
 ### Questions to ask your engineering team
@@ -98,6 +109,10 @@ The PM-specific framing: context is user data that creates value. Your instinct 
 - "What happens when the context gets too large? Does it truncate? What gets dropped first?"
 - "If we add customer transaction history, how much does that grow the context? What's the cost impact per query?"
 - "Are we using RAG? If so, what's in the retrieval corpus and who maintains it?"
+- "What retrieval channels are we running — semantic-only, hybrid (BM25 + semantic), or multi-channel? Why did we choose that tier?"
+- "Will users ask relational questions that span multiple documents or entities? If yes, do we have knowledge graph retrieval?"
+- "Do users need current or versioned information (policies, specs, regulations)? If yes, how does temporal reasoning work — is recency scored or just filtered?"
+- "If a user asks 'what is the current policy on X?' and we have a 2019 and 2025 version in the corpus, which one does the system return and why?"
 - "How do we handle context poisoning — what if the user deliberately puts misleading information into the conversation to manipulate the AI?"
 
 ### How to evaluate it

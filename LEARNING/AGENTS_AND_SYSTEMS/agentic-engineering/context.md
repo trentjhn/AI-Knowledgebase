@@ -23,6 +23,57 @@ Context is the agent's working memory — ephemeral, finite, and the single bigg
 
 **The key architectural implication:** Trying to reconstruct state from context each session is expensive and error-prone. Trying to persist everything as state creates sync issues. Know which one you need.
 
+### Memory Storage Options
+
+Where you store persistent memory determines your retrieval options, latency profile, and failure modes. Match storage to scale and use case:
+
+**In-memory (ephemeral session memory)**
+- Suitable for: single session, development, low-volume
+- Implementation: Python dict or dataclass, cleared on session end
+- Cost: zero
+- When to use: when you only need memory within one agent run
+
+**File-based (durable, simple)**
+- Suitable for: single-user tools, development, low-concurrency agents
+- Implementation: JSON files, one per memory type (`facts.json`, `preferences.json`, `events.json`)
+- Cost: negligible
+- When to use: personal tools, CLI agents, testing
+- Key risk: file locking in concurrent access — use atomic writes (write to temp file, rename)
+
+**SQLite (durable, queryable, local)**
+- Suitable for: single-machine agents with structured memory needs, local-first applications
+- Implementation: standard Python `sqlite3`, tables per memory type, full SQL queries for retrieval
+- Cost: negligible
+- When to use: when you need structured queries ("find all preferences set in the last 7 days"), or when file-based JSON becomes unwieldy
+- Advantage over files: ACID transactions, no corruption risk from partial writes, efficient queries
+
+**Vector database (semantic retrieval at scale)**
+- Suitable for: large memory corpora, multi-user systems, semantic retrieval requirements
+- Options: Pinecone (managed), Weaviate (open-source), Chroma (lightweight local), pgvector (Postgres extension)
+- When to use: when you need "find memories semantically similar to this query" rather than exact key lookup
+- Trade-off: adds embedding step at write time and retrieval step at read time — significant latency overhead vs. direct lookup
+
+**Redis (fast, expiring cache)**
+- Suitable for: high-frequency access patterns, short-term memory with TTL, session state
+- When to use: when you need sub-millisecond memory retrieval, or when memory should expire automatically (e.g., session memory that clears after 24 hours)
+
+### Retrieval Strategy by Memory Type
+
+| Memory Type | Retrieval Pattern |
+|-------------|------------------|
+| Always-relevant (user name, persistent preferences) | Load at session start, keep in context throughout — no retrieval needed |
+| Episodic (past events, history) | Retrieve on demand via semantic search or time-based query ("events from last 7 days related to X") |
+| Facts and knowledge | Embed the current query, find semantically similar stored facts |
+
+**The multi-tier pattern:** Maintain all three strategies simultaneously. Always-relevant memory loads statically at session start; episodic and factual memory retrieve dynamically as needed. This keeps baseline context small while making the full memory corpus available.
+
+### Memory Consistency in Multi-Agent Systems
+
+When memory is shared across agents, write conflicts are the primary failure mode:
+
+- **Simplest approach — one writer, many readers:** Only the orchestrator writes to shared memory; sub-agents read. No write conflicts, easy to reason about.
+- **When multiple agents must write:** Route all writes through a dedicated memory manager agent via a message queue (Redis Streams, RabbitMQ). The queue serializes writes and prevents corruption.
+
 ---
 
 ## Capability Degradation Thresholds
@@ -94,6 +145,21 @@ Load information in tiers rather than all at once. Enables effectively unlimited
 **The payload model:** For this specific call, load: base config + project context + tool definitions (only what this agent needs) + query + retrieved facts. Nothing else.
 
 **Why this is counterintuitive:** Standard patterns treat context as a log. Loading treats it as a precision instrument. This is how small models work in orchestrator patterns — the orchestrator handles accumulation; scouts receive curated loads.
+
+### When to Use Each Model
+
+**Use the Payload Model** (fresh context each call) when:
+- Tasks are largely independent — each call doesn't depend on the specifics of what came 20 steps earlier
+- Context bloat is causing quality degradation in longer sessions
+- You need clean reproducibility for debugging (fresh load = deterministic input)
+- The agent rarely needs to refer back to early-session decisions
+
+**Use Accumulation** when:
+- Tasks are deeply sequential and each step builds on the last
+- The agent frequently needs to refer to decisions made early in the session
+- The session is short enough that context bloat won't occur
+
+**Migration signal:** If you're running an accumulation system and output quality degrades as sessions get longer, that's the signal to switch to the Payload Model with explicit state files. The state files take over the persistence job that accumulation was doing implicitly.
 
 ### ACE Framework (Agentic Context Engineering)
 

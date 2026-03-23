@@ -16,6 +16,8 @@
 13. [Evaluation Design — Specifying What "Done" Looks Like](#13-evaluation-design--specifying-what-done-looks-like)
 14. [Key Takeaways for the AI Practitioner and AI PM](#14-key-takeaways-for-the-ai-practitioner-and-ai-pm)
 15. [Anti-Patterns](#15-anti-patterns)
+16. [Inter-Agent Spec Contracts — Specifying Multi-Agent Handoffs](#16-inter-agent-spec-contracts--specifying-multi-agent-handoffs)
+17. [Spec Versioning — Treating Specifications as Versioned Artifacts](#17-spec-versioning--treating-specifications-as-versioned-artifacts)
 
 ---
 
@@ -680,6 +682,98 @@ The following are the most common specification mistakes and what to do instead.
 
 **Anti-pattern: Implicit hand-offs in multi-agent pipelines.** Passing outputs from one agent to the next without restating goal context, assuming the next agent will correctly infer the original intent from the output alone.
 *Instead:* Write explicit mini-specs for every inter-agent interface. Never rely on implicit continuity.
+
+---
+
+## 16. Inter-Agent Spec Contracts — Specifying Multi-Agent Handoffs
+
+In a multi-agent pipeline, each agent is simultaneously a consumer of the previous agent's output and a producer for the next. Without explicit contracts at these handoff points, agents develop implicit expectations about what they'll receive. Those expectations hold until something changes — the model version, the upstream prompt, the input data structure — and then they break silently. The failure shows up several steps later and requires archaeology to trace back to its origin.
+
+An inter-agent contract is a specification of the interface between two agents. It makes the implicit explicit, at the handoff boundary. Failure Mode 7 in Section 10 describes the problem (the telephone game); this section describes the fix.
+
+### What an Inter-Agent Contract Specifies
+
+**Output schema.** The exact structure of what the producing agent delivers. Not "a research summary" but a concrete definition: `{"summary": string (max 500 words), "sources": array of {"title": string, "url": string, "relevance_score": float 0-1}, "confidence": enum high|medium|low, "gaps": array of strings}`. If the producing agent returns JSON, the schema should be machine-verifiable (JSON Schema or equivalent). If it returns structured text, the format should be defined precisely enough that a parser could be written for it.
+
+**Invariants.** Properties that must always be true about the output, regardless of inputs. "The sources array will never be empty if confidence is high." "If a field is uncertain, it appears in gaps rather than being omitted or fabricated." "The summary will always be present, even if it only says the task could not be completed." Invariants define the guarantees the producing agent makes to the consuming agent. The consuming agent can treat these as preconditions.
+
+**Failure mode output.** What the producing agent returns when it cannot complete its task. Silent failure — empty output, null, exception propagation — is one of the most destructive patterns in multi-agent pipelines because the consuming agent often can't distinguish "empty result" from "task not performed." Define an explicit failure artifact and require the producing agent to use it: `{"status": "failed", "reason": "string", "partial_output": {...}}`. The consuming agent can then detect failure explicitly and route accordingly rather than silently propagating garbage.
+
+**Preconditions.** What the consuming agent requires to be true about its input in order to function correctly. These mirror Cockburn's use case preconditions (Section 3), applied at the inter-agent boundary. If a precondition is violated — the contract was broken upstream — the consuming agent should fail loudly with a specific error message identifying the violation. This is the opposite of silent failure: it creates a bright, traceable signal at the exact moment and location of the contract breach.
+
+### Why Loud Failure at the Boundary Is the Goal
+
+The purpose of inter-agent contracts is not to prevent failures — it's to make failures immediately detectable and precisely locatable. Without contracts, a producing agent that returns malformed output has already failed, but the consuming agent doesn't know it. It proceeds on bad data, produces bad output of its own, and the failure compounds. By the time a human investigates, the root cause is buried under several layers of downstream effects.
+
+With contracts, the producing agent that breaks the contract is required to say so (via the failure artifact), and the consuming agent that receives a broken contract is required to fail immediately (via precondition checking). The failure trace becomes: "Agent B failed because Agent A returned malformed output." That's one step of debugging, not five.
+
+### Contract Template
+
+A minimal inter-agent contract lives in the specification for both agents — the producing agent's spec defines what it must deliver; the consuming agent's spec defines what it requires.
+
+```
+## Handoff Contract: [Agent A] → [Agent B]
+
+### Output Schema (Agent A produces):
+[Exact field-level schema with types, constraints, and optionality]
+
+### Invariants (always true about output):
+- [Invariant 1]
+- [Invariant 2]
+
+### Failure Output (when Agent A cannot complete):
+{"status": "failed", "reason": "[description]", "partial_output": {...}}
+
+### Preconditions (Agent B requires):
+- [Precondition 1] — if violated: [specific error message]
+- [Precondition 2] — if violated: [specific error message]
+```
+
+---
+
+## 17. Spec Versioning — Treating Specifications as Versioned Artifacts
+
+Specifications are not static documents. They change when the product changes, when evaluation reveals gaps, when models are updated, or when new failure modes are discovered. The anti-pattern of "spec drift" (noted in Section 15) is what happens when specs are treated as informal working notes. The fix is treating specs as versioned artifacts — with the same discipline applied to source code.
+
+### Semantic Versioning for Specs
+
+Version specs using the same semantic versioning logic applied to software:
+
+- **Major version (1.x → 2.x):** Breaking change — a change to what the AI must do or produce that would cause a correctly-behaving v1 system to fail against v2 requirements. Examples: changing the output format, adding a mandatory new field, changing the task itself, removing a permitted behavior.
+- **Minor version (1.0 → 1.1):** Additive change — something new is required, but existing behavior still satisfies the old requirements. Examples: adding a new optional output field, adding additional examples, expanding the scope of an existing constraint.
+- **Patch (1.0.0 → 1.0.1):** Clarification — a rewording or elaboration that changes how the spec reads but not what a correctly-behaving system produces. Examples: replacing a vague term with a precise one that matches existing behavior, fixing a typo, adding a rationale to an existing constraint.
+
+The versioning scheme forces you to explicitly classify changes. The act of deciding "is this a major or minor change?" often reveals that a change you assumed was minor is actually breaking — which is the kind of discovery you want before deploying.
+
+### Version Control Alongside Code
+
+Store specs in version control in the same repository as the code that uses them. A spec change that affects model behavior should be a commit, with a message explaining *why* the spec changed (not just what changed — the diff shows the what).
+
+```
+feat(spec): v1.2 — add confidence field to research agent output
+
+Previous version returned confidence as prose in the summary.
+Consuming agent was parsing prose unreliably. Explicit enum field
+(high|medium|low) enables programmatic routing at the handoff.
+```
+
+This practice creates an audit trail: you can see exactly when a spec changed, why, and what that change corresponded to in model behavior. It also makes rollback possible.
+
+### Test Cost at Version Boundaries
+
+When a spec changes, evaluate the cost of that change before deploying it:
+
+1. Identify existing test cases that pass the old spec.
+2. Run those test cases against the new spec. Which ones fail? Those are the tests that need updating because the requirement changed — not because the implementation broke.
+3. Run both old and new spec versions against your evaluation suite before deploying the new spec. This confirms the change produces the intended behavioral shift and catches unexpected regressions.
+
+The discipline: a spec change that degrades overall task performance on your eval suite is a signal that the change may be incorrect or that the evaluation cases need to be reconsidered. Don't deploy until you understand the discrepancy.
+
+### Rollback as a First-Class Capability
+
+If a spec change degrades production behavior, you need to be able to revert it — just like reverting a bad code deployment. This is only possible if the spec is version-controlled. An informal spec stored in a shared doc or email thread cannot be reliably rolled back.
+
+Practically: pin the spec version used in production in your deployment configuration alongside the model version. Rolling back a spec is then as simple as reverting a configuration change and redeploying.
 
 ---
 

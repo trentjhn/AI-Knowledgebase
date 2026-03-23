@@ -9,10 +9,11 @@
 1. [What Makes a Reasoning Model Different?](#what-makes-a-reasoning-model-different)
 2. [When Should You Use One?](#when-should-you-use-one)
 3. [How to Use Them in AI Systems](#how-to-use-them-in-ai-systems)
-4. [How to Prompt Them — Key Differences](#how-to-prompt-them--key-differences)
-5. [Thinking Effort: Controlling How Much They Think](#thinking-effort-controlling-how-much-they-think)
-6. [Limitations and What Goes Wrong](#limitations-and-what-goes-wrong)
-7. [Step-by-Step: Deciding Whether to Use One](#step-by-step-deciding-whether-to-use-one)
+4. [System Architecture Patterns](#system-architecture-patterns)
+5. [How to Prompt Them — Key Differences](#how-to-prompt-them--key-differences)
+6. [Thinking Effort: Controlling How Much They Think](#thinking-effort-controlling-how-much-they-think)
+7. [Limitations and What Goes Wrong](#limitations-and-what-goes-wrong)
+8. [Step-by-Step: Deciding Whether to Use One](#step-by-step-deciding-whether-to-use-one)
 
 ---
 
@@ -124,6 +125,93 @@ Reasoning models with multi-modal capabilities (able to process images) can reas
 
 ---
 
+## System Architecture Patterns
+
+The previous section covers what reasoning models do well in isolation. This section covers how to actually wire them into a production system — the structural patterns that make reasoning models practical at scale.
+
+The core problem is straightforward: reasoning models are slow and expensive. You can't put them in the hot path of every request without either degrading UX or going bankrupt on compute. Good system design solves this by routing intelligently and positioning reasoning models where their cost buys the most value.
+
+---
+
+### The Cascade Pattern (Default for High-Volume Systems)
+
+A standard model handles the majority of calls quickly and cheaply. Only queries that fail a confidence threshold — or are explicitly flagged as complex — escalate to the reasoning model. This is the right default architecture when you're handling many requests and most of them don't actually need deep reasoning.
+
+```
+Request arrives
+      ↓
+[Standard model] — fast, cheap, handles most cases
+      ↓
+Confidence check / complexity classifier
+      ↓
+[Passes threshold] → return response immediately
+[Fails threshold]  → escalate to reasoning model
+                           ↓
+                   [Reasoning model] — deep analysis
+                           ↓
+                   Return response
+```
+
+**Why this works:** In most real-world distributions, a small fraction of queries are genuinely hard. If 5% of your queries need reasoning-model depth and 95% don't, routing all of them through a reasoning model means you're paying reasoning prices for 95% of calls that didn't need it. The cascade lets you pay for reasoning compute only where it earns its cost.
+
+**Practical implementation note:** The confidence threshold doesn't need to be sophisticated. It can be as simple as a classifier that looks for complexity signals (multi-constraint, contradictory requirements, explicit uncertainty, domain-specific jargon density) or a hard-coded list of query types. Start simple and refine based on where the standard model actually fails.
+
+---
+
+### Reasoning as Final Validator
+
+The reasoning model is not in the hot path — it validates or synthesizes *after* standard models do first-pass work. This keeps latency acceptable for the majority of the pipeline while adding reasoning-depth quality control at the output gate.
+
+```
+Standard model drafts code
+         ↓
+[Reasoning model] reviews for correctness, edge cases, security
+         ↓
+Return to user (or loop back for revision)
+```
+
+This pattern is particularly effective for code generation, document drafting, and any task where first-pass output can be produced quickly but must meet a quality standard before delivery. The user's perceived latency is mostly the fast standard model; the reasoning model's time is spent on something valuable — catching errors that would have shipped.
+
+---
+
+### The Recovery Pattern
+
+When a standard model fails on a task — wrong answer, bad format, returned an error, exceeded context cleanly — route that specific request to a reasoning model as the fallback. The reasoning model's extended thinking often resolves what the standard model missed, because it can take more inference steps and consider more alternatives before committing to an answer.
+
+```
+Standard model → fails (wrong answer, error, or explicit low confidence)
+                     ↓
+              [Reasoning model] — extended thinking, second attempt
+                     ↓
+              Return result (with or without confidence caveat to user)
+```
+
+This pairs well with an eval layer: if you have a way to detect failure (output format check, factual consistency check, user thumbs-down signal), you can use that signal to trigger recovery routing automatically.
+
+---
+
+### Timeout Handling — Non-Negotiable
+
+Reasoning models can take 30–90+ seconds on hard problems. Any production system that uses them must implement a timeout with graceful degradation. Without this, a slow reasoning call becomes a hung request, and a hung request becomes a frustrated user or a failed SLA.
+
+The pattern:
+
+```
+Send to reasoning model
+         ↓
+Timeout fires (set based on your SLA — e.g., 15 seconds)
+         ↓
+[Reasoning model responds in time] → return result
+[Timeout fires first]              → return standard model's answer
+                                     with a confidence caveat:
+                                     "This answer is based on standard
+                                     analysis; complex review unavailable."
+```
+
+The confidence caveat matters — it's honest, it manages user expectations, and it tells downstream systems that this answer didn't receive full reasoning review. Don't silently fall back; surface the degradation.
+
+---
+
 ## How to Prompt Them — Key Differences
 
 This is the section where most people go wrong. Reasoning models require a different prompting approach than standard models, and if you use standard prompting techniques, you'll actually get *worse* results.
@@ -179,19 +267,31 @@ Surprisingly, using more descriptive and specific language in your instructions 
 
 ## Thinking Effort: Controlling How Much They Think
 
-Most reasoning model APIs let you control how much "thinking" the model does before responding. This is typically called the **thinking budget** or **effort level**.
+Most reasoning model APIs let you control how much "thinking" the model does before responding. On the Anthropic API, this is the `budget_tokens` parameter — it sets the maximum number of tokens the model can use for its internal reasoning chain before producing its final response.
+
+**Key mechanics of `budget_tokens`:**
+- Minimum: 1,024 tokens (below this, the model can't engage in meaningful extended thinking)
+- Maximum: varies by model — claude-sonnet-4-6 supports up to approximately 16,000 thinking tokens; Opus-class models support higher ceilings
+- Thinking tokens are billed at the same per-token rate as output tokens — they are not free
 
 Think of it like choosing between economy, business, and first class — you're paying for more compute time, which translates to more thorough internal reasoning.
 
-| Tier | What It Means | When to Use |
-|---|---|---|
-| **Low / Budget** | Minimal internal reasoning; faster and cheaper | Start here. Many "complex" tasks succeed at Low. |
-| **Medium** | Moderate reasoning depth; balanced cost/quality | Step up when Low produces incomplete or shallow answers |
-| **High / Extended** | Maximum reasoning time; most thorough | Reserve for genuinely hard problems or high-stakes decisions |
+| Tier | `budget_tokens` Range | What It Means | When to Use |
+|---|---|---|---|
+| **Low / Budget** | 1,024 – 3,000 | Minimal internal reasoning; fast, low cost premium | Straightforward multi-step reasoning, math checks, simple constraint problems |
+| **Medium** | 5,000 – 10,000 | Moderate reasoning depth; balanced cost and quality | Code review, planning with moderate constraints, analytical tasks |
+| **High / Extended** | 15,000 – 32,000 | Maximum reasoning time; highest accuracy on hard problems | Complex architecture decisions, research synthesis, adversarial reasoning. Latency: 30–90+ seconds. |
 
-**The smart strategy:** Always start at Low. Evaluate whether the output meets your quality bar. Escalate to Medium or High only when it demonstrably doesn't. This is important because tasks that *seem* complex often don't actually need maximum reasoning to get a good answer — and the cost difference between Low and High can be 5-10×.
+**Cost mental model:** At claude-sonnet-4-6 pricing (~$15/M output tokens as of 2025), 10,000 thinking tokens adds roughly $0.15 to the cost of a single call. For a low-volume, high-stakes use case — one architectural review, one security audit — that's negligible. At 10,000 calls per day, that's $1,500/day in thinking-token overhead alone. Know your volume before defaulting to Medium or High.
+
+**The smart strategy:** Always start at Low. Evaluate whether the output meets your quality bar. Escalate to Medium or High only when it demonstrably doesn't. Tasks that *seem* complex often don't need maximum reasoning — the cost difference between Low and High is typically 5-10×.
 
 A well-crafted prompt at Low thinking effort will often outperform a vague prompt at High thinking effort. Better prompts, not more thinking time, is usually the right first move.
+
+**When to escalate — and when to stop:**
+- If Low produces wrong or shallow answers on a task where you know the correct answer, move to Medium.
+- If Medium still fails, move to High.
+- If High consistently fails: this is the important signal. Stop escalating tokens and instead ask whether this is actually a reasoning problem. Many failures that look like "not enough thinking" are actually retrieval problems (the model doesn't have the right information in context) or task decomposition problems (the task is too coarsely specified). More tokens won't fix a missing knowledge problem. Diagnose before spending more.
 
 ---
 
@@ -223,7 +323,23 @@ Reasoning models aren't magic. They have specific failure modes and limitations 
 
 **High latency** — Extended thinking can take 30-90 seconds. Don't use reasoning models in any user-facing flow where fast response time is important unless you're okay with that wait.
 
-**Unreliable parallel tool-calling** — Many reasoning models don't reliably call multiple tools in parallel (simultaneously). They tend to call tools sequentially instead. If your workflow depends on parallel tool calls for performance, test this assumption carefully before deploying with a reasoning model.
+**Unreliable parallel tool-calling** — This deserves more than a footnote because it regularly catches practitioners off guard.
+
+Reasoning models generate a sequential thinking chain and then produce a response. This architecture doesn't naturally support parallel tool calls mid-reasoning the way standard models can batch multiple tool calls in a single response turn. The practical result: if you send a reasoning model a prompt that requires calling three tools in parallel, it will call them sequentially. Your expected parallelism disappears, and your pipeline is slower than projected — sometimes by a factor of 3-5× on tool-heavy tasks.
+
+Three workarounds, in order of preference:
+
+**1. Design for sequential tool calls with caching.** Structure your pipeline so each tool's result informs the next. The thinking chain actually benefits from seeing each result in order — the model can incorporate what it learned from tool 1 when deciding how to use tools 2 and 3. This turns a limitation into a feature.
+
+**2. Separate orchestration from reasoning.** Use a standard (non-reasoning) model to orchestrate parallel tool calls and aggregate the results. Once all tool outputs are assembled, pass the full context to the reasoning model for synthesis. This gets you parallelism on the data-fetching side and deep reasoning on the analysis side without fighting the architecture.
+
+```
+[Standard model] → call tools A, B, C in parallel → aggregate results
+                                                             ↓
+                                              [Reasoning model] → synthesize
+```
+
+**3. Minimize tool count in reasoning calls.** Give reasoning models fewer, more focused tools. They reason better with 3 relevant tools than 15 available tools. More tools create more sequential overhead and more surface area for the model to reason about which tool to call when — time better spent on the actual problem.
 
 ---
 
@@ -251,6 +367,25 @@ Here's a practical decision process for whether to reach for a reasoning model:
 **6. Measure cost vs. quality gain.** A 10% quality improvement for a 5× cost increase may not be worth it. Always evaluate the tradeoff explicitly.
 
 **7. Deploy in the right layer.** Use reasoning models for planning, evaluation, and synthesis. Use standard models for execution, simple lookups, and high-throughput steps.
+
+---
+
+## The Broader Context: Two Axes of Compute Scaling
+
+Reasoning models represent one axis of a broader trend in how the field is thinking about compute and intelligence.
+
+**Axis 1 — More compute per token (what reasoning models do):** Extended thinking allocates additional compute to each output by generating a hidden reasoning chain before the final response. The model produces fewer tokens in the final answer but burns more compute arriving at it. Budget_tokens is the control knob.
+
+**Axis 2 — Fewer tokens per unit of meaning (what emerging architectures chase):** Research like CALM (Continuous Autoregressive Language Models, 2025) tries to reduce the number of autoregressive steps needed by compressing multiple tokens into single prediction steps — continuous vectors representing K-token chunks rather than one discrete token at a time.
+
+These are complementary, not competing:
+- Reasoning models: same number of steps, deeper thinking per step
+- Continuous-space models: fewer steps, each step covers more semantic ground
+- The goal in both cases: more intelligence per unit of compute
+
+A future system might combine both — a model that thinks in compressed semantic chunks (fewer steps) with extended reasoning (more depth per step). Whether that's achievable depends on whether continuous-space training methods mature to production scale.
+
+For the architectural picture: see `LEARNING/FOUNDATIONS/emerging-architectures/emerging-architectures.md`
 
 ---
 

@@ -166,7 +166,10 @@ Think of it like a well-organized office. You don't spread every file you've eve
 |---|---|---|
 | Always-included files | Small docs universally relevant | Load them every time (e.g., CLAUDE.md project rules) |
 | Embedding-based retrieval | Large knowledge bases | Convert content to vector embeddings; find closest match to current query |
-| Knowledge graphs | Structured relational data | Traverse relationships to find connected information |
+| Knowledge graphs | Structured relational data | Traverse entity relationships for multi-hop queries that embedding similarity can't answer |
+| Temporal retrieval | Time-sensitive corpora | Date-weighted scoring + version-aware filtering so "current" means most recent, not highest embedding similarity |
+
+> **The 2025 retrieval meta:** Semantic embedding-only retrieval is now considered inadequate for production RAG. The competitive baseline is **4-channel parallel retrieval** — BM25 keyword + semantic vector + knowledge graph traversal + temporal reasoning, fused via Reciprocal Rank Fusion (RRF). Each channel solves a fundamentally different class of query failure that the others can't compensate for. Full architecture and implementation in `future-reference/playbooks/building-rag-pipelines.md` → "The 4-Channel Parallel Retrieval Architecture."
 
 **A counterintuitive insight on tool selection:** You can apply the same retrieval approach to *tool descriptions*, not just data. RAG-MCP research (arXiv 2505.03275) found that retrieving only the most relevant tool descriptions improved tool call accuracy **3×** over always loading all tools (43.1% vs. 13.6% baseline in large-toolset conditions) while cutting prompt tokens by over 50%. Note: the 13.6% baseline reflects a stressed scenario with many tools loaded simultaneously — production gains will vary, but the directional finding is robust. The model gets confused when it has to choose among dozens of tools; giving it only the relevant subset dramatically improves selection accuracy.
 

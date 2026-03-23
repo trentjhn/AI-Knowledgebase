@@ -116,7 +116,24 @@ The pipeline has four stages: (1) documents are chunked and embedded into vector
 
 **Real-world example.** Eugene Yan's *Patterns for Building LLM-based Systems* (2023): "RAG fetches relevant data from outside the foundation model and enhances the input with this data, providing richer context to improve output. RAG helps reduce hallucination by grounding the model on the retrieved context, thus increasing factuality." Martin Fowler's GenAI patterns identify hybrid retrieval (combining vector similarity with BM25 keyword matching) and query rewriting as key extensions of basic RAG for production use.
 
-**Advanced RAG patterns.** At production scale, basic RAG gets extended with: query rewriting (the user's question is expanded or clarified before retrieval), reranking (a cross-encoder model reorders retrieved chunks for relevance), hybrid retrieval (combining dense vector search with sparse keyword search), and agentic RAG (the agent decides when to retrieve and what to retrieve rather than always retrieving).
+**RAG maturity spectrum.** RAG is not a binary "on/off" architectural decision — it exists on a maturity spectrum, and each level solves a different class of retrieval failure. Understanding this spectrum is essential for architects: building a 1-channel system when you need 4 channels will fail in predictable, systematic ways that no amount of prompt engineering will fix.
+
+| Level | Channels | What it handles | What it fails on |
+|---|---|---|---|
+| **1. Semantic-only** | Dense vector embeddings | Paraphrase, conceptual similarity | Exact matches, named entities, relational queries, recency |
+| **2. Hybrid (baseline)** | BM25 + semantic | Everything above + exact keyword matches | Relational queries, recency-dependent answers |
+| **3. + Reranking** | BM25 + semantic + cross-encoder reranker | Better ranking precision across both channels | Still fails on relational and temporal queries |
+| **4. 4-channel (competitive)** | BM25 + semantic + knowledge graph traversal + temporal reasoning, fused via RRF | The full query space: factual, relational, and recency-sensitive queries | Infrastructure overhead — only justified when query complexity demands it |
+
+**Level 2 (hybrid BM25 + semantic) is the minimum viable production baseline** — not an advanced pattern. If your system runs semantic-only retrieval, it will systematically fail on exact string matches, product names, error codes, and any query where the specific terminology matters. Hybrid retrieval is the fix, and it is not optional for production RAG.
+
+**Level 4 adds knowledge graph traversal** for relational queries — questions that require following entity relationships across multiple documents ("what policies govern systems owned by the payments team?", "which vendors supplied both materials affected by this regulation?"). BM25 and semantic search cannot assemble multi-hop answers from fragmented sources; knowledge graph traversal can. Tools: Microsoft GraphRAG (community detection + summarization + local/global search), Neo4j vector+graph hybrid, Amazon Neptune Analytics.
+
+**Level 4 also adds temporal reasoning** for recency-sensitive queries — questions where "current" or "latest" has semantic weight that embeddings cannot encode. The embedding of a 2019 policy document is nearly identical to its 2025 successor; a temporal retrieval channel uses exponential decay scoring and version-aware filtering to ensure the right version surfaces. Critical for regulatory, compliance, and technical documentation use cases.
+
+**Full architecture reference:** `future-reference/playbooks/building-rag-pipelines.md` → "The 4-Channel Parallel Retrieval Architecture."
+
+Beyond retrieval: at production scale, add **query rewriting** (expand or clarify the user's question before retrieval), **agentic RAG** (the agent decides when to retrieve and what to retrieve, with document grading and re-retrieval loops), and **evaluation pipelines** tracking retrieval quality, faithfulness, and answer relevance as separate metrics. See `evaluation/evaluation.md` → "Evaluating RAG Systems."
 
 ---
 

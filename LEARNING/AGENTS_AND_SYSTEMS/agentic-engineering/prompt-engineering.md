@@ -27,6 +27,55 @@ Level 6 → 7: "I want to improve the whole system" → add cross-prompt analysi
 
 **Rule:** Start at the lowest level that meets requirements. Let actual usage drive evolution.
 
+### What Each Level Actually Looks Like
+
+One concrete example per level, using document summarization to show the progression:
+
+**Level 1 — Single-Shot:** One instruction, no context.
+```
+Summarize this document.
+```
+
+**Level 2 — Parameterized (Few-Shot):** Adds examples to establish the expected pattern.
+```
+Here's an example summary: [example output]. Now summarize this document: {document}
+```
+
+**Level 3 — Conditional:** Adds branching based on input properties.
+```
+Summarize this document: {document}
+
+If the document is technical, include a glossary of key terms.
+If it's intended for executives, lead with the key takeaway in one sentence.
+```
+
+**Level 4 — Contextual:** Adds dynamic context injection from external sources.
+```
+User background: {user_background}
+Document topic: {topic}
+
+Summarize the document in a way that is relevant to this user's background and expertise level.
+
+Document: {document}
+```
+
+**Level 5 — Composed:** Breaks the task into a chain of sub-prompts, each feeding the next.
+```
+Step 1 → Extract the 5 most important points from the document.
+Step 2 → Identify who the intended audience is based on tone and vocabulary.
+Step 3 → Using the key points from Step 1, write a summary tailored to the audience identified in Step 2.
+```
+
+**Level 6 — Self-Modifying:** The agent rewrites its own prompt based on feedback signals. After receiving a low clarity score, the prompt appends a new instruction to its own template:
+```
+[auto-added after low clarity score on 2025-03-15]
+Ensure transitions between paragraphs are explicit. Use linking phrases ("Building on this...", "As a result...").
+```
+
+**Level 7 — Meta-Cognitive:** The orchestrator's prompt produces a specialized prompt for each sub-agent it spawns. The orchestrator doesn't summarize — it generates a tailored summarization prompt for each document type it encounters, then delegates execution to a specialist.
+
+Each level is visibly more sophisticated in what it requires the model to do — but also more expensive to build, test, and maintain. Match complexity to the actual problem.
+
 ### Level 6: Self-Modifying (Git History as Learning Signal)
 
 1. Run `git diff` (uncommitted), `git diff --cached` (staged), `git log` (recent commits)
@@ -210,6 +259,20 @@ Critical/blocking constraints should appear **first** — the model weights earl
 **Gemini:** Precision over persuasion; context-last ordering (key info at the end of prompt)
 
 **Format variance impact:** Up to 40% accuracy variance in smaller models based solely on delimiter choice.
+
+### Testing XML vs. JSON Format for Your Use Case
+
+Format choice is not a matter of taste — it has measurable effects on parse reliability and output consistency. Test it:
+
+1. Take 20-30 representative inputs from your actual task distribution (not toy examples)
+2. Run each through both formats with otherwise identical instructions
+3. Measure three things: **parse success rate**, **output completeness** (does the model include all required fields?), and **answer quality** (human eval or automated metric)
+4. Parse error rate is the most important signal — if JSON produces parse errors on more than 5% of outputs, XML is likely better for your use case
+5. If both parse reliably, answer quality and completeness break the tie
+
+**Why XML often wins on reliability:** XML tags provide unambiguous boundaries that don't require balanced delimiters to be valid. A partially truncated XML response can still be partially parsed; a partially truncated JSON response is typically unparseable. This matters most for long outputs near the context limit.
+
+**When JSON is still the right choice:** When the downstream consumer is a standard JSON API, when structured nesting is deep, or when you control truncation and can guarantee complete outputs.
 
 ### Chain-of-Thought (2025 Status)
 

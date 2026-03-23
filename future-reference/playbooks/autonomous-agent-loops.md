@@ -16,7 +16,8 @@
 6. [Pattern 5: Nanoclaw REPL Persistence](#pattern-5-nanoclaw-repl-persistence)
 7. [Pattern 6: De-Sloppify Cleanup Pass](#pattern-6-de-sloppify-cleanup-pass)
 8. [Quality Gates & Escalation](#quality-gates--escalation)
-9. [When to Use Each Pattern](#when-to-use-each-pattern)
+9. [Designing Success Criteria for New Task Types](#designing-success-criteria-for-new-task-types)
+10. [When to Use Each Pattern](#when-to-use-each-pattern)
 
 ---
 
@@ -273,48 +274,158 @@ Loop: find next improvement opportunity
 
 ## Pattern 5: Nanoclaw REPL Persistence
 
-**Definition:** Agent runs in a REPL-like environment where state persists across calls. Agent can see what it wrote last time.
+**Definition:** Agent runs in a REPL-like environment where state persists across calls via files on the filesystem. The agent writes its own state between invocations and reads it back at startup — the "memory" lives on disk, not in the context window.
 
-**Best for:** Exploratory work, long-running agents, agents that learn from their own output history.
+**Best for:** Long-running code migrations, multi-file refactors, research tasks spanning hours, automated testing campaigns that must survive restarts.
 
-**Example: Data Analysis Agent**
+### The Core Insight
+
+A REPL-based agent (running in a terminal or code execution environment) hits context window limits on complex, multi-step work. The fix: externalize memory to files. On each new invocation, the agent reads its state file and picks up exactly where it left off. This bypasses context window limits entirely — completed work doesn't need to be re-summarized or re-explained to fit in context. The filesystem is the memory.
 
 ```
-[Session 1]
-Agent writes: data_analysis.py
-│
-├─ [Session 1, output]
-└─ Discovers: "Sales correlate strongly with temperature"
+[Session 1 — cold start]
+Agent reads: state.json → {"status": "new"}
+Agent plans: 5 steps to complete
+Agent executes: Step 1
+Agent writes: state.json → {"status": "in_progress", "completed_steps": ["step 1"], "current_step": "step 2"}
+Session ends (user closes terminal, crash, timeout)
 
-[Session 2]
-Agent reads: data_analysis.py (from last session)
-Agent reads: output log (from last session)
-Agent executes: python data_analysis.py
-│
-├─ New discovery: "Correlation is stronger on weekends"
-├─ Writes: updated_analysis.py
-└─ Knows: what was done in Session 1 (via persistent files)
-
-[Session 3]
-Agent reads: both previous analysis files
-Agent builds on previous work
-├─ Test new hypothesis based on Session 2 findings
-└─ Avoid re-doing work already done
+[Session 2 — warm start]
+Agent reads: state.json → {"status": "in_progress", "current_step": "step 2"}
+Agent skips step 1 (already done per state file)
+Agent executes: Step 2 → Step 3 → ...
 ```
 
-**Implementation:**
-```bash
-# Nanoclaw pattern: files persist, agent can read them
-ls -la ./analysis_session_*.py  # See previous work
-cat ./analysis_session_1.py     # Read what was done
-python analyze_new.py           # Build on it
+### State File Structure
+
+Keep state files human-readable (JSON or Markdown). If the state file is opaque, you cannot debug what the agent decided. Readable state also lets you manually correct it when the agent goes wrong.
+
+```json
+{
+  "task": "refactor auth module to JWT",
+  "status": "in_progress",
+  "completed_steps": [
+    "analyzed existing code",
+    "identified 3 files to change"
+  ],
+  "current_step": "modify auth.py",
+  "findings": {
+    "files_to_change": ["auth.py", "middleware.py", "tests/test_auth.py"],
+    "approach": "replace session tokens with signed JWTs, keep existing middleware interface"
+  },
+  "errors": [],
+  "last_updated": "2025-03-21T14:30:00Z"
+}
+```
+
+Fields the agent should always write:
+- `completed_steps` — exact list of what's done; agent checks this before running any step
+- `current_step` — where to resume on next invocation
+- `findings` — accumulated discoveries the agent will need later (don't store these in the prompt, store them here)
+- `errors` — failed approaches with reason; prevents the agent from retrying known-dead-ends
+- `last_updated` — useful for debugging stale state
+
+### Idempotency Requirement
+
+Every step the agent runs must be idempotent: running it twice produces the same result as running it once. This is non-negotiable. The agent may crash mid-step and re-run that step from the previous checkpoint. If the step is not idempotent (e.g., it appends to a file rather than writing it), partial execution creates corrupted state.
+
+```python
+# BAD: Not idempotent — appends a duplicate entry if run twice
+def add_import(filepath, import_line):
+    with open(filepath, 'a') as f:
+        f.write(import_line + '\n')
+
+# GOOD: Idempotent — checks before writing
+def add_import(filepath, import_line):
+    with open(filepath, 'r') as f:
+        content = f.read()
+    if import_line not in content:
+        with open(filepath, 'a') as f:
+            f.write(import_line + '\n')
+```
+
+### Handling State Corruption
+
+If the state file is malformed or missing, the agent must **fail loudly**, not silently restart. Silent restart means re-running already-completed work — at best wasteful, at worst destructive (e.g., re-applying a database migration).
+
+```python
+import json, hashlib, sys
+
+def load_state(state_path):
+    if not os.path.exists(state_path):
+        # First run — initialize clean state
+        return {"status": "new", "completed_steps": [], "errors": []}
+
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+        # Validate required fields exist
+        required = {"task", "status", "completed_steps", "current_step"}
+        if not required.issubset(state.keys()):
+            raise ValueError(f"State missing required fields: {required - state.keys()}")
+        return state
+    except (json.JSONDecodeError, ValueError) as e:
+        print(f"FATAL: State file is corrupted: {e}")
+        print(f"State file at: {state_path}")
+        print("Fix manually or delete to restart from scratch.")
+        sys.exit(1)  # Do NOT silently continue
+```
+
+### Preventing State Bloat
+
+State files grow unbounded on long tasks. Set a maximum (e.g., 50KB). When approaching the limit, compress findings into summaries and clear the detailed step array.
+
+The agent's rule: "If my state file exceeds 50KB, summarize `completed_steps` into a single paragraph in `findings.summary` and clear the array."
+
+```python
+import os, json
+
+def write_state(state_path, state):
+    raw = json.dumps(state, indent=2)
+    if len(raw.encode()) > 50_000:  # 50KB limit
+        # Compress: summarize completed steps, clear the array
+        summary = f"Completed {len(state['completed_steps'])} steps: " + \
+                  "; ".join(state['completed_steps'][:3]) + \
+                  f" ... and {len(state['completed_steps']) - 3} more."
+        state['findings']['completed_summary'] = summary
+        state['completed_steps'] = []  # Reset — summary is in findings now
+    with open(state_path, 'w') as f:
+        json.dump(state, f, indent=2)
+```
+
+### Full Startup Sequence
+
+```python
+def agent_main():
+    state = load_state("./task_state.json")
+
+    if state["status"] == "done":
+        print("Task already complete. Nothing to do.")
+        return
+
+    # Skip any steps already completed
+    all_steps = define_steps()
+    remaining = [s for s in all_steps if s.name not in state["completed_steps"]]
+
+    for step in remaining:
+        print(f"Executing: {step.name}")
+        result = step.run(state)
+
+        state["completed_steps"].append(step.name)
+        state["current_step"] = next_step_name(all_steps, step)
+        state["findings"].update(result.findings)
+        write_state("./task_state.json", state)  # Write after every step
+
+    state["status"] = "done"
+    write_state("./task_state.json", state)
 ```
 
 **Characteristics:**
-- State persists in files (git-tracked for audit trail)
-- Agent can reference previous work
-- No context bloat (agent doesn't have to re-explain history)
-- Enables long-running projects
+- State persists in files (git-track the state file for a full audit trail)
+- Agent resumes exactly from last checkpoint — no wasted work on restart
+- Context window carries only current-step context, not the entire history
+- Human-readable state enables manual inspection and correction mid-task
+- Enables multi-hour and multi-day autonomous tasks without supervision
 
 ---
 
@@ -418,18 +529,185 @@ Feature: Can cost max $0.50
 
 ### Gate 4: Divergence Detection
 
-If loop is making **no progress** (same error repeating, or oscillating between states):
+If the loop is making **no progress** (same error repeating, oscillating between states, or generating nearly identical output), detect it programmatically rather than waiting for a human to notice.
+
+**Three signals to instrument:**
+
+**Signal 1 — Cycle Detection**
+
+Track the last N actions. If the current action matches an action taken 3–5 steps ago, the agent is looping. Maintain a rolling hash of recent actions and check for repeats.
+
+```python
+from collections import deque
+import hashlib
+
+class CycleDetector:
+    def __init__(self, window=5):
+        self.recent = deque(maxlen=window)
+
+    def record(self, action: str) -> bool:
+        """Returns True if a cycle is detected."""
+        action_hash = hashlib.md5(action.encode()).hexdigest()
+        if action_hash in self.recent:
+            return True  # Cycle detected
+        self.recent.append(action_hash)
+        return False
+```
+
+**Signal 2 — Progress Rate Degradation**
+
+Track measurable work completed per iteration (files changed, tests passing, tasks checked off). If 3 consecutive iterations produce zero progress, trigger a divergence alert.
+
+```python
+def check_progress_stall(progress_log: list[int], stall_threshold=3) -> bool:
+    """Returns True if the last N iterations all produced zero progress."""
+    if len(progress_log) < stall_threshold:
+        return False
+    return all(p == 0 for p in progress_log[-stall_threshold:])
+```
+
+**Signal 3 — Semantic Drift (for language generation tasks)**
+
+Track whether each iteration's output is meaningfully different from the previous. Compute cosine similarity between consecutive outputs — if similarity > 0.95 for 3+ consecutive iterations, the agent is generating variations of the same content rather than improving.
+
+```python
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+def is_semantically_stalled(outputs: list[str], threshold=0.95, window=3) -> bool:
+    if len(outputs) < window + 1:
+        return False
+    recent = outputs[-(window + 1):]
+    vec = TfidfVectorizer().fit_transform(recent)
+    sims = [cosine_similarity(vec[i], vec[i+1])[0][0] for i in range(len(recent)-1)]
+    return all(s > threshold for s in sims)
+```
+
+**Combining signals into a divergence score:**
+
+Don't treat any single signal as definitive — use a composite score. An agent exploring a genuinely new approach may repeat some steps or produce similar intermediate outputs. Only escalate when multiple signals fire together.
+
+```python
+def divergence_score(cycle: bool, stalled: bool, semantic_drift: bool) -> float:
+    """Returns a score 0.0–1.0. Escalate above 0.6."""
+    return (0.4 * cycle) + (0.35 * stalled) + (0.25 * semantic_drift)
+```
+
+**Response to detected divergence:**
+
+Don't just stop the loop. Before escalating to a human, inject a structured self-diagnosis prompt and give the agent one recovery attempt:
 
 ```
-Detect: Same error appears in iterations 1, 2, 3
-Action: Break loop, escalate to human with error log
+You appear to be in a loop. Your last 3 iterations produced:
+- [summary of iteration N-2 output]
+- [summary of iteration N-1 output]
+- [summary of iteration N output]
 
-Detect: Oscillating (Iteration 1 fixes A, Iteration 2 breaks A to fix B)
-Action: Break loop, escalate (loop is unstable)
+Describe:
+1. What you are trying to accomplish
+2. Why your current approach isn't working
+3. A different approach you haven't tried yet
 
-Detect: Cost exceeds budget
-Action: Immediately break loop, escalate
+If you cannot identify a different approach, respond with: ESCALATE
 ```
+
+If the agent responds with `ESCALATE` or the divergence score remains above threshold after this recovery step, break the loop and hand off to a human with the full divergence log.
+
+```
+Old signals (still valid):
+Detect: Cost exceeds budget → Immediately break loop, escalate
+Detect: Oscillating (Iteration 1 fixes A, Iteration 2 breaks A to fix B) → Break loop, escalate (loop is unstable)
+```
+
+---
+
+## Designing Success Criteria for New Task Types
+
+Every loop pattern depends on success criteria, but the quality gates section only shows examples. Here's how to *design* them from scratch when you're building something new.
+
+### Two Types of Success Criteria
+
+**Objective criteria** — measurable, automatable, no human judgment required:
+- "All 47 tests pass"
+- "Output file exists and is > 0 bytes"
+- "API returns HTTP 200 with a response body"
+- "No `TODO` strings remain in the generated code"
+- "Readability score (Flesch-Kincaid) > 60"
+
+**Subjective criteria** — require human judgment:
+- "The code is clean"
+- "The explanation is clear enough for a junior engineer"
+- "The tone matches our brand voice"
+
+Prefer objective criteria wherever possible. When you can't avoid subjective criteria, convert them to LLM-as-judge evaluations with a rubric — this makes them automatable even if they're not objectively computable.
+
+### The Minimum Viable Success Criterion
+
+For any task, define the single criterion that **must** be true for the task to be considered done. Everything else is a quality criterion that informs further iteration, not a gate that blocks completion.
+
+Having one clear "done" criterion prevents scope creep and endless iteration:
+
+```
+Task: Generate a product description for our new keyboard
+
+DONE when: Description is 150–300 words AND mentions all 3 key features
+           (wireless, backlit, mechanical switches)
+
+Quality criteria (improve if time allows, don't block on):
+├─ Reading level appropriate for general consumer audience
+├─ No marketing clichés ("game-changing", "revolutionary")
+└─ Matches tone of existing product descriptions
+```
+
+If you set quality criteria as required gates, the agent loops forever trying to optimize "tone match" against a fuzzy standard.
+
+### How to Discover Your Criteria: Work Backward From Failure
+
+Ask: **"What would I notice first if this went wrong?"** The inverse of your failure signal is your success criterion.
+
+```
+Task: Migrate authentication to JWT
+
+What would I notice if it went wrong?
+├─ Users can't log in → criterion: test_login() passes
+├─ Sessions expire immediately → criterion: token TTL > 0 and matches config
+├─ Logout doesn't clear tokens → criterion: blacklist endpoint returns 200 + test_logout() passes
+└─ Existing tests break → criterion: full test suite passes
+
+Success criteria:
+1. test_login() passes           ← minimum viable
+2. test_logout() passes          ← minimum viable
+3. token TTL == configured value ← minimum viable
+4. Full test suite passes        ← quality criterion (no regressions)
+```
+
+### Testing Your Criteria Before Running the Agent
+
+Before launching the loop, manually verify that your criteria correctly classify a known-good and a known-bad output. This takes 5 minutes and prevents wasted agent runs.
+
+```
+Criterion: "Output file contains valid JSON"
+
+Known-good test: Run criterion against a file with valid JSON → must PASS
+Known-bad test: Run criterion against an empty file → must FAIL
+Known-bad test: Run criterion against a file with truncated JSON → must FAIL
+
+If criterion passes an empty file: it's too weak (os.path.exists() isn't enough — add json.loads() check)
+If criterion fails a file with a comment at the top: it's too strict (adjust for JSONC if needed)
+```
+
+This is the equivalent of writing a test for your test. Skip it and you'll discover mid-run that your gate was never catching real failures.
+
+### Quick Reference: Criteria by Pattern
+
+| Pattern | Minimum Viable Criterion | Common Quality Criteria |
+|---|---|---|
+| **Sequential** | Output file exists and passes schema validation | Output format matches expected template exactly |
+| **Iterative** | All tests pass | Coverage > threshold, no security flags |
+| **Infinite** | Score improvement < ε for N consecutive rounds | Absolute score above quality floor |
+| **RFC-DAG** | All reviewers have stamped approval | No open comment threads |
+| **Persistence** | `state.json` shows `"status": "done"` | All steps completed with no errors logged |
+| **Cleanup** | No lint errors; original tests still pass | Line count reduced; no obvious comments remain |
 
 ---
 

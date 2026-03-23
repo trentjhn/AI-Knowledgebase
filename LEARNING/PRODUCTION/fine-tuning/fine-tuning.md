@@ -80,6 +80,10 @@ Use this as a rough ordering:
 | Does the information change frequently? | RAG (not fine-tuning) |
 | Is the domain specialized enough that the base model lacks relevant knowledge? | Continued pre-training, then instruction tuning |
 | Do you need both current information and consistent behavior? | RAG + fine-tuning |
+| Do users ask relational or multi-hop questions (spanning multiple entities)? | RAG with knowledge graph traversal |
+| Is recency or version accuracy critical ("current policy," "latest spec")? | RAG with temporal reasoning |
+
+**The RAG complexity note:** "Is the problem about accessing specific information?" is not a binary question — RAG itself comes in levels of architectural sophistication. A basic 2-channel RAG (BM25 + semantic) handles factual lookup. Relational questions (requiring entity traversal across documents) need knowledge graph augmentation. Recency-sensitive queries need temporal reasoning with decay scoring. Choosing RAG doesn't end the architecture decision; it begins the next one. See `future-reference/playbooks/building-rag-pipelines.md` → "The 4-Channel Parallel Retrieval Architecture" for the full spectrum.
 
 ---
 

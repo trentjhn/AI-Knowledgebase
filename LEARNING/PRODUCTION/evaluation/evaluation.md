@@ -377,6 +377,53 @@ Technically, Ragas computes faithfulness by: (1) extracting all factual claims f
 
 These four metrics form a diagnostic dashboard for RAG systems. Low context precision suggests improving your retrieval strategy or query formulation. Low faithfulness suggests constraining the generator more aggressively (stricter prompting, smaller context windows). Low answer relevance suggests the system is misinterpreting query intent.
 
+> **Important:** The four Ragas metrics were designed around single-channel or 2-channel retrieval (semantic or hybrid BM25 + semantic). They measure aggregate retrieval quality but cannot distinguish *which retrieval channel* failed. As systems move to 4-channel architectures (adding knowledge graph traversal and temporal reasoning), additional per-channel metrics are required — see the section below.
+
+### Evaluating Multi-Channel Retrieval Systems
+
+Production RAG systems increasingly use 4-channel parallel retrieval: BM25 + semantic + knowledge graph traversal + temporal reasoning, fused via Reciprocal Rank Fusion (RRF). Each additional channel introduces new failure modes that Ragas metrics don't surface. Evaluate each channel independently.
+
+**Evaluating knowledge graph retrieval**
+
+Knowledge graph retrieval fails differently from embedding-based retrieval. The failure modes are: (1) entity resolution failure — the query contains entity references that don't match the graph's entity names; (2) traversal dead ends — the graph has the entities but not the required relationship edges; (3) multi-hop precision failure — the traversal finds entities along the path but overshoots (returns entities 3 hops away when the answer is 1 hop away).
+
+Metrics to track:
+
+| Metric | What it measures | How to compute |
+|---|---|---|
+| **Entity resolution rate** | % of queries where named entities in the query are successfully matched to graph nodes | Label a test set with the expected graph entities; measure match rate |
+| **Multi-hop success rate** | % of multi-hop queries where the traversal returns the correct target entities | Requires labeled multi-hop test cases with known target entity sets |
+| **Relationship coverage** | % of relationship types in test queries that exist as edges in the graph | Gap analysis: catalog relationship types in test queries, check against graph schema |
+| **Graph retrieval precision@K** | Of K graph-retrieved chunks, fraction actually relevant | Same as context precision but computed only on graph-channel results |
+
+Build a labeled multi-hop test set: identify 50–100 queries that require relationship traversal to answer, document the expected traversal path (entity A → [relationship] → entity B → [relationship] → entity C), and verify the graph channel returns the correct terminal entities. If the graph channel has low multi-hop success rate, the issue is almost always graph construction (missing relationship edges) rather than retrieval logic.
+
+**Evaluating temporal retrieval**
+
+Temporal retrieval fails when: (1) the system surfaces older document versions when a newer version exists for the same topic; (2) the system fails to parse temporal intent from implicit signals ("current policy" → wants most recent, not highest embedding similarity); (3) temporal decay weights are miscalibrated for the domain (policy documents decay differently from news articles).
+
+Metrics to track:
+
+| Metric | What it measures | How to compute |
+|---|---|---|
+| **Version accuracy** | % of recency-sensitive queries where the most recent valid version is retrieved | Label a test set with queries that have multiple document versions; check that newest is returned |
+| **Temporal intent recognition rate** | % of queries containing recency signals where the temporal channel fires correctly | Annotate temporal intent in test queries; check channel activation |
+| **Staleness rate** | % of retrieved documents older than the domain's acceptable recency threshold | Compute avg document age in retrieved sets for recency-sensitive query types |
+| **Temporal decay calibration** | Whether older documents rank systematically lower for recency-sensitive queries | Compare document age vs. rank position across recency queries |
+
+The most practical test: take 20 topics where your corpus contains multiple versions of the same information (policy updates, spec revisions, regulatory amendments). For each topic, issue a "current" or "latest" query and verify the temporal channel returns the most recent version, not the highest-embedding-similarity version (which may be an older document with more comprehensive content).
+
+**Diagnosing 4-channel failures**
+
+When your final answer quality degrades in a 4-channel system, standard Ragas metrics tell you that retrieval failed but not which channel failed. Use this diagnostic sequence:
+
+1. Run the query through each channel independently and score channel-level context precision
+2. Check RRF fusion scores — is one channel consistently contributing low-quality results that are still ranked highly because they appear across multiple channels?
+3. Check whether the failure correlates with a query type: exact-match failures → BM25 issue; paraphrase failures → semantic issue; relational failures → knowledge graph issue; recency failures → temporal issue
+4. Log which channels fire on which queries — a channel that almost never fires may have misconfigured triggering logic (entity extraction failing, temporal intent parsing too conservative)
+
+**The compound failure warning.** In a 4-channel system with RRF fusion, a single malfunctioning channel can degrade results for queries it shouldn't affect at all. A knowledge graph channel returning garbage results for non-relational queries will contaminate the RRF merge with low-quality documents that weren't needed. Implement channel-level quality gates: if a channel's results score below a minimum relevance threshold, exclude them from RRF fusion rather than letting them dilute it.
+
 ### The Key Distinction: Retrieval Failure vs. Generation Failure
 
 One of the most valuable aspects of the Ragas framework is that it helps you identify where in the pipeline a failure occurred. If context recall is low but faithfulness is high, your retrieval is incomplete but the generator is behaving responsibly with what it has. If context recall is high but faithfulness is low, your retrieval is working but the generator is hallucinating. If both are high but answer relevance is low, the pipeline is technically functioning but misunderstanding user intent. Disaggregating failures by stage is the difference between "our RAG system is bad" and "our retriever is missing key documents in the medical domain."

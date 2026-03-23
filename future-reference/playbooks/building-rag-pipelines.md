@@ -142,6 +142,8 @@ Build a test set of question-answer pairs from your actual documents. Run the fu
 
 Most production RAG systems use hybrid retrieval — not semantic-only. Understanding why, and how to implement it, is the difference between a system that works in demos and one that works on real user queries.
 
+> **2025 meta note:** Two-channel hybrid (BM25 + semantic) is now the baseline for production RAG systems, not the ceiling. The current competitive architecture is a **4-channel parallel approach** that adds knowledge graph traversal and temporal reasoning as first-class retrieval systems — see the dedicated section below after this one. Start here to understand the foundation; move to the 4-channel section to understand where the field has moved.
+
 ### Why Keyword Search First
 
 The counterintuitive professional approach is to implement BM25 keyword search *before* semantic search, not after. The reason: semantic search fails on exact matches. When a user asks about a specific product name, error code, API endpoint, or person's name, the semantic embedding of "TypeError: cannot read property of undefined" may not retrieve the document that contains that exact string — because semantically similar documents might discuss a completely different error. BM25 finds it immediately.
@@ -197,6 +199,336 @@ Expose a single unified search API that accepts a `mode` parameter: `keyword_onl
 ### Section-Based Chunking for Hybrid Search
 
 For hybrid retrieval to work well, chunks need to preserve logical document boundaries rather than split arbitrarily. Section-based chunking uses document structure (headings, sections, paragraphs) as natural chunk boundaries. This keeps complete ideas within a single chunk, which improves both BM25 precision (the relevant term appears alongside its context) and semantic accuracy (the embedding represents a complete thought, not half a sentence).
+
+---
+
+## The 4-Channel Parallel Retrieval Architecture (2025 Meta)
+
+The two-channel hybrid (BM25 + semantic) introduced above is the correct starting point — but it's now the floor, not the ceiling. The field has converged on a **four-channel parallel retrieval architecture** that adds knowledge graph traversal and temporal reasoning as first-class retrieval systems, fused via RRF into a single ranked list. This section explains each new channel in depth: what problem it solves, why the other channels can't compensate for its absence, and how to implement it.
+
+### Why Two Channels Are No Longer Enough
+
+BM25 handles exact and near-exact keyword matches. Semantic search handles paraphrase and conceptual similarity. Together, they cover most queries well. But there are two distinct classes of queries they both fail on — and these failures are systematic, not edge cases.
+
+**Class 1: Relational queries.** "What security policies apply to systems owned by the payments team?" or "Which vendors have supplied both pumps and valves to our facilities?" or "What regulations affect all the jurisdictions where our highest-revenue customers are located?" These queries require following *relationships between entities*, not matching text. A user didn't ask "security policies" — they asked about policies that apply through a chain of ownership relationships. No embedding distance captures that traversal. BM25 will find documents containing "payments team" and "security policies" but won't assemble the correct answer because the relationship is implicit across multiple documents, not explicit in any single chunk.
+
+**Class 2: Temporal queries.** "What is the current cancellation policy?" or "What changed in the compliance requirements since last year?" or "Show me the most recent specification for this component." These queries have recency semantics that are invisible to embeddings. The word "current" has no embedding signal that selects the 2025 version of a document over the 2022 version — both contain the same entities, similar language, and similar structure. Temporal reasoning requires treating time as a first-class retrieval dimension, not an afterthought filter.
+
+Knowledge graph traversal solves Class 1. Temporal reasoning solves Class 2. Adding them to BM25 + semantic produces a system that handles the full space of query types, not just the majority of them.
+
+---
+
+### Channel 3: Knowledge Graph Traversal
+
+#### What a Knowledge Graph Is
+
+A knowledge graph is a structured representation of entities and the relationships between them. Unlike a vector database (which stores chunks of text as points in embedding space) or an inverted index (which stores term-document associations), a knowledge graph stores **named entities** (people, products, systems, locations, regulations, organizations) and **typed relationships** between them (owns, applies-to, built-by, located-in, governs, supersedes).
+
+```
+Concrete example:
+PaymentsTeam --[owns]--> PaymentsService
+PaymentsService --[runs-on]--> AWSInfrastructure
+SecurityPolicy_SOC2 --[applies-to]--> AWSInfrastructure
+DataRetentionPolicy_2024 --[supersedes]--> DataRetentionPolicy_2021
+```
+
+A query like "what policies apply to systems the payments team owns?" becomes a graph traversal: start at `PaymentsTeam`, follow `owns` edges to get services, follow `runs-on` edges to get infrastructure, follow `applies-to` edges inbound to get policies. The answer emerges from traversal — no semantic matching required.
+
+#### How Knowledge Graphs Enable Multi-Hop Retrieval
+
+**Multi-hop retrieval** is the ability to answer questions that require following a chain of relationships across multiple documents or entities. It's where BM25 and semantic retrieval fundamentally break down: they retrieve documents, but they don't *connect* information across documents.
+
+Single-hop example (both BM25 and semantic can handle this): "What is the warranty policy for the Model X pump?" — the answer likely exists in a single document.
+
+Multi-hop example (requires graph traversal): "What warranty terms apply to the components supplied by vendors who have had compliance failures in the last 12 months?" This requires: (1) find vendors with compliance failures in the time window → (2) find components they supplied → (3) find the warranty policies for those components → (4) synthesize. No single document contains this answer. A knowledge graph with the right entity relationships makes this traversable. Without it, you'd need a human analyst to manually cross-reference multiple data sources.
+
+#### Microsoft GraphRAG — The Production Architecture
+
+Microsoft's **GraphRAG** paper (2024) formalized the knowledge-graph-augmented RAG approach and is now the most referenced architecture for production knowledge graph retrieval. The approach has two phases:
+
+**Phase 1: Graph Construction (done at ingestion time)**
+
+1. **Entity extraction:** Run LLM calls over all source documents to extract named entities and relationships. The prompt asks the model to identify entities (with type and description) and relationships (with type, directionality, and confidence) from each chunk.
+
+2. **Community detection:** Run graph clustering algorithms (Leiden algorithm is standard) to group related entities into hierarchical "communities" — clusters of closely connected entities. A community might be "all entities related to the Q4 regulatory filing" or "all entities in the payments infrastructure."
+
+3. **Community summarization:** Generate a natural-language summary of each community — what it's about, which entities it contains, what their relationships are. These summaries become retrieval targets.
+
+4. **Store the graph:** Entity nodes and typed relationship edges go into a graph database (Neo4j, Amazon Neptune, or a lighter option like NetworkX for small graphs). Community summaries go into the vector database alongside regular document chunks.
+
+**Phase 2: Query-Time Retrieval**
+
+When a query arrives, the system runs two parallel retrieval paths:
+
+- **Local search:** Traditional retrieval for specific entity-centric questions. Find the most relevant entities in the query, retrieve their immediate neighbors from the graph, pull the associated document chunks. Good for: "Tell me about entity X."
+
+- **Global search:** Community-summary retrieval for broad, cross-cutting questions. Map the query to relevant communities (using embedding similarity on the community summaries), retrieve the community summaries, let the LLM synthesize across them. Good for: "What are the major themes in our regulatory exposure?" — a question that requires synthesis across many entities and documents.
+
+The key architectural insight from GraphRAG: **community summarizations are retrieved in the global search path, not raw document chunks.** The summaries are purpose-built for the LLM to synthesize from — they're already at the right granularity. This is why GraphRAG significantly outperforms standard RAG on questions that require broad understanding of a corpus, not just retrieval of specific facts.
+
+#### Building Your Own Knowledge Graph for RAG
+
+If you're not using GraphRAG, you can construct a simpler knowledge graph inline with your document ingestion pipeline:
+
+**Entity extraction prompt pattern:**
+```
+Given the following document chunk, extract all named entities and their relationships.
+
+For each entity: identify its name, type (person/organization/system/policy/location/date),
+and a one-sentence description.
+
+For each relationship: identify the source entity, target entity, relationship type
+(owns/governs/applies-to/built-by/supersedes/located-in/etc.), and directionality.
+
+Return as JSON.
+
+Document: {chunk}
+```
+
+**Storage:** For small to medium knowledge bases (< 1M entities), NetworkX (Python graph library) is sufficient. For larger production systems, Neo4j's vector and graph integration (called Vector + Graph Hybrid Search) provides both graph traversal and vector similarity in a single database. For cloud-native, Amazon Neptune + Neptune Analytics supports both graph queries and semantic retrieval.
+
+**Retrieval at query time:**
+
+```python
+def knowledge_graph_retrieve(query, graph, top_k=10):
+    # 1. Extract query entities
+    query_entities = extract_entities_from_query(query)  # LLM call
+
+    # 2. Find matching entities in graph
+    matched_nodes = [graph.find_node(entity) for entity in query_entities]
+
+    # 3. Traverse n-hop neighborhood
+    neighborhood = []
+    for node in matched_nodes:
+        neighborhood.extend(graph.get_neighbors(node, max_hops=2))
+
+    # 4. Retrieve document chunks associated with neighborhood nodes
+    associated_chunks = [node.source_chunk for node in neighborhood]
+
+    # 5. Score by graph centrality (more connected nodes are more relevant)
+    scored_chunks = score_by_centrality(associated_chunks, graph)
+
+    return scored_chunks[:top_k]
+```
+
+#### When Knowledge Graph Traversal Is Worth the Investment
+
+Knowledge graph construction requires significant upfront work: entity extraction LLM calls over your entire corpus (expensive at ingestion), graph DB infrastructure, and query-time entity resolution. It pays off when:
+
+- Your questions frequently span multiple documents or entities ("what does X impact?")
+- You have well-defined entity types in your domain (organizations, systems, policies, regulations — as opposed to free-form narrative content)
+- Users ask relational questions, not just factual lookups
+- Your corpus has explicit relationships worth encoding (ownership, governance, version history)
+
+It's overkill when your queries are primarily factual lookups in self-contained documents (most customer support RAG systems don't need it), or when your corpus is mostly narrative text without clear entity structure.
+
+---
+
+### Channel 4: Temporal Reasoning
+
+#### The Problem: Embeddings Are Semantically Blind to Recency
+
+This is the most underappreciated failure mode in production RAG systems. When a user asks "what is the current refund policy?", the word "current" carries semantic weight — but **embedding models don't encode temporal recency as a retrievable dimension.** A document from 2019 describing the refund policy has almost identical embedding similarity to a 2024 document describing the updated refund policy, because both are about the same topic using similar terminology.
+
+The result: RAG systems routinely surface outdated information with high confidence. Worse, when the same topic is covered in documents from multiple time periods, the system may retrieve a mix of old and new, and the generation model synthesizes them into an answer that's neither fully accurate to any version.
+
+This failure mode is invisible in development (when your test corpus is usually small and freshly ingested) but consistently surfaces in production (where document sets accumulate over months and years, and users often specifically want the most recent answer).
+
+#### Temporal Reasoning as a Retrieval Channel
+
+Treating temporal reasoning as its own retrieval channel means going beyond "filter by date" to actually understanding *what makes a document temporally relevant to this query*. There are three distinct mechanisms, applied in combination:
+
+**Mechanism 1: Temporal Query Parsing**
+
+Before retrieval, parse the query for temporal references — explicit ("what changed in Q3 2024?") and implicit ("current policy," "latest version," "after the update"). Use an LLM or lightweight NER to:
+- Identify temporal expressions ("this year," "since the merger," "after 2022")
+- Convert relative expressions to absolute date ranges (as of query time)
+- Classify the temporal intent: point-in-time ("what was the policy on 2023-06-01?"), recency ("current/latest"), change-detection ("what changed since X?")
+
+```python
+def parse_temporal_intent(query):
+    # Returns structured temporal intent
+    return {
+        "has_temporal_signal": True,
+        "intent": "recency",          # recency | point-in-time | change-detection
+        "start_date": "2024-01-01",
+        "end_date": None,              # None = no upper bound (present)
+        "signal_phrase": "current"    # the phrase that triggered this
+    }
+```
+
+**Mechanism 2: Date-Weighted Scoring**
+
+For recency queries, apply a temporal decay function that scores documents higher when they're more recent. The decay function should be:
+- Continuous (not a binary cutoff)
+- Domain-tuned (policies and regulations decay slowly, news decays fast)
+- Combined multiplicatively with semantic/BM25 score, not additively (a highly irrelevant but recent document shouldn't beat a very relevant older one)
+
+```python
+import math
+from datetime import datetime
+
+def temporal_decay_score(doc_date, query_date, half_life_days=365):
+    """
+    Exponential decay: documents lose half their temporal score every half_life_days.
+    half_life_days=365 for policy/compliance docs (slow decay)
+    half_life_days=30 for news/events (fast decay)
+    half_life_days=90 for technical documentation
+    """
+    days_elapsed = (query_date - doc_date).days
+    if days_elapsed < 0:
+        return 1.0  # future-dated doc (ingestion edge case) gets full score
+    decay = math.exp(-0.693 * days_elapsed / half_life_days)  # 0.693 = ln(2)
+    return decay
+
+def combine_scores(semantic_score, temporal_score, temporal_weight=0.3):
+    """
+    Multiplicative combination: temporal score modulates, not replaces, relevance.
+    A temporal_weight of 0.0 = pure relevance. 1.0 = pure recency.
+    0.3 is a reasonable default for most knowledge base RAG.
+    """
+    return semantic_score * (1 + temporal_weight * (temporal_score - 1))
+```
+
+**Mechanism 3: Version-Aware Retrieval**
+
+For domains where documents have explicit version relationships (technical specs, regulatory filings, policy versions), extend the knowledge graph to encode supersession relationships, and use those to filter retrieval results:
+
+```
+Policy_v3 --[supersedes]--> Policy_v2 --[supersedes]--> Policy_v1
+```
+
+At query time: if a document is superseded by a more recent version that's also in the corpus, down-rank or exclude the older version. This requires the knowledge graph to encode `supersedes` edges — which is why temporal reasoning and knowledge graph traversal are complementary: the graph encodes *which* documents are outdated, temporal scoring determines *how much* to penalize them.
+
+#### Temporal Retrieval as a Parallel Channel
+
+Rather than post-processing semantic results with temporal filters, implement temporal reasoning as a parallel retrieval channel that runs concurrently with BM25, semantic, and knowledge graph retrieval:
+
+```python
+def temporal_channel_retrieve(query, temporal_intent, doc_store, top_k=20):
+    if not temporal_intent["has_temporal_signal"]:
+        return []  # no temporal signal → this channel contributes nothing
+
+    if temporal_intent["intent"] == "recency":
+        # Sort all documents with relevant entities by date descending
+        # Score by (relevance * temporal_decay)
+        candidates = doc_store.query_by_entity(query, limit=100)
+        scored = [(doc, semantic_score(query, doc) * temporal_decay_score(
+            doc.date, datetime.now(), half_life_days=doc.domain_half_life
+        )) for doc in candidates]
+        return sorted(scored, key=lambda x: x[1], reverse=True)[:top_k]
+
+    elif temporal_intent["intent"] == "point-in-time":
+        # Filter to docs that were current on the specified date
+        target_date = temporal_intent["start_date"]
+        return doc_store.query_valid_at_date(query, date=target_date, limit=top_k)
+
+    elif temporal_intent["intent"] == "change-detection":
+        # Retrieve documents from before and after the specified date
+        # Surface differences as the retrieval result
+        before = doc_store.query_before_date(query, date=temporal_intent["start_date"])
+        after = doc_store.query_after_date(query, date=temporal_intent["start_date"])
+        return before + after  # let the model identify changes
+```
+
+#### When to Add Temporal Reasoning
+
+Add it when:
+- Your corpus contains documents from multiple time periods on the same topics
+- Users frequently ask about "current," "latest," or "updated" state
+- Regulatory, policy, or specification documents are a primary use case
+- Document versions accumulate over time (not a static one-time corpus)
+
+You can skip explicit temporal reasoning (and rely on simple date-filter pre-processing) when:
+- Your corpus is ingested once and rarely updated
+- All documents are approximately the same age
+- Users don't ask recency-dependent questions
+
+---
+
+### Full 4-Channel Architecture
+
+With all four channels, the retrieval layer looks like this:
+
+```
+User query
+    ↓
+[Pre-retrieval processing — parallel]
+    ├── Temporal parsing → extract temporal intent + date range
+    └── Entity extraction → identify named entities for graph traversal
+    ↓
+[4-channel parallel retrieval]
+    ├── BM25 search               → top-N by keyword rank
+    ├── Semantic search           → top-N by embedding similarity
+    ├── Knowledge graph traversal → relevant entity neighborhood + document chunks
+    └── Temporal channel          → date-weighted or version-filtered results
+    ↓
+[RRF fusion across all 4 channels]
+    → each document gets: Σ 1 / (k + rank_in_channel_i) for each channel it appeared in
+    → channels that don't fire (no graph entities found, no temporal signal) contribute 0
+    ↓
+[Cross-encoder reranking on merged top-N]
+    → select top 5-10 for the model
+    ↓
+[Generation with grounding instructions]
+```
+
+**Key implementation note:** Channels that don't apply to a given query contribute nothing — they don't penalize results by injecting noise. If a query has no temporal signal, the temporal channel returns an empty list and contributes 0 to RRF scores. If a query has no recognizable entities for graph traversal, the knowledge graph channel returns nothing. RRF handles this gracefully: a document that only appears in BM25 and semantic results still gets a combined score from those two systems.
+
+#### RRF With 4 Systems: The Math
+
+The RRF formula extends naturally to any number of retrieval systems:
+
+```
+RRF_score(doc) = Σ_i [ 1 / (k + rank_i(doc)) ]
+```
+
+Where the sum is over all channels in which the document appears, and `rank_i(doc)` is the document's rank in channel `i`. Documents not appearing in a channel are simply excluded from that channel's term in the sum (equivalent to infinite rank → 0 contribution).
+
+With 4 channels, a document that ranks well in multiple channels accumulates contributions from all of them — this is exactly the desired behavior. A document about "current refund policy" that ranks 1st in temporal (very recent), 3rd in semantic (topic match), 10th in BM25 (keyword match), and doesn't appear in knowledge graph (no entity traversal) gets:
+```
+RRF_score = 1/(60+1) + 1/(60+3) + 1/(60+10) + 0
+          = 0.0164 + 0.0157 + 0.0143 + 0
+          = 0.0464
+```
+
+A competitor that only appears in semantic at rank 1 gets:
+```
+RRF_score = 1/(60+1) = 0.0164
+```
+
+The multi-channel document wins decisively, which is the correct behavior — it's reinforced across multiple retrieval signals.
+
+#### Tuning Channel Weights
+
+Standard RRF weights all channels equally. If you have reason to trust some channels more than others for your domain, you can weight them:
+
+```
+Weighted_RRF_score(doc) = Σ_i [ w_i / (k + rank_i(doc)) ]
+```
+
+Where `w_i` is the weight for channel `i`. Reasonable starting weights:
+
+| Query type | BM25 | Semantic | Knowledge Graph | Temporal |
+|---|---|---|---|---|
+| General knowledge base | 1.0 | 1.0 | 0.5 | 0.5 |
+| Technical/legal documents | 1.0 | 0.8 | 0.8 | 1.0 |
+| Relational/organizational | 0.5 | 1.0 | 1.5 | 0.3 |
+| News/events | 0.8 | 1.0 | 0.3 | 1.5 |
+
+Tune these empirically on your actual query distribution. Don't weight the knowledge graph highly if your graph construction is sparse — a sparse graph produces noisy retrieval that hurts more than it helps.
+
+#### Sequencing Your Build
+
+You don't need all four channels before you launch. The right build order:
+
+1. **Semantic only** — prove the core use case works before adding complexity
+2. **+ BM25 + RRF** — this should be the state before you call anything "production"
+3. **+ Reranking** — often produces the largest quality jump after the initial hybrid
+4. **+ Temporal reasoning** — add when users are asking about current/latest state
+5. **+ Knowledge graph** — add when users are asking relational/multi-hop questions
+
+Don't skip to 4 or 5 before nailing 1-3. Knowledge graph construction is expensive and produces no value if your basic retrieval pipeline isn't tuned.
 
 ---
 
@@ -457,6 +789,219 @@ Without traces, all you can measure is final answer quality. With traces, you ca
 Agentic RAG has a compounding failure mode that basic RAG doesn't: each decision node can fail in a way that makes downstream failures more likely. A grader that's too aggressive (grades most documents as irrelevant) forces excessive rewrites, which may produce worse queries, which retrieves worse documents, which grades even worse.
 
 This means aggregate metrics can look deceptively stable while individual components are degrading. Track each layer's metrics independently and watch for correlated degradation — if rewrite rate is climbing while final answer quality holds steady, your grader has quietly become more aggressive and you haven't noticed yet because users haven't complained.
+
+---
+
+## ASMR — Agentic Search and Memory Retrieval
+
+> **Research context:** Supermemory (2025). Achieved ~99% on LongMemEval using agentic reasoning to replace vector search entirely. The headline accuracy requires careful interpretation — see the scoring note below before drawing conclusions.
+
+ASMR is a fundamentally different approach to RAG for memory-intensive applications. It does not improve retrieval. It abandons retrieval. Instead of embedding documents and finding nearest neighbors in a vector space, ASMR deploys parallel agents that actively read through stored knowledge and reason about relevance. The gap this fills is precise: **semantic similarity matching cannot reliably distinguish between an old fact and its correction, or between a primary statement and an exception buried elsewhere in a document.** An agent doing active reasoning can make those distinctions. Cosine distance cannot.
+
+### Why Vector Search Fails on Memory-Intensive Data
+
+The failures are systematic, not edge cases. They emerge from two properties of memory-heavy applications that vector retrieval cannot handle:
+
+**Temporal failure.** A user says in session 1: "I'm vegetarian." In session 47: "I've started eating fish again." Both statements embed into similar vector regions — they're both about dietary preferences. When queried "what does this user eat?", vector search may retrieve the older statement (higher frequency, more recency-neutral), the newer one, or both simultaneously. If both are retrieved and injected into context, the model must reason about which supersedes the other — but it has no way to know the chronological order of the sessions it's reading. The retrieval system surfaced both because they're both relevant; their temporal relationship is invisible in embedding space.
+
+**Nuance failure.** A document states a general rule in paragraph 1 and a specific exception in paragraph 8. Vector retrieval chunks them. The general rule chunk is a strong match for the query about the rule; the exception chunk may have low similarity to the query if it's phrased differently. The model sees the rule without the exception. The semantics of the exception don't require proximity to the rule — it could live anywhere in the document, in any phrasing, and still apply.
+
+ASMR's claim is that a dedicated reasoning agent, reading the full stored knowledge with the query in hand, can resolve both problems. The agent reads all the sessions chronologically, understands that session 47 overrides session 1, and synthesizes accordingly. The agent reads the full document, encounters the exception, and includes it in its answer.
+
+### The Two-Phase Architecture
+
+#### Phase 1 — Parallel Ingestion (Observer Agents)
+
+Ingestion in ASMR is not chunking. It is **semantic extraction with category typing.**
+
+Instead of splitting sessions into overlapping fixed-length chunks and embedding them, ASMR deploys parallel observer agents that read assigned sessions concurrently and extract **structured findings** categorized into six typed knowledge classes:
+
+| Category | What It Captures |
+|---|---|
+| **Personal Information** | Identity facts that persist — name, location, relationships, occupation |
+| **Preferences** | Stated or inferred preferences — diet, communication style, working hours |
+| **Events** | What happened and when — past interactions, reported experiences, history |
+| **Temporal Data** | Time-sensitive facts, conditions, durations — "currently on a project until March" |
+| **Updates** | Corrections or changes to previously stated facts — the most critical category |
+| **Assistant Information** | What the system knows about its own capabilities and prior commitments |
+
+The **Updates** category is the architectural insight. Traditional RAG has no category for "this supersedes something said earlier." ASMR explicitly types corrections and overrides as their own class of finding, so when the retrieval phase runs, it knows to weight Updates over the Personal Information or Preferences entries they replace.
+
+**Why parallel readers?**
+
+For a user with 100 conversation sessions, sequential reading saturates a single agent's context window and takes proportionally long. ASMR distributes across multiple observer agents with interleaved session assignment:
+
+```
+Observer Agent 1: sessions 1, 4, 7, 10, 13 ...
+Observer Agent 2: sessions 2, 5, 8, 11, 14 ...
+Observer Agent 3: sessions 3, 6, 9, 12, 15 ...
+```
+
+Interleaving (rather than consecutive blocks) distributes temporal coverage across all agents, so no single agent is reading only early sessions or only recent ones. Each observer produces structured findings — typed, timestamped, and mapped back to their source session ID for verification later.
+
+The ingestion output is not a vector database. It is a structured finding store — a collection of typed knowledge entries associated with session metadata. In the Supermemory implementation, this lives in-memory or in simple key-value storage.
+
+#### Phase 2 — Active Retrieval (Search Agents)
+
+When a query arrives, the system does not query a vector database. It deploys **3 parallel search agents**, each with a specialized focus, to read the structured finding store and reason about what's relevant:
+
+- **Search Agent 1 — Direct facts:** Searches for explicit statements and direct answers
+- **Search Agent 2 — Context and implications:** Searches for related context, social cues, and inferred meaning
+- **Search Agent 3 — Temporal timeline:** Reconstructs chronological sequences and resolves temporal relationships
+
+Each agent reads independently, evaluates the findings in its domain, and returns its most relevant results with reasoning. The orchestrator then compiles all three sets of findings and cross-references them against the original source session excerpts — a verification step that confirms each finding is actually present in the stored knowledge, not hallucinated by the search agent.
+
+This produces both **breadth** (three different search angles, each finding something the others might miss) and **depth** (verbatim source verification as a grounding check).
+
+```
+Query arrives
+    ↓
+[3 parallel search agents — concurrent]
+    ├── Agent 1: direct facts + explicit statements
+    ├── Agent 2: context, implications, social cues
+    └── Agent 3: temporal reconstruction + relationship mapping
+    ↓
+[Orchestrator compiles findings]
+    → cross-references findings against source session excerpts
+    → resolves conflicts between agents (Updates supersede older Preferences/Personal Info)
+    ↓
+[Verified context package]
+    → passed to answering ensemble
+```
+
+### The Answering Ensemble
+
+After retrieval, the verified context is routed through a set of specialized answering agents rather than a single generation prompt. Two variants were tested:
+
+#### 8-Variant Ensemble (pass@8 accuracy: 98.60%)
+
+Context is routed in parallel to 8 specialized prompt variants simultaneously. Each variant is tuned for a different answer type:
+- A precise counter (for "how many times did X happen?")
+- A time specialist (for temporal questions)
+- A context deep-dive expert (for questions about nuanced state)
+- General knowledge synthesizers with varying instruction emphasis
+- Others tuned to specific question categories in LongMemEval
+
+Each variant independently evaluates the context and generates an answer. The system is scored as **pass@8**: the question is marked correct if **any** of the 8 variants produces the correct answer.
+
+**CRITICAL accuracy note:** Pass@8 is not the production metric. It measures whether the right answer exists somewhere in the system's output — not whether the system reliably surfaces it as its answer. If 7 variants give the wrong answer and 1 gives the right answer, the question scores as correct. For a system that will provide a single response to a user, this overstates practical accuracy. The 98.60% figure is the upper bound on what's achievable; it does not represent what a user experiences.
+
+#### 12-Variant Decision Forest (single-output accuracy: 97.20%)
+
+The production-realistic variant: 12 specialized answering agents run independently, then an aggregator LLM synthesizes a single authoritative answer from all 12 responses using:
+- **Majority voting** — what did most agents conclude?
+- **Domain trust weighting** — for time questions, weight the time specialist's answer more heavily
+- **Conflict resolution** — when agents disagree, the aggregator reasons about which answer is better supported by the context
+
+The 97.20% accuracy figure uses pass@1 scoring — one answer out, it's either right or wrong. This is the honest production metric. Both figures are genuinely impressive on LongMemEval, but practitioners should reference the 97.20% when evaluating whether ASMR is worth deploying.
+
+### What LongMemEval Actually Tests
+
+LongMemEval is a rigorous benchmark designed to simulate exactly the failure modes ASMR targets. It is not a standard QA benchmark. Its properties:
+
+- **Conversation histories exceeding 115,000 tokens** — well beyond what fits in a single context window
+- **Contradictory information across sessions** — old facts explicitly overridden by newer ones
+- **Events spread across multiple time periods** — requiring temporal reconstruction to answer correctly
+- **Questions requiring temporal reasoning** — "what does the user currently believe about X?", "how many times did X happen?", "what changed since session Y?"
+
+Most memory systems score poorly on LongMemEval because **retrieval, not reasoning, is the bottleneck**: the challenge is not generating a correct answer from good context, it's getting only the right, temporally-ordered information into context in the first place. ASMR's architectural response is to replace the retrieval step entirely with a reasoning step that reads everything and selects contextually.
+
+For reference: baseline vector RAG systems typically score in the 50–65% range on LongMemEval, and the best specialized memory systems before ASMR were in the 70–80% range. The jump to ~97–98% represents a material change in what the architecture can handle.
+
+### Key Engineering Insights
+
+**1. Agentic retrieval beats vector search specifically for temporal and multi-session data.**
+
+This is a precise claim, not a general one. ASMR's advantage is specifically on data where old facts get corrected by new ones, and where the system must know which version of a fact is current. For a static document corpus where no document supersedes another, vector search is faster, cheaper, and comparably accurate.
+
+**2. The Updates category is the structural key.**
+
+The six-category knowledge typing exists primarily to make Updates a first-class concept. Everything else (Personal Information, Preferences, Events, Temporal Data, Assistant Information) could be typed differently without changing the fundamental approach. But without an explicit Updates category — a dedicated slot for "this corrects something previously known" — the architecture has no way to reason about supersession during retrieval. This is the single design decision that most directly explains why ASMR outperforms vector retrieval on temporal benchmarks.
+
+**3. Parallel processing improves granularity without sacrificing speed.**
+
+Both ingestion (parallel observer agents) and retrieval (parallel search agents) are parallelized. Without parallel ingestion, a 100-session conversation history would overflow a single agent's context window. Without parallel retrieval, three serial search passes would triple latency. The parallelism is not an optimization — it is load-bearing for the architecture to function at realistic scale.
+
+**4. Specialization beats generalization at the answering stage.**
+
+Routing context to specialist agents (counter, time specialist, context deep-diver) outperforms any single general-purpose prompt on LongMemEval's diverse question types. The aggregation step — whether pass@8 or a decision forest — works because specialists are genuinely better at their narrow domains than a generalist is across all of them.
+
+### The Cost Reality
+
+ASMR involves many LLM calls per query. At minimum:
+
+| Phase | Calls |
+|---|---|
+| Ingestion (per session batch) | 3 observer agents |
+| Retrieval (per query) | 3 search agents |
+| Answering (per query) | 8–12 specialist agents + 1 aggregator |
+| **Total per answered question** | **~14–18 LLM calls** |
+
+The Supermemory research used smaller models — Gemini 2.0 Flash, GPT-4o-mini — to keep this affordable at research scale. Even with smaller models, the unit economics require careful analysis before production deployment.
+
+**Rough cost framing:** At $0.15/1M input tokens (GPT-4o-mini), a 115k-token history processed by 3 observer agents is roughly $0.05 in ingestion costs per user. Per query, 3 search agents + 12 answering agents reading a compressed context package might total $0.02–0.08 depending on context size. At low volume (thousands of queries/day), this is manageable. At high volume (millions of queries/day), the economics require dedicated analysis and likely model optimization.
+
+**Where ASMR is currently suited:**
+- Medical records retrieval and longitudinal patient history queries
+- Legal document analysis across large, interconnected document sets
+- Enterprise knowledge management for high-value, complex queries
+- Personal memory systems for premium applications where accuracy is paramount
+
+**Where it is not yet suited:**
+- Mass-market consumer applications at billions of queries per day
+- Cost-sensitive applications where $0.05/query is too expensive
+- Any use case where latency < 1 second is a hard requirement
+
+### "No Vector Database Required" — What This Actually Means
+
+Eliminating the vector database is not just infrastructure simplification — it changes the cost model and the deployment profile.
+
+**What's eliminated:**
+- Embedding model inference at ingestion (generating and storing vectors)
+- Vector database infrastructure (Pinecone, Weaviate, pgvector — their hosting, maintenance, and query costs)
+- Index maintenance and re-embedding when documents change
+
+**What replaces it:**
+- LLM compute at ingestion (observer agents reading and extracting findings)
+- Simple key-value or in-memory storage for structured findings (trivially cheap)
+- LLM compute at retrieval (search agents reading findings and reasoning)
+
+The trade-off: **vector infrastructure cost → LLM compute cost.** For many use cases, LLM compute per query is more expensive than vector search per query, but the operational simplicity is significant — no vector DB to provision, no embedding model to maintain, no index to synchronize when knowledge changes.
+
+The practical implication: ASMR can be embedded in systems and environments where vector database infrastructure doesn't exist. Edge devices, embedded systems, and applications running on constrained infrastructure can implement ASMR with only an LLM API endpoint and local key-value storage. This is not true of any vector-search-based RAG approach.
+
+### When to Consider ASMR Over Traditional RAG
+
+**ASMR is the better choice when:**
+- Your data has a **temporal update pattern** — users correct past statements, preferences change, facts are overridden. This is the primary condition. Without it, ASMR's advantage over vector search is marginal.
+- You have **multi-session user data** where old preferences or facts are superseded by new ones and the system must know which version is current
+- You are handling **long conversation histories** (thousands of tokens of prior context) that can't fit in a single context window and where the chronological ordering of facts matters
+- Query accuracy is **high-value and lower-frequency** — the compute cost per query is acceptable relative to the value of getting the right answer
+- Your deployment environment has **no existing vector DB infrastructure** and adding it is a significant burden
+- The load-bearing accuracy requirement is **"latest fact supersedes older fact"** — this is exactly what ASMR's Updates category and temporal search agent are built for
+
+**Traditional RAG is still the right choice when:**
+- You need **low latency** — ASMR's 14–18 LLM calls per query create meaningful latency overhead, especially at P99. Vector search retrieval is typically sub-100ms; ASMR retrieval is measured in seconds.
+- Your corpus is **large, static, and non-temporal** — a documentation library, a product catalog, a legal code base where documents don't supersede each other. Vector search excels here.
+- You need **cost efficiency at scale** — 15–18 LLM calls per query is expensive at millions of queries per day. Embedding + vector search at that scale is a small fraction of the LLM compute cost.
+- **Retrieval errors are acceptable and roughly uniform** across query types — if your use case tolerates some errors and doesn't specifically suffer from temporal failures, vector search with hybrid retrieval handles most cases well
+- Your data doesn't have meaningful **correction and override patterns** — ASMR's primary edge disappears without them
+
+### Connection to the 4-Channel Architecture
+
+ASMR's temporal timeline reconstruction (Search Agent 3) addresses the same underlying problem as the temporal reasoning channel described in the 4-channel architecture section above: **semantic embeddings are blind to recency.** The solutions differ in implementation:
+
+| | 4-Channel Temporal Channel | ASMR Search Agent 3 |
+|---|---|---|
+| Mechanism | Date-weighted scoring applied to vector search results | Agent actively reads knowledge and reasons about temporal sequences |
+| Infrastructure | Vector DB + temporal metadata + decay function | Structured finding store + LLM reasoning |
+| Latency | Low (parallel with other channels, fast scoring) | Higher (LLM call, sequential reasoning) |
+| Accuracy on complex temporal chains | Moderate — scoring resolves obvious recency, misses multi-step chains | Higher — can follow "A was updated by B which was itself revised by C" |
+| Cost | Low per query | High per query |
+
+The 4-channel temporal channel is the right choice when you want to improve recency handling within an existing vector RAG system incrementally. ASMR is the right choice when temporal accuracy is the primary correctness requirement and you're willing to replace the retrieval architecture entirely.
+
+Both solve the same root problem. ASMR solves it more thoroughly. The 4-channel architecture solves it more cheaply.
 
 ---
 

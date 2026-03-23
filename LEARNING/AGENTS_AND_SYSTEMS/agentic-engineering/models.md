@@ -113,6 +113,20 @@ Skip when:
 
 **Note:** Extended thinking requires temperature 0 and has a minimum 1,024 token budget.
 
+### Where Extended Thinking Earns Its Cost
+
+Extended thinking provides the largest quality gains on tasks with these properties: multi-step logical chains where each step depends on the previous; problems with a large solution space that benefit from exploration before committing to an answer; adversarial or tricky inputs where the model needs to catch a plausible-but-wrong path before producing output; and mathematical or formal reasoning where a wrong intermediate step invalidates everything that follows.
+
+Quality improvement benchmarks from published evaluations:
+
+| Task Type | Gain over non-thinking |
+|-----------|----------------------|
+| Graduate-level math and science (GPQA Diamond) | +20–30 percentage points |
+| Complex multi-file software engineering (SWE-bench) | +15–25% |
+| Simple tasks (classification, extraction, summarization) | <5%, often 0% |
+
+The practical takeaway: extended thinking earns its cost when the model would otherwise "jump to an answer" without sufficient exploration — tasks with multiple plausible solution paths where the right path requires evaluation. If your task has one obvious answer path, the thinking budget is largely wasted. If the task requires the model to evaluate competing approaches, thinking is worth the latency and cost.
+
 ### Instruction Fade in Long Contexts
 
 Instructions at the start of long contexts receive less weight than recent messages — recency bias. Most clearly visible when conversations exceed 50% of context window capacity.
@@ -177,6 +191,22 @@ Route to fast/cheap model first. Escalate to expensive model only when quality g
 - Confidence thresholds
 - Semantic validation (schema, required fields)
 - Classifier-based routing (trained on historical data)
+
+### Defining "Failed" for the First Model — Cascade Triggers
+
+A cascade trigger is a signal that the cheaper model's output is insufficient and the more capable model should be invoked. The trigger types, in order of reliability:
+
+**Format failure.** The output doesn't match the required format: JSON parse error, missing required fields, wrong structure. Always trigger cascade on format failure — don't return malformed output downstream. This is the most reliable trigger because it's mechanical to detect.
+
+**Confidence threshold.** Models can be prompted to self-assess confidence ("rate your confidence in this answer: high, medium, or low, and explain why"). If self-assessed confidence falls below your threshold, cascade. Set the threshold empirically: look at historical cases where the model said "high confidence" and was wrong — those are false negatives, and they're the expensive failure mode to calibrate against.
+
+**Semantic validation failure.** Run a lightweight check on the output's content — does it actually address the question? An embedding similarity check between the query and the response, or a small classifier trained on "answered vs. didn't answer," catches the "model answered a different question" failure. This is more expensive to build but catches a failure mode that format checking misses.
+
+**Output length as a signal.** For tasks requiring thorough analysis, very short outputs often indicate the model surface-skimmed or gave up. Set a minimum length threshold for complex tasks and cascade when output falls below it. Combine with semantic validation — short but correct is different from short because confused.
+
+**Explicit uncertainty language.** Parse the output for phrases like "I'm not sure," "I don't have enough information," "this is uncertain," "I cannot determine." If the task requires confident output and these phrases appear, cascade. Simple string matching works; a small classifier is more robust.
+
+One important constraint: don't cascade on all failures — only on failures where the more capable model is likely to do better. If the first model fails because the task is fundamentally ambiguous or under-specified, the capable model will also fail. Fix the task specification first, then rerun. Cascading a broken task to an expensive model just produces an expensive failure.
 
 ### Planning-Execution Separation
 

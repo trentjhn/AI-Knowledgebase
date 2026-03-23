@@ -2,7 +2,7 @@
 
 **Purpose:** Find a concept quickly without reading entire files. KB is organized by learning path: Foundations → Agents & Systems → Production.
 
-**Total KB:** ~7,800 lines across 10 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
+**Total KB:** ~9,300 lines across 13 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
 
 ---
 
@@ -65,6 +65,45 @@
 
 ---
 
+### LEARNING/FOUNDATIONS/multimodal/multimodal.md (~500 lines)
+
+**Vision-language models, document understanding, multimodal RAG, audio, video, and agentic vision**
+
+| Section | Topic |
+|---|---|
+| 1. | What "multimodal" actually means — modalities, early vs. late fusion, images as token representations |
+| 2. | VLM architecture deep dive — vision encoder (ViT/CLIP/DINOv2), projection layer (linear vs. Q-Former), LM backbone, resolution tradeoff, training paradigm |
+| 3. | Major architectures — CLIP (contrastive pre-training, zero-shot), LLaVA (linear projection lesson), BLIP-2 (Q-Former), GPT-4V/4o (native multimodal), Claude vision (tile-based, 5MB/20 img limits, ~1,700 tokens at high detail), Gemini (1M context for long video) |
+| 4. | Document understanding — OCR-then-LLM vs. vision-native vs. hybrid vs. specialized (Textract, Azure); decision table by document type |
+| 5. | Multimodal RAG — 4 approaches: text-only, CLIP embedding, VLM-generated summaries, ColPali late interaction (patch-level SOTA) |
+| 6. | Audio and speech — Whisper architecture, model size table (tiny to large-v3), faster-whisper (3x speedup), ASR options, TTS options, native audio models vs. ASR pipeline |
+| 7. | Video understanding — frame sampling strategies, Gemini 1.5 long-video, production architecture |
+| 8. | Multimodal in agentic systems — computer use loop, UI grounding challenge, vision as tool use |
+| 9. | Evaluation and benchmarks — VQA/DocVQA/ChartQA/TextVQA/video benchmarks; contamination warning (39% inflation) |
+| 10. | Practical guide — decision tree (when to use VLM vs. OCR), image preprocessing checklist, token cost math, VLM prompt engineering, 5 error modes unique to VLMs, production checklist |
+
+---
+
+### LEARNING/FOUNDATIONS/emerging-architectures/emerging-architectures.md (~500 lines)
+
+**Frontier monitoring: architectural research challenging the transformer + BPE paradigm (early 2026)**
+
+Type: Informed observer tracking a fast-moving frontier — not a practitioner how-to. Re-read every 6-12 months.
+
+| Lines | Section |
+|---|---|
+| 1–35 | Purpose and framing — what this doc is for and how to use it |
+| 36–115 | Section 1: Current dominant paradigm — transformer + BPE foundations, 4 known bottlenecks (autoregressive latency, O(n²) attention, tokenization artifacts, KV cache growth), why transformers resist displacement |
+| 116–205 | Section 2: State Space Models / Mamba — SSM core idea (fixed-size hidden state, O(n) scaling), Mamba selective state transitions, Mamba-2 SSD theory, retrieval weakness, hybrid SSM/Transformer (Jamba 52B) as practical near-term bet |
+| 206–295 | Section 3: Mixture of Experts (MoE) — already in production (Mixtral, GPT-4, DeepSeek-V3), routing mechanics, expert collapse + auxiliary loss fix, DeepSeek-V3 innovation (671B total / 37B active per token), fine-grained MoE frontier |
+| 296–390 | Section 4: Byte-level and tokenization-free models — BPE problem, MegaByte (hierarchical byte-level), BLT (entropy-based dynamic patching, 50% FLOPs at equivalent quality), infrastructure gap |
+| 391–475 | Section 5: Continuous / latent space models — CALM (K-token chunk vectors, 1.82B scale, custom BrierLM metric), diffusion LMs (MDLM/SEDD, parallel generation, infilling strength), flow matching, discrete vs. continuous tension |
+| 476–555 | Section 6: Linear attention variants — Performer, RetNet, RWKV-6 (O(1) inference memory), retrieval precision tradeoff, GQA/MQA already in production (4-8x KV cache reduction) |
+| 556–635 | Section 7: Signal vs. noise framework — 5 green flags, 5 red flags, current status table for all 7 architectures |
+| 636–end | Section 8: Practical implications for builders — 1-2yr / 2-4yr / 4yr+ horizons, PM procurement questions, uncertainty framing |
+
+---
+
 ## 📚 LEARNING / AGENTS & SYSTEMS — Building (Mid-Level)
 
 Prerequisites: Complete FOUNDATIONS first.
@@ -124,6 +163,25 @@ Prerequisites: Complete FOUNDATIONS first.
 | 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
 | 527–543 | Anti-patterns |
 | **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
+
+---
+
+### LEARNING/AGENTS_AND_SYSTEMS/mcp/mcp.md (~500 lines)
+
+**Model Context Protocol — universal interface between AI models and external systems**
+
+| Lines | Section |
+|---|---|
+| 1–50 | What MCP is, the N×M problem, HTTP analogy, what it enables |
+| 51–110 | Architecture: hosts, clients, servers — three-tier diagram, session lifecycle |
+| 111–210 | Three primitives: Tools (model-controlled), Resources (app-controlled), Prompts (user-controlled) |
+| 211–270 | Transport: stdio vs. HTTP+SSE — comparison table, Claude Desktop config example |
+| 271–360 | MCP vs. function calling — key differences table, when to use each |
+| 361–460 | Building an MCP server — Python SDK + TypeScript SDK minimal examples, design principles |
+| 461–520 | Security model — trust hierarchy, consent requirement, 4 MCP-specific attack types + defenses |
+| 521–560 | Ecosystem — host apps, server categories table, official + community servers, SDKs |
+| 561–590 | Decision framework — MCP vs. direct integration decision table, portfolio approach |
+| 591–640 | MCP in agentic systems — shared tool layer diagram, context budget (82% savings), memory pattern, MCP+RAG pattern |
 
 ---
 
@@ -199,6 +257,47 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
+### LEARNING/PRODUCTION/rl-alignment/rl-alignment.md (~550 lines)
+
+**Full landscape of RL techniques for aligning and improving language models — from RLHF to RLVR**
+
+Prerequisites: fine-tuning.md, evaluation.md
+
+| Lines | Section |
+|---|---|
+| 1–70 | RL alignment landscape: why RL is needed, core loop, technique spectrum + comparison table |
+| 71–200 | RLHF: 3-stage pipeline (SFT → RM → PPO), InstructGPT result (1.3B beats 175B), KL penalty mechanics, reward hacking |
+| 201–310 | DPO: eliminates RM + PPO, closed-form derivation (conceptual), variants (IPO, KTO, SimPO), when to use |
+| 311–420 | PRMs vs. ORMs: step-level vs. outcome labels, PRM800K, Lightman et al. 2023 SOTA on MATH, Monte Carlo rollout training |
+| 421–500 | GRPO: eliminates value function, group-relative advantage formula, key params (G=8–16), DeepSeek-R1 result |
+| 501–590 | RLVR: verifiable reward paradigm, verifiable domains table, DeepSeek-R1 architecture, "aha moment" emergence, code+unit-tests recipe |
+| 591–660 | Constitutional AI + RLAIF: 2-phase CAI process, AI labeling scaling argument, laundering failure mode |
+| 661–720 | RFT / STaR: rejection sampling loop, iterative bootstrapping, limitations (can't start from 0%) |
+| 721–800 | Reward hacking + alignment tax: concrete examples (verbosity, sycophancy, formatting), mitigations, managing the tax |
+| 801–end | Practical stack for builders: base model alignment comparison table, fine-tuning safety risks, evaluation signals, technique decision framework |
+
+---
+
+### LEARNING/PRODUCTION/inference-optimization/inference-optimization.md (~500 lines)
+
+**How LLMs actually run in production — latency, throughput, cost, and the full optimization toolkit**
+
+| Lines | Section |
+|---|---|
+| 1–60 | What inference optimization is: training vs. inference compute, why inference bottlenecks, 5 key metrics (TPS, TTFT, TPOT, p95/p99, GPU utilization) |
+| 61–190 | Quantization: FP32/FP16/BF16/INT8/INT4 tradeoffs; GPTQ vs. AWQ; accuracy cliff; VRAM table (7B→405B at each precision) |
+| 191–270 | Speculative decoding: autoregressive bottleneck, draft+verify mechanism, 2–3× latency gains, Medusa heads |
+| 271–380 | KV cache: memory formula, PagedAttention (24× throughput), prefix caching, sliding window, GQA (4–8× cache reduction) |
+| 381–440 | Continuous batching: static vs. dynamic scheduling, 5–30× throughput improvement, framework support |
+| 441–540 | Serving frameworks: vLLM, TGI, Triton+TensorRT, SGLang, Ollama — comparison table + selection guide |
+| 541–620 | Parallelism: tensor (within-node, NVLink), pipeline (cross-node), data, expert (MoE) — decision guide |
+| 621–660 | Flash Attention: O(n²) → O(n) memory, 3–7× speedup, FA2/FA3, practitioner notes |
+| 661–740 | Production optimization workflow: 9-step sequence from profiling to continuous monitoring |
+| 741–780 | Cost mental model: API vs. self-host break-even, 10M tokens/day threshold, GPU reference table |
+| 781–end | Quick reference: technique selection table (problem → technique → expected gain) |
+
+---
+
 ## 🎯 CAREER — PM & Professional Development
 
 ---
@@ -268,11 +367,11 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 | Phase | Topics | Lines | Time |
 |-------|--------|-------|------|
-| **FOUNDATIONS** | Prompt Eng, Context Eng, Reasoning | ~1,400 | 5h |
-| **AGENTS_AND_SYSTEMS** | Agentic Eng, System Design, Skills | ~4,000 | 9-10h |
-| **PRODUCTION** | Evaluation, Security, Specs, Fine-tuning | ~2,400 | 8-9h |
+| **FOUNDATIONS** | Prompt Eng, Context Eng, Reasoning, Multimodal, Emerging Architectures | ~2,400 | 7-8h |
+| **AGENTS_AND_SYSTEMS** | Agentic Eng, System Design, Skills, MCP | ~4,500 | 10-11h |
+| **PRODUCTION** | Evaluation, Security, Specs, Fine-tuning, Inference Optimization, RL Alignment | ~3,450 | 12-13h |
 | **CAREER** | PM preparation (4 docs) | ~800 | As needed |
 | **FUTURE-REFERENCE** | 7 playbooks + catalog + specs | ~2,500 | As needed |
-| **Total** | **10 learning topics + extras** | **~9,500** | **22-24h** |
+| **Total** | **14 learning topics + extras** | **~11,550** | **28-31h** |
 
-Last updated: 2026-03-08
+Last updated: 2026-03-22 (added emerging-architectures.md)

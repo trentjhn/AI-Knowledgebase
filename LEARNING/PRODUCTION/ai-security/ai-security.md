@@ -15,8 +15,12 @@
 7. [The AI Firewall / Gateway Pattern](#7-the-ai-firewall--gateway-pattern)
 8. [Sandboxing: Execution Isolation](#8-sandboxing-execution-isolation)
 9. [Monitoring, Detection, and DevSecOps](#9-monitoring-detection-and-devsecops)
+   - [Model Behavior Drift Detection](#model-behavior-drift-detection)
+   - [Behavioral Anomaly Detection](#behavioral-anomaly-detection)
 10. [Emerging Threats](#10-emerging-threats)
 11. [Anti-Patterns](#11-anti-patterns)
+12. [Agent Configuration Security](#12-agent-configuration-security)
+    - [CVE Response Workflow](#cve-response-workflow)
 
 ---
 
@@ -361,6 +365,40 @@ Real-time monitoring enables real-time response: throttling, quarantine, or acce
 
 ---
 
+### Model Behavior Drift Detection
+
+Model drift is a security concern, not just a quality concern. A model that previously refused certain request types and now complies, without any prompt change, is exhibiting unsafe behavioral drift. This can result from silent model updates by your provider, fine-tuning contamination, or context accumulation effects — and it is invisible without instrumentation.
+
+**What drift looks like operationally:**
+- A model that previously refused certain request types now complies
+- Tone shifts from formal to informal across a class of queries (can signal a persona drift from system prompt erosion)
+- Output length distributions change materially without corresponding prompt changes
+- Refusal rates drop or spike without a corresponding change to the system prompt or guardrails
+- Format compliance rate degrades — the model stops following JSON or markdown specifications it previously honored
+
+Each of these is a drift signal. None of them surface without active measurement.
+
+**Baseline establishment:** On deployment, capture a statistical baseline for your model's behavior. Measure: refusal rate by request category, average output length by query type, distribution of output formats, and confidence scores where available. Store this baseline with the model version and prompt hash. Recompute metrics weekly and immediately after any model update.
+
+**Metric-based detection:**
+
+*Refusal rate monitoring* — Track `refusals / total_requests` by category. A drop >20% from baseline in any category without a corresponding prompt change is a drift signal requiring investigation.
+
+*Output length distribution* — Track mean and standard deviation of output length by query type. Shifts >2σ from baseline indicate behavioral change. Both shrinkage (truncation, premature stopping) and expansion (verbose hedging, new caveats) are informative signals.
+
+*Format compliance rate* — If your prompts specify output format (JSON, markdown, specific structure), track the rate at which responses conform. Degradation signals model behavior change regardless of output content.
+
+**Tooling:** Langfuse, LangSmith, and Helicone all support custom metric tracking that can power this monitoring. The key is alerting on deviation from your baseline — not just absolute thresholds — because what constitutes "normal" varies by application.
+
+**Response to detected drift:**
+1. Check whether a model version update occurred — providers sometimes update models silently without notification; compare your model version hash against your deployment record
+2. Run your standard eval suite against the new behavior to characterize the scope of drift
+3. If drift is harmful, pin to a specific model version (most providers support this via API parameter)
+4. If pinning isn't available, adjust your prompts to restore desired behavior and document the adjustment as a compensating control
+5. File a support ticket with your provider describing the behavioral change — this creates a record and sometimes surfaces changelog information
+
+---
+
 ### The DevSecOps Lifecycle
 
 Security for AI agents isn't a deployment checklist — it's integrated across the entire development lifecycle. The **DevSecOps** (Development + Security + Operations) model embeds security at every phase:
@@ -390,6 +428,32 @@ Every agent action should be logged in a way that cannot be modified — not eve
 - Detecting cover-up attempts: a sophisticated attacker might try to modify logs to hide actions
 
 Immutable logs should record: action taken, agent identity, timestamp, tool/resource accessed, input parameters, output. Store them in a system the agent has no write access to.
+
+---
+
+### Behavioral Anomaly Detection
+
+The continuous monitoring bullet points above mention "access patterns" — but identifying an anomaly requires knowing what normal looks like first. Without baselines, every alert is a guess.
+
+**Baseline construction:** For each agent role, log all resource accesses for the first two weeks of production operation. Build a per-agent baseline: which file paths, API endpoints, database tables, and external domains it accesses. Record frequency distributions — not just presence/absence of a resource, but how often the agent accesses it per hour, which access patterns cluster together, and the typical sequence of operations within a task type. Two weeks is the minimum; four weeks captures weekly periodicity in business-logic-driven workflows.
+
+**Anomaly signals and what they indicate:**
+
+*Novel resource access* — The agent accesses a resource type it has never accessed before in two-plus weeks of operation. This is the highest signal-to-noise alert you can have for an established agent. A code review agent suddenly reading `/etc/passwd` or a customer service agent hitting an internal financial API it has never touched is a near-certain indicator of compromise or injection. Alert immediately.
+
+*Volume anomaly* — The agent accesses a known resource but at 10× its normal rate. This may indicate data exfiltration (reading everything it can reach as fast as possible) or a runaway tool loop. Both are security events. Alert at >5× baseline sustained for more than 60 seconds — brief spikes from legitimate bursty work are common, but sustained high volume is not.
+
+*Temporal anomaly* — The agent is active at times it has never been active before. A business-hours workflow operating at 3am is a high-confidence signal of a compromised agent or injected instruction that bypassed normal task scheduling. Alert on any activity more than 2 standard deviations from the historical time-of-day distribution for that agent role.
+
+*Sequence anomaly* — The agent performs known actions but in an unusual order. A file-editing agent that normally reads → modifies → tests → commits, but is now reading credentials → reading configuration → making network calls, is exhibiting a privilege escalation sequence even if each individual action is technically permitted. Harder to detect than volume or temporal anomalies, but important for catching sophisticated injection attacks that stay within allowed operations.
+
+**Threshold guidance:**
+- Novel resource access → alert immediately (near-zero false positive rate for agents with two-plus weeks of baseline)
+- Volume anomaly → alert at >5× baseline sustained for >60 seconds
+- Temporal anomaly → alert any activity >2σ from historical time-of-day distribution
+- Sequence anomaly → flag for review when step-transition probability drops below the 1st percentile of observed transitions
+
+**Implementation stack:** This is application-level logging with statistical comparison. OpenTelemetry traces + a time-series database (Prometheus, InfluxDB) + alerting (Grafana, PagerDuty) is the standard infrastructure. The AI-specific layer is adding `agent_id` and `agent_role` as trace dimensions, and building the baseline computation and deviation alerting on top of that data. No specialized AI security tooling is required — standard observability infrastructure handles this if you instrument correctly from the start.
 
 ---
 
@@ -685,11 +749,41 @@ Claude Code and Model Context Protocol (MCP) servers expand AI capabilities but 
 | **CVE-2025-35028** | Critical (9.1) | HexStrike AI MCP RCE | Avoid untrusted networks |
 | **CVE-2025-15061** | Critical (9.8) | Framelink Figma MCP RCE | Update immediately |
 
-**⚠️ Unpatched critical CVEs (as of Feb 2026)**:
+**Unpatched critical CVEs (as of Feb 2026)**:
 - CVE-2026-0755 (gemini-mcp-tool): No fix available → Do not expose to untrusted networks
 - CVE-2025-35028 (HexStrike): No fix available → Do not use in production
 
 **Sources**: [Cymulate](https://cymulate.com/blog/), [Checkpoint Research](https://research.checkpoint.com/), [Flatt Security](https://flatt.tech/)
+
+### CVE Response Workflow
+
+The table above is a point-in-time snapshot. New AI security CVEs emerge continuously, and the response process matters as much as the catalog.
+
+**Where to monitor for new AI security CVEs:**
+- **NIST NVD** (nvd.nist.gov) — the canonical database; search for "LLM", "large language model", "AI agent", "MCP server"
+- **MITRE ATLAS** (atlas.mitre.org) — the authoritative taxonomy for AI/ML-specific attacks; use for understanding attack patterns, not just individual CVEs
+- **Vendor security advisories** — Anthropic, OpenAI, and Google DeepMind all publish security advisories; subscribe via their developer newsletters and status pages
+- **Framework changelogs** — LangChain, LlamaIndex, LlamaFirewall, and other AI framework maintainers frequently embed security fixes in point releases without prominent CVE announcements; read every changelog
+- **arXiv cs.CR** — academic security research often precedes CVE publication by months; papers tagged "adversarial ML", "prompt injection", or "LLM security" are early warning signals
+- **Snyk's vulnerability database** — covers AI framework dependencies with actionable fix guidance
+- **mcp-scan** (Snyk, open-source) — actively scans installed MCP servers against known vulnerability signatures
+
+**Impact assessment process** when a new CVE is published:
+1. Does the vulnerability affect a component we use? Inventory check: model provider, AI framework, vector database, embedding model, MCP servers, tool libraries
+2. What attack surface does it expose? Classify: prompt injection, data exfiltration, model inversion, supply chain tampering, RCE
+3. What is the exploitability? Does exploitation require model access, API access, network adjacency, or physical infrastructure access? Internet-exposed components with low exploitability requirements are the highest-priority surface
+4. What data or agent actions are at risk if exploited? A CVE in a read-only analytics agent has different implications than one in a workflow agent with write access to production systems
+5. Is there a patch, workaround, or mitigation available? If not, the decision is: disable the component, network-isolate it, or accept risk with compensating controls
+
+**Patch prioritization:** Use CVSS score as a starting point but weight by deployment context. A CVSS 7.5 vulnerability in your primary LLM provider is more urgent than a CVSS 9.0 in a framework component used only in a non-critical internal tool. Factors: component criticality in your system, attack surface exposure (internet-facing vs. internal-only), and availability of mitigation.
+
+**Patch timeline targets:**
+- Critical (CVSS 9.0+) and exploitable in your environment: patch or apply mitigating control within 24 hours; treat as an incident
+- High (7.0–8.9): patch within 7 days; monitor for exploitation indicators in the interim
+- Medium (4.0–6.9): patch within 30 days
+- Low (<4.0): include in next scheduled maintenance cycle
+
+**When no patch is available:** Applying CVE-2026-0755 and CVE-2025-35028 from the table above as examples — the correct response for an unpatched critical CVE is not to wait. Isolate the component from untrusted network access, disable if feasible, document the accepted risk with a compensating control plan, and set a calendar reminder to recheck patch status weekly.
 
 ### MCP Rug-Pull Attack Model
 

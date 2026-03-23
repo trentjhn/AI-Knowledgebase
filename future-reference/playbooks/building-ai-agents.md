@@ -121,7 +121,14 @@ As your agent handles more complex tasks, these patterns become increasingly imp
 
 **Multi-agent architecture.** For complex tasks, break work into specialized sub-agents (a planner, a researcher, a writer, a reviewer) rather than one general agent doing everything. Each agent is simpler, more reliable, and easier to debug. See `agentic-engineering/agentic-engineering.md` for the Orchestrator, Expert Swarm, and Multi-Agent Collaboration patterns.
 
-**Persistent memory.** Add external memory (a database, a vector store) so the agent can recall information from previous sessions and past tasks. This is what enables agents that get better over time rather than starting fresh every run.
+**Persistent memory.** Add external memory so the agent can recall information from previous sessions and past tasks — this is what enables agents that improve over time rather than starting fresh every run. The retrieval strategy for that memory is a meaningful architectural decision, not just a vector store choice:
+
+- **Semantic (embedding) retrieval** — for factual lookup ("what did we decide about X last week?"). The default and correct starting point.
+- **BM25 + semantic hybrid** — the production baseline; adds exact-match retrieval for entity names, codes, and terminology that embeddings miss.
+- **Knowledge graph retrieval** — for relational or planning queries ("what tasks depend on this component?", "what decisions touch this system?"). Agents doing multi-step planning often need to traverse relationships between entities, not just find similar documents. Add this when your agent's planning domain has meaningful entity relationships.
+- **Temporal retrieval** — for history-aware agents that need to distinguish what is *currently* true from what was *previously* true ("what is the current state of this decision?" not "show me everything ever written about this decision").
+
+Most agents start with semantic-only or 2-channel hybrid and that covers the majority of use cases. Add knowledge graph and temporal channels when your agent's queries demonstrate systematic failures they can't compensate for — relational failures and recency failures are the two signals to watch.
 
 **Evaluation pipelines.** Once an agent is in production, set up automated tests that run it on known tasks and check the outcomes. Model updates and prompt drift can quietly break agents that were working fine.
 
