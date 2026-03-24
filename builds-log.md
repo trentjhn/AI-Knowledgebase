@@ -240,6 +240,7 @@ A personal AI knowledge library built for genuine depth — distilled, practitio
 
 ```
 AI-Knowledgebase/
+├── CLAUDE.md                ← Behavioral contract + last30days research trigger
 ├── KB-INDEX.md              ← Navigation layer (line counts, read times, one-liners)
 ├── builds-log.md            ← This file
 ├── LEARNING/
@@ -300,7 +301,10 @@ This hierarchy means an AI agent dropped into this repo can navigate without bei
 **4. Frontier monitoring as its own document type**
 `emerging-architectures.md` is intentionally not a tutorial. It's a Signal vs. Noise framework for evaluating new research — SSMs/Mamba, MoE, byte-level models, continuous/latent space. Designed to age well. The evaluation framework matters more than specific benchmarks, which decay fast.
 
-**5. builds-log.md (this file) as the meta-layer**
+**5. CLAUDE.md with last30days research trigger**
+The KB now has a behavioral contract. The key rule: when asked to research or update any topic, automatically run `/last30days [topic] --sources=hackernews,youtube` before synthesizing. HN surfaces what engineers have actually discovered in the field; YouTube pulls transcript content from builders shipping real products. Output is session-only context — it supplements primary sources, never replaces them.
+
+**6. builds-log.md (this file) as the meta-layer**
 A record of what was built, why, and what patterns are running across systems. Turns building into deliberate practice — not just shipping and forgetting.
 
 ---
@@ -375,3 +379,5 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Dynamic index generation** | edge_lab (journal/INDEX.md) | Index always accurate — rebuilt from source, never manually maintained |
 | **Mandatory-first-read index** | edge_lab (playbook/README.md) | Enforced routing — never open sub-files without reading the index first |
 | **Math offloading to scripts** | edge_lab (calc.py, position-sizer.py) | Eliminates LLM arithmetic errors entirely — deterministic by design |
+| **Trusted sources constraint** | edge_lab (6 X accounts in CLAUDE.md) | Agent only pulls from named, curated accounts — not the open web |
+| **Middle layer / news filter** | edge_lab (news-snapshot.md) | Raw news filtered to facts before reaching analysis layer; thesis ownership stays with human |
