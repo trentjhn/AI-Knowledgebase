@@ -58,6 +58,7 @@ edge_lab/
 ├── framework/                ← Personal trading framework rules
 ├── reviews/                  ← Weekly/periodic review outputs
 ├── scripts/
+│   ├── calc.py               ← 12-command calculator — all math offloaded here
 │   ├── position-sizer.py     ← --calc mode: shares, % at risk, buffer impact
 │   ├── live-prices.py        ← yfinance multi-ticker fetch
 │   ├── build-index.py        ← Rebuilds journal/INDEX.md
@@ -103,7 +104,10 @@ edge_lab has two distinct index patterns serving different purposes:
 
 The distinction matters: the journal index is a catalog (what exists), the playbook index is a router (which one to open). Different jobs, different maintenance models.
 
-**9. Tested scripts**
+**9. `calc.py` — math fully offloaded to Python**
+12-command calculator covering every calculation type in swing trading: R:R, R multiple, week R, P&L, exposure, drawdown, avg cost, $ at risk, spot conversion, price vs levels. CLAUDE.md has a hard rule: agent never computes numbers in-context, always calls `calc.py` and shows output directly. Solves a real failure mode — LLM arithmetic compounds errors in long-context sessions; Python doesn't.
+
+**10. Tested scripts**
 Every script in `scripts/` has a corresponding `test_*.py`. Production-grade practices applied to a personal trading tool.
 
 ---
@@ -370,3 +374,4 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Layered README index hierarchy** | AI-Knowledgebase | Agent (or human) orients at any depth without being told what to read |
 | **Dynamic index generation** | edge_lab (journal/INDEX.md) | Index always accurate — rebuilt from source, never manually maintained |
 | **Mandatory-first-read index** | edge_lab (playbook/README.md) | Enforced routing — never open sub-files without reading the index first |
+| **Math offloading to scripts** | edge_lab (calc.py, position-sizer.py) | Eliminates LLM arithmetic errors entirely — deterministic by design |
