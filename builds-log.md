@@ -95,7 +95,15 @@ Before any analysis, reads `journal/INDEX.md` → finds 3 structurally similar p
 **7. Session close = git push**
 End-of-session protocol: list changed files → rebuild journal index → `git add -A && git commit && git push`. Framework versioned automatically.
 
-**8. Tested scripts**
+**8. Two types of index files**
+edge_lab has two distinct index patterns serving different purposes:
+
+- `journal/INDEX.md` — **dynamically generated** by `scripts/build-index.py` every time a trade entry is added. The agent never manually maintains it. Run the script, it rebuilds from scratch. Always accurate.
+- `playbook/README.md` — **mandatory-first-read** index. The CLAUDE.md explicitly enforces: *"ALWAYS read playbook/README.md first — it is the index. Use the Matching Guide to identify the correct setup file, then open only that file. Never open individual playbook files without reading the README index first."*
+
+The distinction matters: the journal index is a catalog (what exists), the playbook index is a router (which one to open). Different jobs, different maintenance models.
+
+**9. Tested scripts**
 Every script in `scripts/` has a corresponding `test_*.py`. Production-grade practices applied to a personal trading tool.
 
 ---
@@ -265,11 +273,28 @@ Each doc synthesizes 10–20+ primary sources (papers, docs, blog posts) into a 
 - `future-reference/` is operational protocols (how to build things)
 These are intentionally separate. Mixing them creates reference docs that are neither good to learn from nor good to execute against.
 
-**3. Frontier monitoring as its own document type**
-`emerging-architectures.md` is intentionally not a tutorial. It's a Signal vs. Noise framework for evaluating new research — SSMs/Mamba, MoE, byte-level models, continuous/latent space. Designed to age well. The evaluation framework matters more than specific benchmarks, which decay fast.
+**3. Layered README index hierarchy**
+This is the most architecturally deliberate thing in the KB — a 4-level README cascade that lets any reader (or AI agent) orient at any depth:
 
-**4. KB-INDEX.md as the lightweight navigation layer**
-Single file: topic → file path → line count → estimated read time → one-line description. Makes the whole library scannable without opening files. Acts like a table of contents for the entire system.
+```
+README.md                           ← Root: "what is this repo, what's where"
+└── LEARNING/README.md              ← Section: learning path guide (Foundation→Build→Ship)
+    ├── FOUNDATIONS/README.md       ← Subsection: what's in FOUNDATIONS, how long, prereqs
+    ├── AGENTS_AND_SYSTEMS/README.md
+    └── PRODUCTION/README.md
+└── future-reference/README.md     ← Section: practical tools vs. study material
+└── KB-INDEX.md                    ← Flat catalog: file paths, line counts, read times
+```
+
+Each level answers a different question:
+- Root README: "Where do I start?"
+- Section READMEs: "What's in this section, how long will it take, what should I read first?"
+- KB-INDEX.md: "I know what I want — where exactly is it?"
+
+This hierarchy means an AI agent dropped into this repo can navigate without being told anything. It reads README.md, gets oriented, follows the links to the right section README, then hits KB-INDEX.md for the specific file. **Progressive disclosure for navigation.**
+
+**4. Frontier monitoring as its own document type**
+`emerging-architectures.md` is intentionally not a tutorial. It's a Signal vs. Noise framework for evaluating new research — SSMs/Mamba, MoE, byte-level models, continuous/latent space. Designed to age well. The evaluation framework matters more than specific benchmarks, which decay fast.
 
 **5. builds-log.md (this file) as the meta-layer**
 A record of what was built, why, and what patterns are running across systems. Turns building into deliberate practice — not just shipping and forgetting.
@@ -342,3 +367,6 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Delta sync** | Zenkai (planned) | Cost-efficient content regeneration |
 | **Session close = commit** | edge_lab | Automatic versioning without manual git discipline |
 | **Phase-based workflows** | mariana-interview, website builds | Structured execution that mirrors real-world constraints |
+| **Layered README index hierarchy** | AI-Knowledgebase | Agent (or human) orients at any depth without being told what to read |
+| **Dynamic index generation** | edge_lab (journal/INDEX.md) | Index always accurate — rebuilt from source, never manually maintained |
+| **Mandatory-first-read index** | edge_lab (playbook/README.md) | Enforced routing — never open sub-files without reading the index first |
