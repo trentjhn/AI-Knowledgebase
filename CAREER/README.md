@@ -1,36 +1,34 @@
-# CAREER — PM & Professional Development
+# CAREER — AI PM Domain Knowledge
 
-Resources for AI PM interviews, job preparation, and professional development in AI roles.
-
-**What's this for:** Interview prep, understanding AI PM responsibilities, connecting KB knowledge to PM decisions.
+Reference for thinking like an AI PM — understanding the role, applying technical depth to product decisions, and developing domain intuition for AI-powered systems.
 
 ---
 
 ## Contents
 
-[**pm-context/**](pm-context/) — Four documents covering all aspects of AI PM preparation:
+[**pm-context/**](pm-context/) — Four documents covering the full scope of AI PM thinking:
 
 1. **ai-pm-role.md** — What is an AI PM? Responsibilities, what companies value, competitive advantage of AI PM thinking
 2. **pm-fundamentals.md** — PM frameworks, decision-making models, mental models, and methodologies
-3. **interview-scenarios.md** — Real interview questions, case studies, how to think through AI PM scenarios
+3. **interview-scenarios.md** — Case studies and scenarios for thinking through AI PM problems
 4. **ai-pm-applications.md** — How KB concepts (agents, RAG, context, evaluation, security, cost) map to actual PM decisions
 
 ---
 
 ## How to Use
 
-**Preparing for interviews:**
+**Getting oriented as an AI PM:**
 1. Read `ai-pm-role.md` for context on what AI PM is
 2. Study `pm-fundamentals.md` for frameworks
-3. Practice `interview-scenarios.md` questions
+3. Work through `interview-scenarios.md` to develop problem-solving patterns
 
-**During projects:**
-- Use `ai-pm-applications.md` to translate KB knowledge into PM decisions
+**Translating technical knowledge into product thinking:**
+- Use `ai-pm-applications.md` to connect KB concepts to PM decisions
 - Reference back to LEARNING/ docs when you need the technical depth
 
-**Building PM intuition:**
-- Pair a LEARNING topic (e.g., "Evaluation") with the corresponding AI-PM-Applications section
-- Use this to see how technical concepts become product requirements
+**Building AI PM intuition:**
+- Pair a LEARNING topic (e.g., "Evaluation") with the corresponding section in `ai-pm-applications.md`
+- See how technical concepts become product requirements and tradeoffs
 
 ---
 

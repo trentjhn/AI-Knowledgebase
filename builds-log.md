@@ -41,7 +41,7 @@ edge_lab/
 ├── CLAUDE.md / GEMINI.md     ← Behavioral contract (dual AI)
 ├── context/
 │   ├── macro-outlook.md      ← Current HTF bias (agent updates in-session)
-│   ├── portfolio-state.md    ← Open positions, risk snapshot
+│   ├── positions.md          ← Current positions, risk snapshot
 │   ├── market-snapshot.md    ← Generated indicator data (make refresh)
 │   ├── macro-snapshot.md     ← Macro conditions
 │   └── pending-setups.md     ← Watchlist — auto-price-checked at session start
@@ -72,7 +72,7 @@ edge_lab/
 #### Key Decisions and Why They're Elegant
 
 **1. Context as files, not conversation memory**
-All state lives in structured markdown — macro outlook, portfolio state, watchlist. Agent reads fresh each session. No hallucinated continuity from chat history.
+All state lives in structured markdown — macro outlook, open positions, watchlist. Agent reads fresh each session. No hallucinated continuity from chat history.
 
 **2. Dual AI portability**
 CLAUDE.md and GEMINI.md are the same behavioral contract with different tool dialects. When Claude usage hits limits, Gemini picks up with zero behavior drift. Tool mapping:
@@ -91,7 +91,7 @@ On every chart upload: checks `market-snapshot.md` timestamp. >24h → flags imm
 Before any analysis, reads `journal/INDEX.md` → finds 3 structurally similar past setups → reads full entries. Analysis grounded in personal trade history, not generic TA patterns.
 
 **6. Non-interactive position sizer**
-`position-sizer.py --calc` runs inline during trade discussion (not after). Pulls portfolio value/maint req/margin from context. Outputs shares, % at risk, buffer impact, binding constraint.
+`position-sizer.py --calc` runs inline during trade discussion (not after). Pulls live position sizing data from context. Outputs shares, % at risk, buffer impact, binding constraint.
 
 **7. Session close = git push**
 End-of-session protocol: list changed files → rebuild journal index → `git add -A && git commit && git push`. Framework versioned automatically.
@@ -109,6 +109,20 @@ The distinction matters: the journal index is a catalog (what exists), the playb
 
 **10. Tested scripts**
 Every script in `scripts/` has a corresponding `test_*.py`. Production-grade practices applied to a personal trading tool.
+
+**11. Two-mode news system**
+Two distinct protocols with different jobs — not one "news" command:
+
+- **Morning Brief** (`/morning-brief` or "morning brief"): Runs last30days on 5 X accounts + Polymarket, filters output to facts only (strips sentiment, predictions, opinions), writes to `context/news-snapshot.md`. Curated, persistent, 4-6 bullets. Feeds the analysis context.
+- **Daily Digest** (`/daily-digest` or "daily digest"): Runs last30days 5 times — one targeted call per account with account-matched topic keywords. Synthesizes into thematic narratives + notable events + upcoming items. Session only, never writes to a file. Comprehensive, informational, not tied to any analysis workflow.
+
+The separation matters: morning brief is a context-preparation tool (facts → file → analysis). Daily digest is a reading tool (synthesis → understand what happened today). Same accounts, completely different intent and output.
+
+**12. Global slash command skills**
+`/morning-brief` and `/daily-digest` installed at `~/.claude/skills/` — available in any Claude Code session globally, not just edge_lab. Each skill is self-contained with the full protocol so it works standalone. The auto-triggers in CLAUDE.md also remain, so natural language and slash commands both work.
+
+**13. `fetch-digest.py` — parked custom X scraper**
+Built a direct X API scraper using `requests` + session cookies (AUTH_TOKEN + ct0) that bypasses last30days entirely. Pulls all original posts from all 5 accounts with recency-boosted engagement scoring and ID caching to avoid rate limits. Parked pending a valid Bearer token (last30days's internal bird-search client handles this; raw requests cannot use a stale public token). Lives at `scripts/fetch-digest.py` — activate by adding `X_BEARER_TOKEN` to `.env`.
 
 ---
 
