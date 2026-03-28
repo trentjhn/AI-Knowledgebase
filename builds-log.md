@@ -325,14 +325,14 @@ A record of what was built, why, and what patterns are running across systems. T
 
 ### 5. Zenkai — Personalized AI Learning App
 
-**Status:** Planned (not yet built)
-**Repo:** `trentjhn/zenkai` (not yet created)
+**Status:** Functional — end-to-end working for Module 2. 8 modules remaining for full content coverage.
+**Repo:** `trentjhn/zenkai`
 **Design doc:** `/Users/t-rawww/AI-Knowledgebase/docs/plans/2026-02-28-zenkai-design.md`
 
-#### What It Will Be
+#### What It Is
 A local web app that turns this knowledge base into an interactive learning experience. Named after the DBZ Zenkai boost. Spaced repetition, scenario-based quizzes with AI PM framing, module gating (≥70% to unlock next).
 
-#### Planned Stack
+#### Stack
 - Frontend: React + Tailwind + shadcn/ui + Framer Motion
 - Backend: FastAPI (Python)
 - DB: SQLite (local)
