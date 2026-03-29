@@ -343,6 +343,61 @@ A local web app that turns this knowledge base into an interactive learning expe
 
 ---
 
+### 6. YouTube Summarizer Premium — Full-Stack AI Video Intelligence
+
+**Status:** Production-deployed
+**Location:** `/Users/t-rawww/Projects/youtube-summarizer-complete/`
+**Repo:** `trentjhn/youtube-summarizer-complete` (private)
+
+#### What It Is
+Full-stack AI application that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: ~30 seconds, Deep: ~60 seconds) with context-aware agentic chat and seamless timestamp navigation back to source material.
+
+#### Stack
+- **Frontend:** React + Vite + Tailwind CSS v4 + Framer Motion (Bento Grid layout)
+- **Backend:** Flask (Python) + SQLite + Redis + WebSockets (SocketIO)
+- **LLM Models:** Google Gemini 2.5 Flash-Lite (primary), OpenAI GPT-4o-mini (chat fallback)
+- **Infrastructure:** Vercel (frontend), Render (backend with IaC via render.yaml)
+
+#### Key Decisions and Why They're Elegant
+
+**1. Model migration for economics + context**
+Switched from OpenAI GPT-4o-mini → Google Gemini 2.5 Flash-Lite. Economics: 33% cost reduction. Context: 8x larger window (1M vs 128K tokens). Practical impact: eliminates chunking for 99%+ of videos. Documented migration logic in `ai_summarizer.py` shows deliberate model economics optimization beyond just "newer is better."
+
+**2. Dual-mode summarization architecture**
+Two completely different prompting strategies with identical core principles but different output depth:
+- **Quick Mode:** 5 hyper-focused JSON components (quick takeaway, key points, topics, timestamps, summary)
+- **Deep Mode:** Same 5 components but 8-module breakdown with detailed analysis, key quotes, arguments sections
+The separation lets users choose summarization depth without branching prompt logic — same prompt engine, two different output targets.
+
+**3. Production-grade prompt engineering**
+Sophistication rarely seen in deployed systems. Core principles baked into prompts:
+- **Comprehensiveness Principle:** Content dictates output length, not arbitrary constraints. 3-hour video gets deeper analysis than 10-minute video.
+- **Faithful Representation:** Preserve tone/intent without sanitizing, intentional for controversial content. Reflects actual speaker message, not watered-down version.
+- **Attribution Preservation:** Clear sourcing when speaker quotes others or references studies. Maintains context connection.
+- **Tone Matching:** 5 configurable tones (Objective, Academic, Casual, Skeptical, Provocative) applied consistently across all outputs.
+- **Few-shot learning embedded:** BAD vs GOOD output examples in prompt itself, teaching the model what to avoid.
+Prompt versioning (v5.0) auto-invalidates cache on prompt changes — no stale summaries.
+
+**4. Context-aware chat with layered context management**
+Chat service builds conversation context from three layers: video title → structured summary → transcript (truncated to 5K chars). Conversation history limited to 10 messages to prevent context bloat while maintaining conversational coherence. Context engineering in action: careful composition prevents token waste while preserving relevance.
+
+**5. Real-time processing feedback via WebSocket**
+SocketIO integration streams progress during LLM processing. Provides UX feedback for operations taking 30-60 seconds. Progress updates sent in real-time, no artificial polling.
+
+**6. YouTube extraction resilience**
+Handles modern YouTube's anti-bot measures: yt-dlp integration + Netscape cookie format parsing + cookie-based auth to bypass datacenter IP blocks. Accumulates extraction errors for debugging without crashing. Solves the "silent 500 error" failure mode.
+
+**7. Token accounting and context strategy**
+Conservative max input (900K/1M tokens) leaves explicit buffer for 65K-token output. Detailed token-per-word calculation (1.3 tokens/word English, 150 words/minute of speech). Therefore: ~195 tokens per minute of video, ~11,700 tokens per hour. Strategic math prevents runtime surprises.
+
+**8. Deployment infrastructure-as-code**
+Frontend (Vercel): Root `VITE_API_URL` environment variable points to backend. Backend (Render): `render.yaml` IaC blueprint with Web Service provisioning. Critical decision: Web Service instead of serverless, because Lambda/serverless timeouts before LLM processing finishes. Deployment logic reflects real constraints.
+
+**9. Cache invalidation strategy**
+SQLite persistence + Redis caching for processed videos. Cache key versioning lets admin clear cache without data loss (`/api/admin/clear-cache` endpoint). Useful for testing prompt changes without incrementing version.
+
+---
+
 ## Protocols and Playbooks
 
 ### Website Build Protocol
