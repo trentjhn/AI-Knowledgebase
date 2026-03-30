@@ -9,14 +9,15 @@
 
 Quick look at what's been built and why each matters:
 
-| System | Status | Type | Key Innovation |
+| System | Status | Type | Problem Solved |
 |--------|--------|------|---|
-| **YouTube Summarizer Premium** | Production-deployed | Full-Stack AI | Dual-mode architecture, 8x context window optimization, production prompt engineering |
-| **edge_lab** | Live | Trading Automation | Session-aware agent with state management, market real-time decisions, 13 elegant patterns |
-| **Zenkai** | Functional | Learning Platform | Interactive distillation of KB, delta sync for cost efficiency, spaced repetition UX |
-| **AI-Knowledgebase** | Continuously growing | Knowledge Library | Practitioner-depth synthesis from 100+ primary sources, methodology foundation for consulting |
-| **interview-prep** | Live | Job Search OS | 27-company CRM system, STAR story management, session logging for institutional memory |
-| **mariana-interview** | Complete | Case Study Prep | Purpose-built domain constraints, 3-phase interview workflow, output persistence |
+| **YouTube Summarizer Premium** | Production-deployed | Full-Stack AI | Long videos require watching in full to extract information; chunking-based tools lose narrative coherence |
+| **edge_lab** | Live | Trading Automation | Trading frameworks break down under real-time pressure — steps skipped, math approximated, thesis drifted |
+| **Zenkai** | Functional | Learning Platform | Good reference material doesn't create retention; needed active recall and spaced repetition for AI content |
+| **AI-Knowledgebase** | Continuously growing | Knowledge Library | AI engineering knowledge scattered across 100+ sources with no practitioner-depth synthesis that ages well |
+| **interview-prep** | Live | Job Search OS | 10+ concurrent applications across memory-less sessions; needed live-state CRM with company-specific context |
+| **mariana-interview** | Complete | Case Study Prep | Generic PM templates fail in industrial domains — wrong personas, wrong success metrics, missing physical constraints |
+| **security-var-agent** | Functional | Recommendation Engine | VAR workflows require market-real vendor analysis, ROI modeling, and confidence scoring; manual comparison is error-prone |
 
 ---
 
@@ -45,6 +46,9 @@ The second pattern: **dual AI portability**. Three systems now have both CLAUDE.
 **Status:** Production-deployed
 **Location:** `/Users/t-rawww/Projects/youtube-summarizer-complete/`
 **Repo:** `trentjhn/youtube-summarizer-complete` (private)
+
+#### The Problem
+Long videos require watching in full to extract information. Most AI summarization tools hit context limits and chunk the video — losing the narrative arc and connection between ideas. The result is bullet points that look comprehensive but miss the through-line.
 
 #### What It Is
 Full-stack AI application that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: ~30 seconds, Deep: ~60 seconds) with context-aware agentic chat and seamless timestamp navigation back to source material.
@@ -100,6 +104,9 @@ SQLite persistence + Redis caching for processed videos. Cache key versioning le
 **Status:** Live
 **Location:** `/Users/t-rawww/edge_lab/`
 **Config:** `CLAUDE.md` + `GEMINI.md`
+
+#### The Problem
+Trading frameworks are easy to write and hard to follow under real-time pressure. Without a system that enforces your own rules at every decision, steps get skipped — macro alignment unchecked, position sizing eyeballed, past trade history ignored. The failure mode isn't a bad framework. It's a good framework that doesn't get used.
 
 #### What It Is
 A session-aware swing trading analyst grounded in a pre-built framework. Not a generic chatbot — it reasons strictly within my macro bias, key levels, portfolio state, and trade journal. It stress-tests my thesis, never generates one from thin air.
@@ -202,6 +209,9 @@ Built a direct X API scraper using `requests` + session cookies (AUTH_TOKEN + ct
 **Repo:** `trentjhn/zenkai`
 **Design doc:** `/Users/t-rawww/AI-Knowledgebase/docs/plans/2026-02-28-zenkai-design.md`
 
+#### The Problem
+Reading well-written reference material doesn't create retention. The AI-Knowledgebase had hundreds of pages of synthesized AI engineering content — but without active recall and spaced repetition, it stayed reference-only: useful to look up, not useful to apply from memory. The vision: something like Duolingo for AI, where learning is interactive, gated by mastery, and actually engaging.
+
 #### What It Is
 A local web app that turns this knowledge base into an interactive learning experience. Named after the DBZ Zenkai boost. Spaced repetition, scenario-based quizzes with AI PM framing, module gating (≥70% to unlock next).
 
@@ -221,6 +231,9 @@ A local web app that turns this knowledge base into an interactive learning expe
 **Status:** Live (continuously growing)
 **Location:** `/Users/t-rawww/AI-Knowledgebase/`
 **Repo:** `trentjhn/AI-Knowledgebase` (private)
+
+#### The Problem
+AI engineering knowledge is scattered across 100+ papers, documentation sites, and blog posts of wildly varying depth. Most tutorials are either too shallow for practitioners or benchmark-focused — which decays fast as models improve. No single resource synthesized core concepts, frameworks, and operational playbooks at practitioner depth in a form that aged well.
 
 #### What It Is
 A personal AI knowledge library built for genuine depth — distilled, practitioner-level reference docs on core AI engineering topics. Built for personal use and as a methodology foundation for future consulting/audit work.
@@ -304,6 +317,9 @@ A record of what was built, why, and what patterns are running across systems. T
 **Location:** `/Users/t-rawww/interview-prep/`
 **Config:** `CLAUDE.md` + `GEMINI.md`
 
+#### The Problem
+Running 10+ concurrent job applications means managing unique context for every company, hiring manager, interview format, and STAR story alignment — across weeks of sessions that share no memory. Notes apps stay static. Chat history resets. There was no system built for the actual complexity of a multi-track job search campaign.
+
 #### What It Is
 A full job search operating system — not a notes folder. Tracks 10+ active/passive opportunities, stores STAR stories, maintains interview schedules, logs every session, and holds all core materials. The CLAUDE.md doubles as a live CRM.
 
@@ -359,6 +375,9 @@ The CLAUDE.md has explicit language rules: no em dashes, no filler phrases, don'
 **Location:** `/Users/t-rawww/mariana-interview/`
 **Config:** `CLAUDE.md`
 
+#### The Problem
+Generic PM templates solve the wrong problem in industrial domains. A standard PRD template optimizes for DAU/MAU, but in mining software you measure recovery rate and cost per ton. It assumes users are individual product managers, but plant operators and process engineers have different pain points. It ignores physical constraints (ore composition, flotation chemistry, equipment specs) that drive every technical decision. Using a generic template in a domain-specific case study produces a PRD that *looks* professional but solves the wrong problem at every section.
+
 #### What It Is
 A purpose-built preparation environment for the Mariana Minerals Round 2 collaborative PRD case study. Not generic interview prep — purpose-built for a specific 60-minute interview with a specific company in a specific domain (industrial mining software).
 
@@ -413,7 +432,55 @@ Every feature analysis forces: systems first (inputs→process→outputs→feedb
 
 ---
 
+### 7. security-var-agent — Value-Added Reseller Recommendation Engine
+
+**Status:** Functional (reached solid state, business case closed)
+**Location:** `/Users/t-rawww/AI-Agent-Project/`
+**Repo:** `trentjhn/security-var-agent` (GitHub public)
+
+#### The Problem
+VAR workflows require evaluating dozens of vendors across multiple dimensions (market position, technical fit, ROI, implementation complexity). Manual comparison is error-prone and time-consuming. Spreadsheet-based scoring misses market context and ROI implications. The result: recommendations based on incomplete analysis or vendor familiarity rather than systematic evaluation.
+
+#### What It Is
+A modular service-oriented architecture for comprehensive software solution recommendations. Analyzes client requirements, market conditions, and technical constraints to produce evidence-based vendor recommendations with ROI projections, implementation timelines, and confidence scoring.
+
+#### Stack
+- **Frontend:** React + TypeScript (AI Advisor chat interface, side-by-side recommendation comparison)
+- **Backend:** Node.js + TypeScript (modular service architecture)
+- **Services:** Context Understanding, Analysis, Recommendation Engine, ROI Calculator, Implementation Planning
+- **Data:** Market Data Cache Service (99.9% hit rate), Confidence Scoring System
+- **Infrastructure:** Supabase (data persistence), Jest (comprehensive test coverage)
+
+#### Key Decisions and Why They're Elegant
+
+**1. Modular service-oriented architecture**
+Six independent services (Context, Analysis, Recommendation, ROI, Implementation, Data Freshness) composed by a central orchestrator. Each service is independently testable and replaceable. Changes to vendor scoring logic don't affect ROI calculation or confidence scoring.
+
+**2. Market data cache with 99.9% hit rate**
+Market data freshness is critical — recommendations should reflect current vendor positions and pricing. Caching strategy avoids redundant API calls while maintaining real-time context. Cache invalidation rules ensure stale data is caught before reaching recommendations.
+
+**3. Confidence scoring system**
+Not all recommendations are equally strong. The system quantifies confidence across four dimensions: market validation (vendor track record), technical fit (architecture compatibility), financial viability (ROI > threshold), and implementation feasibility (timeline realistic). Scoring is transparent to users — they see which recommendations are high-confidence vs. cautious.
+
+**4. ROI calculator with detailed financial modeling**
+Beyond "this vendor is cheaper" — the system models total cost of ownership (licensing + implementation + training + maintenance), payback period, and break-even timelines. Financial output is evidence-based and defensible.
+
+**5. Implementation timeline visualization**
+Recommendations include detailed phased timelines — pre-implementation (discovery, vendor selection), implementation (deployment, integration, testing), and post-implementation (training, optimization). Timelines account for parallel vs. sequential work, vendor constraints, and client readiness.
+
+**6. TypeScript for type safety across service boundaries**
+Services communicate via strict interfaces — a change to the Recommendation output format is caught at compile time across all consumers. Prevents silent failures where one service produces data another service doesn't expect.
+
+**7. Comprehensive test suite**
+Jest coverage for service logic, recommendation scoring, ROI calculations, and confidence algorithms. Ensures scoring logic stays consistent as vendor datasets and market conditions change.
+
+**Project Status:** Built to specification for a VAR workflow automation opportunity. Reached functional state with core services operational. Client opportunity closed, but the system demonstrates patterns (modular scoring, financial modeling, confidence transparency) applicable to other recommendation engines (cloud provider selection, SaaS stack optimization, etc.).
+
+---
+
 ## What These Systems Demonstrate
+
+Collectively, these seven systems show depth across the full AI engineering stack:
 
 Collectively, these six systems show depth across the full AI engineering stack:
 
@@ -468,7 +535,7 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | Pattern | Systems | What It Solves |
 |---|---|---|
 | **Context as files** | edge_lab, interview-prep, mariana-interview, KB | Session continuity without chat memory dependency |
-| **Behavioral contract (CLAUDE.md)** | All 6 systems | Consistent agent behavior across sessions, no re-explaining |
+| **Behavioral contract (CLAUDE.md)** | 6 of 7 systems (all except VAR Agent) | Consistent agent behavior across sessions, no re-explaining |
 | **Dual AI portability** | edge_lab, interview-prep | Claude↔Gemini handoff with zero behavior drift |
 | **Conditional context loading** | YouTube Summarizer, mariana-interview, edge_lab | Load domain context on-demand — keep context window efficient |
 | **Custom language constraints** | mariana-interview, interview-prep | Force domain-appropriate vocabulary at the system level |
@@ -489,3 +556,6 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Production-grade prompt engineering** | YouTube Summarizer | Comprehensiveness principle, faithful representation, tone matching, few-shot examples embedded |
 | **Trusted sources constraint** | edge_lab (6 X accounts in CLAUDE.md) | Agent only pulls from named, curated accounts — not the open web |
 | **Middle layer / news filter** | edge_lab (news-snapshot.md) | Raw news filtered to facts before reaching analysis layer; thesis ownership stays with human |
+| **Modular service architecture** | security-var-agent | Services independently testable/replaceable; changes in one domain don't cascade |
+| **Confidence scoring transparency** | security-var-agent | Quantified confidence across multiple dimensions; recommendations include explicit strength assessment |
+| **Financial modeling + ROI clarity** | security-var-agent | Detailed cost modeling prevents false economies; breaks down total cost of ownership |
