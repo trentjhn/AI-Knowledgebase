@@ -5,6 +5,21 @@
 
 ---
 
+## Systems Overview
+
+Quick look at what's been built and why each matters:
+
+| System | Status | Type | Key Innovation |
+|--------|--------|------|---|
+| **YouTube Summarizer Premium** | Production-deployed | Full-Stack AI | Dual-mode architecture, 8x context window optimization, production prompt engineering |
+| **edge_lab** | Live | Trading Automation | Session-aware agent with state management, market real-time decisions, 13 elegant patterns |
+| **Zenkai** | Functional | Learning Platform | Interactive distillation of KB, delta sync for cost efficiency, spaced repetition UX |
+| **AI-Knowledgebase** | Continuously growing | Knowledge Library | Practitioner-depth synthesis from 100+ primary sources, methodology foundation for consulting |
+| **interview-prep** | Live | Job Search OS | 27-company CRM system, STAR story management, session logging for institutional memory |
+| **mariana-interview** | Complete | Case Study Prep | Purpose-built domain constraints, 3-phase interview workflow, output persistence |
+
+---
+
 ## The Pattern Running Through All of This
 
 Before diving into individual systems, there's a meta-pattern worth naming:
@@ -23,9 +38,64 @@ The second pattern: **dual AI portability**. Three systems now have both CLAUDE.
 
 ---
 
-## Systems
+## Systems (Most Impressive First)
 
-### 1. edge_lab — Trading Analyst System
+### 1. YouTube Summarizer Premium — Full-Stack AI Video Intelligence
+
+**Status:** Production-deployed
+**Location:** `/Users/t-rawww/Projects/youtube-summarizer-complete/`
+**Repo:** `trentjhn/youtube-summarizer-complete` (private)
+
+#### What It Is
+Full-stack AI application that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: ~30 seconds, Deep: ~60 seconds) with context-aware agentic chat and seamless timestamp navigation back to source material.
+
+#### Stack
+- **Frontend:** React + Vite + Tailwind CSS v4 + Framer Motion (Bento Grid layout)
+- **Backend:** Flask (Python) + SQLite + Redis + WebSockets (SocketIO)
+- **LLM Models:** Google Gemini 2.5 Flash-Lite (primary), OpenAI GPT-4o-mini (chat fallback)
+- **Infrastructure:** Vercel (frontend), Render (backend with IaC via render.yaml)
+
+#### Key Decisions and Why They're Elegant
+
+**1. Model migration for economics + context**
+Switched from OpenAI GPT-4o-mini → Google Gemini 2.5 Flash-Lite. Economics: 33% cost reduction. Context: 8x larger window (1M vs 128K tokens). Practical impact: eliminates chunking for 99%+ of videos. Documented migration logic in `ai_summarizer.py` shows deliberate model economics optimization beyond just "newer is better."
+
+**2. Dual-mode summarization architecture**
+Two completely different prompting strategies with identical core principles but different output depth:
+- **Quick Mode:** 5 hyper-focused JSON components (quick takeaway, key points, topics, timestamps, summary)
+- **Deep Mode:** Same 5 components but 8-module breakdown with detailed analysis, key quotes, arguments sections
+The separation lets users choose summarization depth without branching prompt logic — same prompt engine, two different output targets.
+
+**3. Production-grade prompt engineering**
+Sophistication rarely seen in deployed systems. Core principles baked into prompts:
+- **Comprehensiveness Principle:** Content dictates output length, not arbitrary constraints. 3-hour video gets deeper analysis than 10-minute video.
+- **Faithful Representation:** Preserve tone/intent without sanitizing, intentional for controversial content. Reflects actual speaker message, not watered-down version.
+- **Attribution Preservation:** Clear sourcing when speaker quotes others or references studies. Maintains context connection.
+- **Tone Matching:** 5 configurable tones (Objective, Academic, Casual, Skeptical, Provocative) applied consistently across all outputs.
+- **Few-shot learning embedded:** BAD vs GOOD output examples in prompt itself, teaching the model what to avoid.
+Prompt versioning (v5.0) auto-invalidates cache on prompt changes — no stale summaries.
+
+**4. Context-aware chat with layered context management**
+Chat service builds conversation context from three layers: video title → structured summary → transcript (truncated to 5K chars). Conversation history limited to 10 messages to prevent context bloat while maintaining conversational coherence. Context engineering in action: careful composition prevents token waste while preserving relevance.
+
+**5. Real-time processing feedback via WebSocket**
+SocketIO integration streams progress during LLM processing. Provides UX feedback for operations taking 30-60 seconds. Progress updates sent in real-time, no artificial polling.
+
+**6. YouTube extraction resilience**
+Handles modern YouTube's anti-bot measures: yt-dlp integration + Netscape cookie format parsing + cookie-based auth to bypass datacenter IP blocks. Accumulates extraction errors for debugging without crashing. Solves the "silent 500 error" failure mode.
+
+**7. Token accounting and context strategy**
+Conservative max input (900K/1M tokens) leaves explicit buffer for 65K-token output. Detailed token-per-word calculation (1.3 tokens/word English, 150 words/minute of speech). Therefore: ~195 tokens per minute of video, ~11,700 tokens per hour. Strategic math prevents runtime surprises.
+
+**8. Deployment infrastructure-as-code**
+Frontend (Vercel): Root `VITE_API_URL` environment variable points to backend. Backend (Render): `render.yaml` IaC blueprint with Web Service provisioning. Critical decision: Web Service instead of serverless, because Lambda/serverless timeouts before LLM processing finishes. Deployment logic reflects real constraints.
+
+**9. Cache invalidation strategy**
+SQLite persistence + Redis caching for processed videos. Cache key versioning lets admin clear cache without data loss (`/api/admin/clear-cache` endpoint). Useful for testing prompt changes without incrementing version.
+
+---
+
+### 2. edge_lab — Trading Analyst System
 
 **Status:** Live
 **Location:** `/Users/t-rawww/edge_lab/`
@@ -126,118 +196,23 @@ Built a direct X API scraper using `requests` + session cookies (AUTH_TOKEN + ct
 
 ---
 
-### 2. interview-prep — Job Search OS
+### 3. Zenkai — Personalized AI Learning App
 
-**Status:** Live
-**Location:** `/Users/t-rawww/interview-prep/`
-**Config:** `CLAUDE.md` + `GEMINI.md`
-
-#### What It Is
-A full job search operating system — not a notes folder. Tracks 10+ active/passive opportunities, stores STAR stories, maintains interview schedules, logs every session, and holds all core materials. The CLAUDE.md doubles as a live CRM.
-
-#### Architecture
-
-```
-interview-prep/
-├── CLAUDE.md / GEMINI.md    ← Behavioral contract + live pipeline state
-├── core-materials/
-│   ├── paypal-narrative.md  ← PayPal PM story (the origin story)
-│   ├── paypal-metrics.md    ← Verified numbers (140M logins, $2.4M margin, 52% lift)
-│   ├── behavioral-stories.md ← STAR story beats (4 stories, deploy-ready)
-│   ├── master-pitch.md      ← Pitch versions (60s, 2min, modular)
-│   ├── pm-playbook.md       ← Reusable frameworks
-│   └── pm-frameworks-refresher.md ← RICE, CIRCLES, metrics
-├── companies/               ← 27 folders, one per company tracked
-│   ├── mariana-minerals/
-│   ├── bridgestone/
-│   ├── ziff-davis/
-│   └── [24 more...]
-├── sessions/                ← Date-stamped session logs (YYYY-MM-DD.md)
-├── session-recaps/          ← Condensed recaps for review
-├── templates/               ← Reusable interview templates
-├── docs/                    ← Supporting documents
-└── side-hustle/             ← Parallel tracks, consulting exploration
-```
-
-#### Key Decisions and Why They're Elegant
-
-**1. CLAUDE.md as live CRM**
-The CLAUDE.md holds the full pipeline: 10 ranked opportunities, interview schedules, key contacts with context, STAR stories, what's working/not working. Every session starts with this loaded — no re-explaining. It gets updated in-session as new information comes in.
-
-**2. Company folders as atomic context units**
-Each of the 27 companies has its own folder. Company-specific prep, call notes, and research are isolated — never bleeds between opportunities. When prepping for a specific call, load only that company's folder.
-
-**3. Session log as institutional memory**
-Daily sessions logged at `sessions/YYYY-MM-DD.md`. Recaps live in `session-recaps/`. Can look back and trace exactly when a belief changed, when an opportunity shifted, what worked in a call.
-
-**4. human-voice skill integration**
-All outreach drafts (emails, thank-yous, LinkedIn messages) run through the `human-voice` skill first. Enforces direct, Oakland-rooted voice — not corporate filler. The behavioral rule is in the CLAUDE.md itself: no em dashes, no motivational poster BS.
-
-**5. Dual AI portability**
-GEMINI.md exists for the same reason as edge_lab — continuity across AI tool switches mid-job-search.
-
-**6. Communication style baked in as constraints**
-The CLAUDE.md has explicit language rules: no em dashes, no filler phrases, don't over-rehearse, simplify when brain fog hits. These override default AI communication tendencies at the system level.
-
----
-
-### 3. mariana-interview — Case Study Preparation System
-
-**Status:** Complete (used for Round 2 interview)
-**Location:** `/Users/t-rawww/mariana-interview/`
-**Config:** `CLAUDE.md`
+**Status:** Functional — end-to-end working for Module 2. 8 modules remaining for full content coverage.
+**Repo:** `trentjhn/zenkai`
+**Design doc:** `/Users/t-rawww/AI-Knowledgebase/docs/plans/2026-02-28-zenkai-design.md`
 
 #### What It Is
-A purpose-built preparation environment for the Mariana Minerals Round 2 collaborative PRD case study. Not generic interview prep — purpose-built for a specific 60-minute interview with a specific company in a specific domain (industrial mining software).
+A local web app that turns this knowledge base into an interactive learning experience. Named after the DBZ Zenkai boost. Spaced repetition, scenario-based quizzes with AI PM framing, module gating (≥70% to unlock next).
 
-#### Architecture
+#### Stack
+- Frontend: React + Tailwind + shadcn/ui + Framer Motion
+- Backend: FastAPI (Python)
+- DB: SQLite (local)
+- AI: Claude claude-sonnet-4-6 via Anthropic API
 
-```
-mariana-interview/
-├── CLAUDE.md               ← Behavioral contract + language rules
-├── QUICKREF.md             ← Fast reference for session
-├── interviewer-PREP-ONLY.md ← Notes on Sam Sperling
-├── context/
-│   ├── company.md          ← PlantOS, MineOS, CapitalProjectOS: personas, metrics, tensions
-│   └── glossary.md         ← Industrial terminology (SX-EW, flotation, RFI, EPCC, P&ID...)
-├── ai-reference/
-│   └── ai-pm-framing.md    ← Load only when prompt involves AI/ML explicitly
-├── templates/
-│   └── prd-mariana.md      ← Custom PRD template (NOT generic PM template)
-└── output/
-    ├── PRD-AutomatedBidEvaluation.md    ← Produced during session
-    └── PreMortem-AutomatedBidEvaluation.md
-```
-
-#### Key Decisions and Why They're Elegant
-
-**1. Specialized language rules as hard constraints**
-The CLAUDE.md bans generic PM vocabulary and forces industrial-specific equivalents:
-```
-"users"     → plant operators / process engineers / mine planners
-DAU/MAU     → recovery rate / cost per ton / schedule variance
-"edge case" → failure mode (treat as first-class requirement)
-"validate"  → "test this assumption before V2 by [specific method]"
-```
-This forces the agent to sound like an industrial PM, not a consumer tech PM. The domain framing is enforced at the system level.
-
-**2. 3-phase session workflow mirroring the interview**
-The CLAUDE.md maps directly to the interview format:
-- **Phase 1 (10 min):** Frame — which product, primary persona, core tension, biggest constraint
-- **Phase 2 (35 min):** `/prd` command — reasons first, asks clarifying questions, builds using Mariana template
-- **Phase 3 (10 min):** `/premortem` command — Tigers (real risks), Paper Tigers (overblown), Elephants (unspoken)
-
-**3. Conditional context loading**
-`ai-pm-framing.md` is loaded **only** when the prompt involves AI/ML explicitly. Domain-specific context on demand — not always loaded. Keeps the context window efficient.
-
-**4. Output folder**
-Session outputs saved to `output/`. The PRD and PreMortem are persistent artifacts — can review after the interview and learn from them.
-
-**5. "Fill structure, not words" principle**
-The CLAUDE.md frames the agent role explicitly: surface structure and risks, not replace PM judgment. After generating any section, offer 1-2 questions to bring back to the interviewer. Keeps the human's reasoning primary.
-
-**6. Thinking framework baked in**
-Every feature analysis forces: systems first (inputs→process→outputs→feedback), costs always (capital/operating/time/risk), three different people (who approves, who uses, who gets fired). Physical constraints named — never ignored.
+#### Key Design Decision
+**Delta sync via git commit hashes** — compares KB file hash against last-generated hash. Only regenerates quiz content for files that actually changed. Avoids burning API credits on unchanged content every launch. The KB is the source of truth; Zenkai derives from it.
 
 ---
 
@@ -323,78 +298,140 @@ A record of what was built, why, and what patterns are running across systems. T
 
 ---
 
-### 5. Zenkai — Personalized AI Learning App
+### 5. interview-prep — Job Search OS
 
-**Status:** Functional — end-to-end working for Module 2. 8 modules remaining for full content coverage.
-**Repo:** `trentjhn/zenkai`
-**Design doc:** `/Users/t-rawww/AI-Knowledgebase/docs/plans/2026-02-28-zenkai-design.md`
-
-#### What It Is
-A local web app that turns this knowledge base into an interactive learning experience. Named after the DBZ Zenkai boost. Spaced repetition, scenario-based quizzes with AI PM framing, module gating (≥70% to unlock next).
-
-#### Stack
-- Frontend: React + Tailwind + shadcn/ui + Framer Motion
-- Backend: FastAPI (Python)
-- DB: SQLite (local)
-- AI: Claude claude-sonnet-4-6 via Anthropic API
-
-#### Key Design Decision
-**Delta sync via git commit hashes** — compares KB file hash against last-generated hash. Only regenerates quiz content for files that actually changed. Avoids burning API credits on unchanged content every launch. The KB is the source of truth; Zenkai derives from it.
-
----
-
-### 6. YouTube Summarizer Premium — Full-Stack AI Video Intelligence
-
-**Status:** Production-deployed
-**Location:** `/Users/t-rawww/Projects/youtube-summarizer-complete/`
-**Repo:** `trentjhn/youtube-summarizer-complete` (private)
+**Status:** Live
+**Location:** `/Users/t-rawww/interview-prep/`
+**Config:** `CLAUDE.md` + `GEMINI.md`
 
 #### What It Is
-Full-stack AI application that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: ~30 seconds, Deep: ~60 seconds) with context-aware agentic chat and seamless timestamp navigation back to source material.
+A full job search operating system — not a notes folder. Tracks 10+ active/passive opportunities, stores STAR stories, maintains interview schedules, logs every session, and holds all core materials. The CLAUDE.md doubles as a live CRM.
 
-#### Stack
-- **Frontend:** React + Vite + Tailwind CSS v4 + Framer Motion (Bento Grid layout)
-- **Backend:** Flask (Python) + SQLite + Redis + WebSockets (SocketIO)
-- **LLM Models:** Google Gemini 2.5 Flash-Lite (primary), OpenAI GPT-4o-mini (chat fallback)
-- **Infrastructure:** Vercel (frontend), Render (backend with IaC via render.yaml)
+#### Architecture
+
+```
+interview-prep/
+├── CLAUDE.md / GEMINI.md    ← Behavioral contract + live pipeline state
+├── core-materials/
+│   ├── paypal-narrative.md  ← PayPal PM story (the origin story)
+│   ├── paypal-metrics.md    ← Verified numbers (140M logins, $2.4M margin, 52% lift)
+│   ├── behavioral-stories.md ← STAR story beats (4 stories, deploy-ready)
+│   ├── master-pitch.md      ← Pitch versions (60s, 2min, modular)
+│   ├── pm-playbook.md       ← Reusable frameworks
+│   └── pm-frameworks-refresher.md ← RICE, CIRCLES, metrics
+├── companies/               ← 27 folders, one per company tracked
+│   ├── mariana-minerals/
+│   ├── bridgestone/
+│   ├── ziff-davis/
+│   └── [24 more...]
+├── sessions/                ← Date-stamped session logs (YYYY-MM-DD.md)
+├── session-recaps/          ← Condensed recaps for review
+├── templates/               ← Reusable interview templates
+├── docs/                    ← Supporting documents
+└── side-hustle/             ← Parallel tracks, consulting exploration
+```
 
 #### Key Decisions and Why They're Elegant
 
-**1. Model migration for economics + context**
-Switched from OpenAI GPT-4o-mini → Google Gemini 2.5 Flash-Lite. Economics: 33% cost reduction. Context: 8x larger window (1M vs 128K tokens). Practical impact: eliminates chunking for 99%+ of videos. Documented migration logic in `ai_summarizer.py` shows deliberate model economics optimization beyond just "newer is better."
+**1. CLAUDE.md as live CRM**
+The CLAUDE.md holds the full pipeline: 10 ranked opportunities, interview schedules, key contacts with context, STAR stories, what's working/not working. Every session starts with this loaded — no re-explaining. It gets updated in-session as new information comes in.
 
-**2. Dual-mode summarization architecture**
-Two completely different prompting strategies with identical core principles but different output depth:
-- **Quick Mode:** 5 hyper-focused JSON components (quick takeaway, key points, topics, timestamps, summary)
-- **Deep Mode:** Same 5 components but 8-module breakdown with detailed analysis, key quotes, arguments sections
-The separation lets users choose summarization depth without branching prompt logic — same prompt engine, two different output targets.
+**2. Company folders as atomic context units**
+Each of the 27 companies has its own folder. Company-specific prep, call notes, and research are isolated — never bleeds between opportunities. When prepping for a specific call, load only that company's folder.
 
-**3. Production-grade prompt engineering**
-Sophistication rarely seen in deployed systems. Core principles baked into prompts:
-- **Comprehensiveness Principle:** Content dictates output length, not arbitrary constraints. 3-hour video gets deeper analysis than 10-minute video.
-- **Faithful Representation:** Preserve tone/intent without sanitizing, intentional for controversial content. Reflects actual speaker message, not watered-down version.
-- **Attribution Preservation:** Clear sourcing when speaker quotes others or references studies. Maintains context connection.
-- **Tone Matching:** 5 configurable tones (Objective, Academic, Casual, Skeptical, Provocative) applied consistently across all outputs.
-- **Few-shot learning embedded:** BAD vs GOOD output examples in prompt itself, teaching the model what to avoid.
-Prompt versioning (v5.0) auto-invalidates cache on prompt changes — no stale summaries.
+**3. Session log as institutional memory**
+Daily sessions logged at `sessions/YYYY-MM-DD.md`. Recaps live in `session-recaps/`. Can look back and trace exactly when a belief changed, when an opportunity shifted, what worked in a call.
 
-**4. Context-aware chat with layered context management**
-Chat service builds conversation context from three layers: video title → structured summary → transcript (truncated to 5K chars). Conversation history limited to 10 messages to prevent context bloat while maintaining conversational coherence. Context engineering in action: careful composition prevents token waste while preserving relevance.
+**4. human-voice skill integration**
+All outreach drafts (emails, thank-yous, LinkedIn messages) run through the `human-voice` skill first. Enforces direct, Oakland-rooted voice — not corporate filler. The behavioral rule is in the CLAUDE.md itself: no em dashes, no motivational poster BS.
 
-**5. Real-time processing feedback via WebSocket**
-SocketIO integration streams progress during LLM processing. Provides UX feedback for operations taking 30-60 seconds. Progress updates sent in real-time, no artificial polling.
+**5. Dual AI portability**
+GEMINI.md exists for the same reason as edge_lab — continuity across AI tool switches mid-job-search.
 
-**6. YouTube extraction resilience**
-Handles modern YouTube's anti-bot measures: yt-dlp integration + Netscape cookie format parsing + cookie-based auth to bypass datacenter IP blocks. Accumulates extraction errors for debugging without crashing. Solves the "silent 500 error" failure mode.
+**6. Communication style baked in as constraints**
+The CLAUDE.md has explicit language rules: no em dashes, no filler phrases, don't over-rehearse, simplify when brain fog hits. These override default AI communication tendencies at the system level.
 
-**7. Token accounting and context strategy**
-Conservative max input (900K/1M tokens) leaves explicit buffer for 65K-token output. Detailed token-per-word calculation (1.3 tokens/word English, 150 words/minute of speech). Therefore: ~195 tokens per minute of video, ~11,700 tokens per hour. Strategic math prevents runtime surprises.
+---
 
-**8. Deployment infrastructure-as-code**
-Frontend (Vercel): Root `VITE_API_URL` environment variable points to backend. Backend (Render): `render.yaml` IaC blueprint with Web Service provisioning. Critical decision: Web Service instead of serverless, because Lambda/serverless timeouts before LLM processing finishes. Deployment logic reflects real constraints.
+### 6. mariana-interview — Case Study Preparation System
 
-**9. Cache invalidation strategy**
-SQLite persistence + Redis caching for processed videos. Cache key versioning lets admin clear cache without data loss (`/api/admin/clear-cache` endpoint). Useful for testing prompt changes without incrementing version.
+**Status:** Complete (used for Round 2 interview)
+**Location:** `/Users/t-rawww/mariana-interview/`
+**Config:** `CLAUDE.md`
+
+#### What It Is
+A purpose-built preparation environment for the Mariana Minerals Round 2 collaborative PRD case study. Not generic interview prep — purpose-built for a specific 60-minute interview with a specific company in a specific domain (industrial mining software).
+
+#### Architecture
+
+```
+mariana-interview/
+├── CLAUDE.md               ← Behavioral contract + language rules
+├── QUICKREF.md             ← Fast reference for session
+├── interviewer-PREP-ONLY.md ← Notes on Sam Sperling
+├── context/
+│   ├── company.md          ← PlantOS, MineOS, CapitalProjectOS: personas, metrics, tensions
+│   └── glossary.md         ← Industrial terminology (SX-EW, flotation, RFI, EPCC, P&ID...)
+├── ai-reference/
+│   └── ai-pm-framing.md    ← Load only when prompt involves AI/ML explicitly
+├── templates/
+│   └── prd-mariana.md      ← Custom PRD template (NOT generic PM template)
+└── output/
+    ├── PRD-AutomatedBidEvaluation.md    ← Produced during session
+    └── PreMortem-AutomatedBidEvaluation.md
+```
+
+#### Key Decisions and Why They're Elegant
+
+**1. Specialized language rules as hard constraints**
+The CLAUDE.md bans generic PM vocabulary and forces industrial-specific equivalents:
+```
+"users"     → plant operators / process engineers / mine planners
+DAU/MAU     → recovery rate / cost per ton / schedule variance
+"edge case" → failure mode (treat as first-class requirement)
+"validate"  → "test this assumption before V2 by [specific method]"
+```
+This forces the agent to sound like an industrial PM, not a consumer tech PM. The domain framing is enforced at the system level.
+
+**2. 3-phase session workflow mirroring the interview**
+The CLAUDE.md maps directly to the interview format:
+- **Phase 1 (10 min):** Frame — which product, primary persona, core tension, biggest constraint
+- **Phase 2 (35 min):** `/prd` command — reasons first, asks clarifying questions, builds using Mariana template
+- **Phase 3 (10 min):** `/premortem` command — Tigers (real risks), Paper Tigers (overblown), Elephants (unspoken)
+
+**3. Conditional context loading**
+`ai-pm-framing.md` is loaded **only** when the prompt involves AI/ML explicitly. Domain-specific context on demand — not always loaded. Keeps the context window efficient.
+
+**4. Output folder**
+Session outputs saved to `output/`. The PRD and PreMortem are persistent artifacts — can review after the interview and learn from them.
+
+**5. "Fill structure, not words" principle**
+The CLAUDE.md frames the agent role explicitly: surface structure and risks, not replace PM judgment. After generating any section, offer 1-2 questions to bring back to the interviewer. Keeps the human's reasoning primary.
+
+**6. Thinking framework baked in**
+Every feature analysis forces: systems first (inputs→process→outputs→feedback), costs always (capital/operating/time/risk), three different people (who approves, who uses, who gets fired). Physical constraints named — never ignored.
+
+---
+
+## What These Systems Demonstrate
+
+Collectively, these six systems show depth across the full AI engineering stack:
+
+**Full-Stack Capability**: From production deployment (YouTube Summarizer), full-stack architecture (Zenkai), to real-time automation (edge_lab). Not just backend or frontend — end-to-end product thinking.
+
+**Sophisticated Prompt Engineering**: Production-grade techniques (dual-mode prompting, comprehensiveness principle, tone matching, few-shot learning embedded in prompts). Not generic "do better" instructions.
+
+**Context Engineering at Scale**: Systems that manage complex context strategically — layered composition, conditional loading, token accounting, persistent state as files instead of chat memory.
+
+**Economic Optimization**: Model selection driven by cost/context tradeoffs (33% cheaper, 8x larger window). Strategic math (token-per-word, cache invalidation) to prevent runtime surprises.
+
+**State Management**: Systems that maintain real-world state (trading positions, job opportunities, KB content) and make decisions grounded in that state, not hallucinated context.
+
+**Behavioral Contracts (CLAUDE.md/GEMINI.md)**: Explicit, persistent system instructions that enforce domain-specific vocabulary, constraints, and workflows. AI agents that respect boundaries.
+
+**Dual AI Portability**: Same behavioral contract across different AI tools (Claude↔Gemini), proving that agent behavior can be decoupled from implementation.
+
+These patterns are replicable and applicable to other AI systems beyond these six examples.
 
 ---
 
@@ -431,22 +468,24 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | Pattern | Systems | What It Solves |
 |---|---|---|
 | **Context as files** | edge_lab, interview-prep, mariana-interview, KB | Session continuity without chat memory dependency |
-| **Behavioral contract (CLAUDE.md)** | All 5 systems | Consistent agent behavior across sessions, no re-explaining |
+| **Behavioral contract (CLAUDE.md)** | All 6 systems | Consistent agent behavior across sessions, no re-explaining |
 | **Dual AI portability** | edge_lab, interview-prep | Claude↔Gemini handoff with zero behavior drift |
-| **Conditional context loading** | mariana-interview, edge_lab | Load domain context on-demand — keep context window efficient |
+| **Conditional context loading** | YouTube Summarizer, mariana-interview, edge_lab | Load domain context on-demand — keep context window efficient |
 | **Custom language constraints** | mariana-interview, interview-prep | Force domain-appropriate vocabulary at the system level |
-| **Structured output folders** | mariana-interview, edge_lab (journal/) | Persistent artifacts from sessions, not lost to chat history |
-| **Non-interactive scripts** | edge_lab | Inline calculation during workflow, not as a separate step |
-| **Git as persistence layer** | edge_lab, interview-prep, KB | Version-controlled state — history is automatic |
+| **Structured output folders** | mariana-interview, edge_lab (journal/), YouTube Summarizer | Persistent artifacts from sessions, not lost to chat history |
+| **Non-interactive scripts** | edge_lab, YouTube Summarizer | Inline calculation/processing during workflow, not as a separate step |
+| **Git as persistence layer** | edge_lab, interview-prep, KB, Zenkai | Version-controlled state — history is automatic |
 | **Distillation over aggregation** | KB | Reference-able depth vs. bookmark pile |
 | **Frontier monitoring layer** | KB (emerging-architectures) | Evaluate new research without chasing benchmarks |
-| **DESIGN.md as design contract** | Website builds | AI tools know design intent before writing code |
-| **Delta sync** | Zenkai (planned) | Cost-efficient content regeneration |
+| **DESIGN.md as design contract** | Website builds, Zenkai | AI tools know design intent before writing code |
+| **Delta sync** | Zenkai, YouTube Summarizer (cache versioning) | Cost-efficient content/cache regeneration |
 | **Session close = commit** | edge_lab | Automatic versioning without manual git discipline |
 | **Phase-based workflows** | mariana-interview, website builds | Structured execution that mirrors real-world constraints |
 | **Layered README index hierarchy** | AI-Knowledgebase | Agent (or human) orients at any depth without being told what to read |
 | **Dynamic index generation** | edge_lab (journal/INDEX.md) | Index always accurate — rebuilt from source, never manually maintained |
 | **Mandatory-first-read index** | edge_lab (playbook/README.md) | Enforced routing — never open sub-files without reading the index first |
 | **Math offloading to scripts** | edge_lab (calc.py, position-sizer.py) | Eliminates LLM arithmetic errors entirely — deterministic by design |
+| **Token accounting strategy** | YouTube Summarizer | Conservative limits, explicit buffer math, prevent runtime surprises |
+| **Production-grade prompt engineering** | YouTube Summarizer | Comprehensiveness principle, faithful representation, tone matching, few-shot examples embedded |
 | **Trusted sources constraint** | edge_lab (6 X accounts in CLAUDE.md) | Agent only pulls from named, curated accounts — not the open web |
 | **Middle layer / news filter** | edge_lab (news-snapshot.md) | Raw news filtered to facts before reaching analysis layer; thesis ownership stays with human |
