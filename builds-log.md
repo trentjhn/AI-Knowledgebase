@@ -38,7 +38,7 @@ The second pattern: **dual AI portability**. Three systems now have both CLAUDE.
 
 ---
 
-## Systems (Most Impressive First)
+## Systems
 
 ### 1. YouTube Summarizer Premium — Full-Stack AI Video Intelligence
 
