@@ -2,7 +2,7 @@
 
 A unified reference for AI teachings, findings, experiments, and research—organized by learning path and practical use.
 
-*Started: 2026-02-20*
+*Last Updated: 2026-04-01*
 
 ---
 
