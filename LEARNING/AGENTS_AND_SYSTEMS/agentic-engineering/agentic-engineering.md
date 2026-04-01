@@ -1207,6 +1207,84 @@ Notice what's happening: agents are genuinely disagreeing, referencing each othe
 
 ---
 
+### Real-World Orchestration Patterns
+
+The patterns above describe collaboration architectures. This section covers the production-grade mechanisms for making orchestration actually work at scale — based on the ECC system, an open-source agent harness built from 10+ months of intensive daily use.
+
+**The Chief-of-Staff Pattern**
+
+For complex multi-step projects, a dedicated coordinator agent — separate from all specialist agents — manages cross-agent work. The chief-of-staff doesn't implement anything. Its job is decomposition, delegation, and synthesis.
+
+```
+Chief-of-Staff (opus):
+  → Receives high-level goal from human
+  → Decomposes into atomic subtasks
+  → Dispatches to appropriate specialist agents
+  → Monitors progress, resolves blockers
+  → Synthesizes outputs into coherent deliverable
+  → Reports back to human with unified result
+```
+
+Why a separate coordinator matters: specialist agents optimized for their domain make poor project managers. A security reviewer shouldn't also be tracking whether the database migration is blocking the API tests. Separation of concerns applies to agents just as it does to code.
+
+**The Loop-Operator Pattern**
+
+For tasks with machine-verifiable success criteria, a loop-operator agent manages continuous execution rather than delegating to a one-shot agent. The pattern:
+
+1. Loop-operator receives task + success criteria
+2. Dispatches implementation agent with bounded scope
+3. Runs verification step (tests, lint, type-check)
+4. If criteria not met: analyzes failure, updates instructions, dispatches again
+5. Caps at `max_iterations` (typically 5-10) to prevent runaway loops
+6. Escalates to human if cap hit without success
+
+The key design insight is that the loop-operator doesn't know *how* to implement the task — it knows *whether* it's done. These are different skills, and mixing them in one agent produces confused behavior.
+
+**Harness Construction Principles**
+
+The quality of an agent harness determines the ceiling of what your agents can achieve. Four factors dominate:
+
+- **Action space quality:** Tools should be schema-first, narrow, and deterministic in output shape. Broad tools that do many things produce ambiguous action choices. Micro-tools for sensitive operations (file deletion, database writes), macro-tools only when latency genuinely dominates.
+
+- **Observation quality:** What the agent perceives after taking an action should be rich enough to enable course correction. Thin observations (just "success" or "error") force the agent to retry blindly. Rich observations include the changed state, any warnings, and enough context to understand why the action succeeded or failed.
+
+- **Recovery quality:** Can the agent get back on track after a failed action? Good recovery requires: idempotent operations where possible, rollback mechanisms for destructive steps, and explicit error messages that describe what went wrong at a level the agent can reason about.
+
+- **Context budget:** Token cost is an architectural constraint, not an afterthought. MCP tool schemas cost ~500 tokens each at load time. Agent descriptions load universally regardless of whether the agent is invoked. Prose runs at ~words × 1.3 tokens; code at ~chars ÷ 4. Design your harness with these costs in mind from the start.
+
+**The /multi-* Command Pattern**
+
+For large projects where parallel execution genuinely helps, the multi-execute pattern spawns independent agent instances for non-overlapping subtasks:
+
+```
+/multi-plan   → Multiple planning agents produce competing plans
+              → Human selects or synthesizes the best approach
+
+/multi-execute → Parallel implementation agents work on independent modules
+              → Chief-of-staff monitors and integrates outputs
+
+/multi-backend → Backend-only parallel agents (API + database + auth simultaneously)
+/multi-frontend → Frontend-only parallel agents (components + state + routing simultaneously)
+```
+
+The key constraint: tasks must have zero shared state during execution. Agents writing to the same files in parallel produce merge conflicts and architectural drift. Partition work by module or layer, never by feature (features cut across layers).
+
+**A Practical Agent Taxonomy**
+
+Production agent harnesses tend to converge on a similar set of specialist roles. The following taxonomy — drawn from the ECC harness — serves as a reference for what to build:
+
+| Tier | Agents | Model | Responsibility |
+|---|---|---|---|
+| Orchestration | chief-of-staff, loop-operator, harness-optimizer | opus | Planning, coordination, harness self-improvement |
+| Architecture | planner, architect | opus | Decomposition, system design |
+| Implementation | language reviewers (Python, TS, Go, etc.) | sonnet | Domain-specific implementation review |
+| Quality | code-reviewer, tdd-guide, security-reviewer | sonnet | Standards enforcement |
+| Operations | build-error-resolver, doc-updater, refactor-cleaner | haiku/sonnet | Maintenance tasks |
+
+The model assignments aren't arbitrary: orchestration and architecture require the reasoning depth of Opus; maintenance tasks are well-defined enough for Haiku; implementation review sits in between.
+
+---
+
 ### Autonomous Loops
 
 An iteration-based pattern where the agent repeatedly attempts a task, using git history as external memory, with a fresh context window for each attempt. The agent looks at what previous iterations committed, understands what worked and what didn't, and improves on the next attempt.
@@ -1618,26 +1696,62 @@ The surprising finding: this isn't primarily about speed — both single-agent a
 
 **Lifecycle Hooks — Real-Time Control and Observability**
 
-Hooks are event handlers that fire at critical moments in agent execution. They enable real-time visibility and enforcement rather than after-the-fact analysis.
+Hooks are event handlers that fire at critical moments in agent execution. They enable real-time visibility and enforcement rather than after-the-fact analysis. Think of them as middleware for your agent: each hook intercepts a specific event in the execution lifecycle and can inspect, modify, block, or log what happens at that moment.
 
-| Hook | Primary Use |
-|---|---|
-| `PreToolUse` | Validate commands before execution — catch dangerous operations before they happen |
-| `PostToolUse` | Log actions, update metrics, track per-tool token costs |
-| `SubagentStop` | Record subagent outputs, promote artifacts to persistent storage |
-| `ErrorEscalation` | Notify human overseers when agents fail or behave unexpectedly |
+There are six hook types, each covering a different point in the lifecycle:
 
-Hooks run synchronously and block agent execution — use them for real enforcement, not just logging. But keep them fast (see time budgets below) or they become a bottleneck.
+| Hook | When It Fires | Blocking? | Primary Use |
+|---|---|---|---|
+| `SessionStart` | When a new Claude session begins | No | Load context, inject conventions, restore session state |
+| `PreToolUse` | Before any tool executes | **Yes** — exit code 2 blocks the tool | Validate commands, block dangerous operations, enforce git safety |
+| `PostToolUse` | After a tool completes | No | Audit logging, cost tracking, PR notifications, quality gates |
+| `Stop` | When a response completes | No | Batch formatting (Biome/Prettier), session state persistence, pattern extraction |
+| `SessionEnd` | When the session closes | No | Final state persistence, cost metrics, cleanup |
+| `PreCompact` | Before context compaction | No | Save critical state before context is compressed |
+
+The blocking distinction matters enormously. `PreToolUse` is the only hook that can *prevent* an action. All others observe and react. This is by design — you want broad observability but surgical blocking authority.
+
+**Hook matchers** — hooks can target specific tools or all tools:
+
+```json
+{ "matcher": "Bash" }          // fires only before Bash commands
+{ "matcher": "Write" }         // fires only before file writes
+{ "matcher": "Edit" }          // fires only before file edits
+{ "matcher": "*" }             // fires before any tool
+```
+
+**The custom hook contract** — hooks are shell commands that receive tool metadata via stdin (JSON) and respond via stdout (JSON). Exit code 0 = success, exit code 2 = block (PreToolUse only), any other non-zero = error. This makes hooks composable with any language or tool: bash scripts, Python, Node.js, or compiled binaries.
+
+**Hook profiles** — rather than maintaining separate hook configs per environment, profile-based configuration lets you toggle behavior via environment variables:
+
+- **minimal** — only session state persistence + critical safety checks
+- **standard** (default) — full suite: safety checks, quality gates, audit logging, pattern extraction
+- **strict** — adds security scanning, enforces coverage minimums, blocks non-compliant commits
+
+**Time budgets** — hooks block execution while running, so speed matters:
 
 | Hook | Time Budget | If Exceeded |
 |---|---|---|
-| SessionStart | 3-5 seconds | Proceed with defaults |
-| PreEdit | 10-15 seconds | Skip optional context injection |
-| PreToolUse | 5-10 seconds | Log warning, proceed anyway |
+| `SessionStart` | 3-5 seconds | Proceed with defaults |
+| `PreToolUse` | 5-10 seconds | Log warning, proceed anyway |
+| `PostToolUse` | 2-3 seconds (target) | Non-blocking, but slow hooks create backpressure |
+| `Stop` | Up to 30 seconds | Acceptable — runs after response, user doesn't wait |
+
+**Production hook patterns** — the most valuable hooks observed in production:
+
+*Dev server blocker:* A `PreToolUse` hook on Bash that checks whether a dev server is already running (via tmux pane check) before allowing another `npm run dev`. Prevents the most common multi-session footgun: two servers on the same port.
+
+*Git safety enforcer:* A `PreToolUse` hook on Bash that blocks `--no-verify` and `--no-gpg-sign` flag patterns. Prevents accidental bypass of pre-commit hooks and signing requirements.
+
+*Compaction threshold counter:* A `PreToolUse` hook that increments a counter per tool call. At a configurable threshold (default: 50), triggers a strategic compact at a safe point (after planning, after research, never mid-implementation). This is more reliable than manual `/compact` discipline.
+
+*Session state persistence:* A `Stop` hook that writes the current session's key facts, decisions, and progress to a markdown file. When the next session starts, `SessionStart` loads this file. Together they implement memory that survives context boundaries without external infrastructure.
+
+*Pattern extractor:* A `Stop` hook that analyzes the session for recurring correction patterns and user preferences, writes them to `~/.claude/skills/learned/`, and builds up a personalized micro-skill library over time.
 
 **Pre-edit dependency injection:** Before an agent edits a file, inject dynamic context — current imports, type definitions, available exports from the TypeScript language server. This prevents the most common implementation errors: missing imports, type mismatches, using functions that don't exist.
 
-**Philosophy:** Permissive tools + strict prompts + hook enforcement. The agent has broad access; the prompt guides what it should do; hooks enforce the hard limits that must never be violated.
+**Philosophy:** Permissive tools + strict prompts + hook enforcement. The agent has broad access; the prompt guides what it should do; hooks enforce the hard limits that must never be violated. This three-layer model means you can give agents wide tool access (needed for real autonomy) without losing safety guarantees (needed for production trust).
 
 ---
 

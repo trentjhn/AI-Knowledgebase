@@ -317,7 +317,7 @@ Prerequisites: fine-tuning.md, evaluation.md
 
 ---
 
-### future-reference/playbooks/ (8 playbooks)
+### future-reference/playbooks/ (11 playbooks)
 
 **Practical, ready-to-use guides for building AI systems**
 
@@ -331,6 +331,30 @@ Prerequisites: fine-tuning.md, evaluation.md
 | [building-chatbots.md](future-reference/playbooks/building-chatbots.md) | Conversational systems | Chatbot architecture and patterns |
 | [building-rag-pipelines.md](future-reference/playbooks/building-rag-pipelines.md) | RAG workflows | Retrieval-augmented generation patterns |
 | [writing-production-prompts.md](future-reference/playbooks/writing-production-prompts.md) | Production prompts | Crafting reliable prompts for deployment |
+| [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
+| [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |
+| [project-template.md](future-reference/playbooks/project-template.md) | New projects | General AI project template structure |
+
+---
+
+---
+
+## 🛠️ SKILLS-CATALOG — Pull-Ready Skills & Agents
+
+### skills-catalog/ (35 skills + 15 agents)
+
+**Functional Claude Code skills and agent definitions. Copy into `.claude/skills/` or `.claude/agents/` for any project.**
+
+See [skills-catalog/README.md](skills-catalog/README.md) for the full index, descriptions, and quick-setup recipes.
+
+| Category | Count | Source | Examples |
+|---|---|---|---|
+| `workflow/` | 11 skills | Skills Master | brainstorming, planning, smart-commit, deslop, session-handoff |
+| `design/` | 6 skills | Skills Master | frontend-taste, ui-ux-pro-max, web-design-patterns |
+| `engineering/` | 11 skills | Skills Master + ECC | tdd-workflow, verification-loop, api-design, security-review |
+| `production/` | 6 skills + reference | ECC | context-budget, strategic-compact, deployment-patterns, hooks-reference |
+| `agents/` | 15 agents | ECC | planner, architect, chief-of-staff, code-reviewer, loop-operator |
+| `meta/` | 1 skill | Skills Master | antigravity_skill_creator |
 
 ---
 
@@ -371,7 +395,8 @@ Prerequisites: fine-tuning.md, evaluation.md
 | **AGENTS_AND_SYSTEMS** | Agentic Eng, System Design, Skills, MCP | ~4,500 | 10-11h |
 | **PRODUCTION** | Evaluation, Security, Specs, Fine-tuning, Inference Optimization, RL Alignment | ~3,450 | 12-13h |
 | **CAREER** | PM preparation (4 docs) | ~800 | As needed |
-| **FUTURE-REFERENCE** | 7 playbooks + catalog + specs | ~2,500 | As needed |
-| **Total** | **14 learning topics + extras** | **~11,550** | **28-31h** |
+| **FUTURE-REFERENCE** | 11 playbooks + catalog + specs | ~3,500 | As needed |
+| **SKILLS-CATALOG** | 35 skills + 15 agents | ~15,000 | Per project |
+| **Total** | **14 learning topics + skills catalog + extras** | **~26,000+** | **28-31h learning** |
 
-Last updated: 2026-03-22 (added emerging-architectures.md)
+Last updated: 2026-04-01 (added skills-catalog with 35 skills + 15 agents; deepened multi-agent orchestration + hooks sections in agentic-engineering.md; fixed playbook index count)
