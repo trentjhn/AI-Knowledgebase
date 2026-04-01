@@ -230,6 +230,24 @@ If validation fails, common issues include:
 
 **Explain the why.** "Fetch the team roster before creating tasks" is better with the reason: "Fetch the team roster before creating tasks — this ensures assignees exist and prevents silent failures when tasks can't be assigned."
 
+**End every output-producing skill with a self-verification block.** This is one of the highest-leverage patterns in skill authoring and is consistently underused. After the main instruction body, include an explicit checklist of criteria the model must evaluate its own output against before delivering it.
+
+```markdown
+## Before Completing
+
+Review your output against each criterion below. If any item fails, revise before delivering.
+
+- [ ] [Criterion 1]
+- [ ] [Criterion 2]
+- [ ] [Criterion 3]
+```
+
+Why this works: on a single generation pass, the model applies all skill criteria simultaneously — but attention is not uniform. Criteria buried mid-skill get systematically underweighted compared to those at the top and bottom. The self-verification block forces a *second full application* of those criteria, not just a cursory review. Practitioners consistently report substantially higher quality outputs after adding this block to design skills, writing skills, and slide creation skills.
+
+This is empirically backed by the **Self-Refine** research (Madaan et al., 2023): the same model that produced output is capable of meaningfully critiquing it, and acting on that critique produces better results than a single-pass generation — without any external feedback signal. For visual and design output specifically, the effect is especially pronounced because the criteria are multi-dimensional (hierarchy, spacing, contrast, motion, responsiveness) and easy to partially satisfy on first pass.
+
+The checklist items should be concrete and binary — things the model can answer YES or NO about. Vague criteria ("looks good?") don't create the comparison pressure that specific ones do ("Does the primary CTA have sufficient contrast against the background?").
+
 ---
 
 ## 8. Three Categories of Skills
