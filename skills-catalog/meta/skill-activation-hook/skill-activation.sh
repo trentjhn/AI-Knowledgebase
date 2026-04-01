@@ -4,65 +4,73 @@
 # WHAT IT DOES:
 #   Before every prompt, forces Claude to explicitly evaluate each installed
 #   skill (YES/NO with reason) and invoke relevant ones before implementing.
-#   Dynamically reads .claude/skills/ — no hardcoded skill names.
+#   Checks both user-level (~/.claude/skills/) and project-level (.claude/skills/).
+#   Exits silently if no skills are found — zero overhead on bare projects.
 #
 # WHY:
 #   Passive description matching achieves ~20% skill activation rate.
-#   This hook raises it to ~84% by creating a commitment sequence that
-#   makes skipping activation syntactically awkward before implementation.
+#   This hook raises it to ~84% via a commitment sequence that makes
+#   skipping activation syntactically awkward before implementation.
 #   Source: scottspence.com/posts/how-to-make-claude-code-skills-activate-reliably
 #
-# INSTALLATION:
-#   1. Copy this file to your project: .claude/hooks/skill-activation.sh
-#   2. Make it executable: chmod +x .claude/hooks/skill-activation.sh
-#   3. Add to .claude/settings.json (see settings-template.json):
-#      "hooks": {
-#        "UserPromptSubmit": [{ "hooks": [{ "type": "command",
-#          "command": ".claude/hooks/skill-activation.sh" }] }]
-#      }
+# GLOBAL INSTALLATION (recommended — fires on every project):
+#   mkdir -p ~/.claude/hooks
+#   cp skill-activation.sh ~/.claude/hooks/skill-activation.sh
+#   chmod +x ~/.claude/hooks/skill-activation.sh
+#   # Then merge settings-template.json into ~/.claude/settings.json
+#
+# PER-PROJECT INSTALLATION:
+#   mkdir -p .claude/hooks
+#   cp skill-activation.sh .claude/hooks/skill-activation.sh
+#   chmod +x .claude/hooks/skill-activation.sh
+#   # Then merge settings-template.json into .claude/settings.json
+#
+# SKILL SCOPES (both are checked, project takes precedence on name conflicts):
+#   User-level:    ~/.claude/skills/        — always available, all projects
+#   Project-level: <repo-root>/.claude/skills/ — this project only
 #
 # CUSTOMIZATION:
-#   Set SKILL_HOOK_DESCRIPTIONS=true in your environment to include skill
-#   trigger descriptions in the evaluation list (more verbose, more useful).
-#   Default: false (skill names only — less noise per prompt)
-#
-# NOTES:
-#   - Exits silently (exit 0) if no skills are installed — no overhead
-#   - Works with both project-level and user-level skill directories
-#   - The forced 3-step sequence is what produces reliable activation;
-#     rephrasing it as softer guidance will degrade performance
+#   SKILL_HOOK_DESCRIPTIONS=true  — include trigger descriptions (verbose but helpful)
+#   Default: false (skill names only)
 
 SHOW_DESCRIPTIONS="${SKILL_HOOK_DESCRIPTIONS:-false}"
 
-# Find repo root, fall back to current directory
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-SKILLS_DIR="$REPO_ROOT/.claude/skills"
+USER_SKILLS_DIR="$HOME/.claude/skills"
+PROJECT_SKILLS_DIR="$REPO_ROOT/.claude/skills"
 
-# Exit silently if no skills installed — zero overhead on bare projects
-if [ ! -d "$SKILLS_DIR" ] || [ -z "$(ls -A "$SKILLS_DIR" 2>/dev/null)" ]; then
-    exit 0
-fi
-
-# Build skill list, optionally with descriptions parsed from YAML frontmatter
+# Build deduplicated skill list — project-level takes precedence over user-level
+# (bash 3.2 compatible: no associative arrays)
+seen=""
 SKILL_LINES=""
-for skill_dir in "$SKILLS_DIR"/*/; do
-    [ -f "$skill_dir/SKILL.md" ] || continue
-    skill_name=$(basename "$skill_dir")
-    if [ "$SHOW_DESCRIPTIONS" = "true" ]; then
-        desc=$(grep -m1 "^description:" "$skill_dir/SKILL.md" 2>/dev/null \
-               | sed 's/^description:[[:space:]]*//' \
-               | cut -c1-70)
-        if [ -n "$desc" ]; then
-            SKILL_LINES="$SKILL_LINES\n  - $skill_name: $desc"
+
+for skills_dir in "$PROJECT_SKILLS_DIR" "$USER_SKILLS_DIR"; do
+    [ -d "$skills_dir" ] || continue
+    for skill_dir in "$skills_dir"/*/; do
+        [ -f "$skill_dir/SKILL.md" ] || continue
+        skill_name=$(basename "$skill_dir")
+
+        # Skip duplicates (project-level was processed first)
+        echo "$seen" | grep -qx "$skill_name" && continue
+        seen="$seen
+$skill_name"
+
+        if [ "$SHOW_DESCRIPTIONS" = "true" ]; then
+            desc=$(grep -m1 "^description:" "$skill_dir/SKILL.md" 2>/dev/null \
+                   | sed 's/^description:[[:space:]]*//' \
+                   | cut -c1-70)
+            if [ -n "$desc" ]; then
+                SKILL_LINES="$SKILL_LINES\n  - $skill_name: $desc"
+            else
+                SKILL_LINES="$SKILL_LINES\n  - $skill_name"
+            fi
         else
             SKILL_LINES="$SKILL_LINES\n  - $skill_name"
         fi
-    else
-        SKILL_LINES="$SKILL_LINES\n  - $skill_name"
-    fi
+    done
 done
 
-# Exit silently if directory exists but contains no valid SKILL.md files
+# Exit silently if no skills found — no noise on bare projects
 [ -z "$SKILL_LINES" ] && exit 0
 
 cat <<EOF
