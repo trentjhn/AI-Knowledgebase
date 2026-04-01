@@ -910,3 +910,63 @@ CLAUDE.md inclusion:
 - [ ] Document instinct evolution in session logs (learning history)
 
 ---
+
+## 15. Reliable Skill Invocation — The Activation Problem
+
+Here is a counterintuitive finding that most skill authors never discover: **writing a better description does not reliably fix activation.** The problem is deeper.
+
+Claude Code's documentation says skills "autonomously decide when to use them based on your request." In practice, this passive matching is broken for a large class of prompts. Empirical testing across 50 runs (5 prompt categories, 10 iterations each) with well-written, domain-specific skill descriptions produced only a **20% activation rate** without enforcement hooks. The model reads the description, recognizes relevance, and then proceeds directly to implementation anyway — skipping the `Skill()` tool call entirely.
+
+Why does this happen? The decision to invoke a skill competes with the model's strong prior to begin implementation. Generating implementation tokens is always an available, rewarded action. Calling `Skill()` first requires an extra step that feels like unnecessary delay. Without enforcement, the shortcut wins more often than not.
+
+### The Fix: UserPromptSubmit Hook
+
+The solution is a `UserPromptSubmit` hook that injects a mandatory evaluation sequence before every prompt. Instead of Claude deciding whether to invoke skills, it is forced to produce an explicit YES/NO judgment for each installed skill before any implementation token is generated. That commitment makes skipping activation syntactically awkward — like starting a sentence and then contradicting it.
+
+**Performance comparison (source: scottspence.com/posts/how-to-make-claude-code-skills-activate-reliably):**
+
+| Approach | Activation Rate | Cost/prompt | Notes |
+|---|---|---|---|
+| Passive description matching | 20% | $0.0058 | Unreliable even with good descriptions |
+| LLM Eval hook | 80% | $0.0061 | Pre-evaluates via separate API call; fails on multi-skill prompts |
+| Forced Eval hook | **84%** | $0.0067 | Best overall; adds verbose YES/NO output to responses |
+
+The LLM Eval hook is slightly cheaper and faster but has a catastrophic failure mode: it scores 0% on prompts that require multiple skills simultaneously (form creation that needs both routing and state skills, for example). The Forced Eval hook is the safer choice.
+
+### How the Forced Eval Hook Works
+
+A shell script is registered under `UserPromptSubmit` in `settings.json`. On every prompt, it injects a mandatory three-step instruction block before Claude sees the user's request:
+
+```
+STEP 1 — EVALUATE: For each installed skill, state YES or NO with a one-line reason.
+STEP 2 — ACTIVATE: For every YES, call Skill(skill-name) tool immediately.
+STEP 3 — IMPLEMENT: Only after Steps 1 and 2 are complete.
+```
+
+The aggressive framing ("MANDATORY," "WORTHLESS without activation") is intentional. Softer language degrades the effect. The psychological mechanism is commitment: once Claude has written "YES — need reactive state," not calling `Skill(svelte5-runes)` immediately after would contradict its own stated evaluation.
+
+### Template
+
+A dynamic template that auto-discovers installed skills (no hardcoded names) is in the skills catalog:
+
+```
+skills-catalog/meta/skill-activation-hook/
+├── skill-activation.sh          ← the hook script (reads .claude/skills/ at runtime)
+└── settings-template.json       ← settings.json configuration
+```
+
+Installation per project:
+```bash
+mkdir -p .claude/hooks
+cp ~/AI-Knowledgebase/skills-catalog/meta/skill-activation-hook/skill-activation.sh .claude/hooks/
+chmod +x .claude/hooks/skill-activation.sh
+# Merge settings-template.json into your .claude/settings.json
+```
+
+Set `SKILL_HOOK_DESCRIPTIONS=true` in your environment to include skill trigger phrases in the evaluation list — more verbose but helps Claude make better YES/NO decisions for unfamiliar skills.
+
+### Key Design Insight
+
+The implication for skill architecture is important: **the description field's job is not to ensure activation — that's the hook's job.** The description field's job is to give Claude enough context to make a correct YES/NO decision in Step 1. These are different requirements. Descriptions should be clear enough to evaluate quickly; they don't need to be "sticky" enough to self-trigger without a hook.
+
+---

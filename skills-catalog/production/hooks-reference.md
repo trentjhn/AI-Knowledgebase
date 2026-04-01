@@ -156,6 +156,37 @@ For hooks that should not block the main flow (e.g., background analysis):
 
 Async hooks run in the background. They cannot block tool execution.
 
+## UserPromptSubmit — Forcing Skill Activation
+
+The `UserPromptSubmit` event fires before every user prompt and injects its output into Claude's context. This is fundamentally different from all other hook types: it doesn't inspect tool calls, it shapes how Claude *approaches* the task before any tools are selected.
+
+The most important application is **forced skill evaluation**. Passive description matching achieves only ~20% skill activation rate across prompt categories. A `UserPromptSubmit` hook that injects a mandatory 3-step evaluation sequence raises this to ~84%.
+
+**The mechanism:**
+
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/skill-activation.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+The hook script outputs an instruction block that forces Claude to evaluate each installed skill before implementation. See `skills-catalog/meta/skill-activation-hook/` for a dynamic template that auto-discovers skills from `.claude/skills/` — no hardcoded skill names.
+
+**Key difference from other hooks:** `UserPromptSubmit` output is *context injection*, not blocking. The hook cannot prevent Claude from proceeding; it prepends instructions. This means language intensity matters — "MANDATORY," "CRITICAL," and explicit logical consequences ("WORTHLESS unless you ACTIVATE") produce significantly better compliance than softer framing.
+
+---
+
 ## Common Hook Recipes
 
 ### Warn about TODO comments
