@@ -2,7 +2,7 @@
 """
 ArXiv Weekly Digest Generator for AI Knowledge Base
 
-Queries ArXiv API for papers matching KB topics, deduplicates across topics,
+Queries ArXiv API for papers from last 7 days, deduplicates across topics,
 and outputs a weekly digest markdown file.
 """
 
@@ -10,77 +10,65 @@ import requests
 import json
 from datetime import datetime, timedelta
 from collections import defaultdict
-from urllib.parse import quote
 import os
 import sys
 import time
+import re
 
-# ArXiv query mapping: topic -> list of search queries
+# Consolidated ArXiv query mapping: topic -> list of search queries
+# Reduced from 26 to 9 queries by combining similar topics
 TOPIC_QUERIES = {
     "Prompt Engineering": [
-        '"prompt engineering"',
-        '"in-context learning"',
-        '"few-shot learning"',
+        '("prompt engineering" OR "in-context learning" OR "few-shot learning")',
     ],
     "Context Engineering": [
-        '"retrieval augmented generation"',
-        '"RAG"',
-        '"context window"',
+        '("retrieval augmented generation" OR "RAG" OR "context window")',
     ],
     "Reasoning LLMs": [
-        '"chain of thought"',
-        '"reasoning"',
+        '("chain of thought" OR "reasoning")',
     ],
     "Agentic Engineering": [
-        '"agent" AND ("language model" OR "LLM")',
-        '"tool use"',
-        '"multi-agent"',
+        '("agent" OR "tool use" OR "multi-agent") AND ("language model" OR "LLM")',
     ],
     "Skills": [
-        '"instruction tuning"',
-        '"task-specific"',
+        '("instruction tuning" OR "task-specific")',
     ],
     "Evaluation": [
-        '"evaluation" AND ("LLM" OR "language model")',
-        '"benchmark"',
+        '("evaluation" OR "benchmark") AND ("language model" OR "LLM")',
     ],
     "Fine-tuning": [
-        '"fine-tuning"',
-        '"LoRA"',
-        '"RLHF"',
-        '"DPO"',
-        '"preference learning"',
+        '("fine-tuning" OR "LoRA" OR "RLHF" OR "DPO" OR "preference learning")',
     ],
     "AI Security": [
-        '"adversarial" AND ("LLM" OR "language model")',
-        '"jailbreak"',
-        '"robustness"',
+        '("adversarial" OR "jailbreak" OR "robustness") AND ("language model" OR "LLM")',
     ],
     "Alignment & Safety": [
-        '"alignment"',
-        '"safety"',
-        '"value alignment"',
+        '("alignment" OR "safety" OR "value alignment")',
     ],
 }
 
 # Category filter
 ARXIV_CATEGORIES = "(cat:cs.AI OR cat:cs.CL OR cat:stat.ML)"
-LLM_FILTER = '("language model" OR "LLM" OR "neural network")'
-
 ARXIV_API = "http://export.arxiv.org/api/query?"
 
 
-def build_query(topic_query: str) -> str:
-    """Build a full ArXiv query with filters."""
-    # Wrap topic query if it's not already
-    if not topic_query.startswith('(') and not topic_query.startswith('"'):
-        topic_query = f'"{topic_query}"'
+def get_date_range() -> tuple:
+    """Get 7-day date range for ArXiv query."""
+    today = datetime.now()
+    week_ago = today - timedelta(days=7)
+    # ArXiv uses YYYYMMDDHHMM format for submittedDate
+    from_date = week_ago.strftime("%Y%m%d0000")
+    to_date = today.strftime("%Y%m%d2359")
+    return from_date, to_date, today
 
-    # Combine: category + topic query (LLM filter removed to avoid no-results)
-    return f"{ARXIV_CATEGORIES} AND ({topic_query})"
+
+def build_query(topic_query: str, from_date: str, to_date: str) -> str:
+    """Build a full ArXiv query with category, date range, and topic filters."""
+    # Combine: category + date range + topic query
+    return f'{ARXIV_CATEGORIES} AND submittedDate:[{from_date} TO {to_date}] AND ({topic_query})'
 
 
-def fetch_papers(query: str, max_results: int = 10) -> list:
+def fetch_papers(query: str, max_results: int = 3) -> list:
     """Fetch papers from ArXiv API with rate limit handling."""
     params = {
         "search_query": query,
@@ -91,37 +79,30 @@ def fetch_papers(query: str, max_results: int = 10) -> list:
     }
 
     # Retry logic with exponential backoff
-    max_retries = 3
+    max_retries = 2
     for attempt in range(max_retries):
         try:
-            response = requests.get(ARXIV_API, params=params, timeout=20)
+            response = requests.get(ARXIV_API, params=params, timeout=15)
             response.raise_for_status()
             return parse_arxiv_response(response.text)
         except requests.exceptions.HTTPError as e:
             if response.status_code == 429:  # Rate limited
-                wait_time = (2 ** attempt) * 3  # 3s, 6s, 12s
-                print(f"  Rate limited. Waiting {wait_time}s before retry...", file=sys.stderr)
+                wait_time = (2 ** attempt) * 5
+                print(f"  Rate limited. Waiting {wait_time}s...", file=sys.stderr)
                 time.sleep(wait_time)
             else:
-                print(f"HTTP Error {response.status_code}: {e}", file=sys.stderr)
+                print(f"HTTP Error {response.status_code}", file=sys.stderr)
                 return []
         except requests.RequestException as e:
-            print(f"Error fetching from ArXiv: {e}", file=sys.stderr)
+            print(f"Error: timeout/connection issue", file=sys.stderr)
             return []
 
-        # Polite delay between requests (ArXiv courtesy)
-        time.sleep(2)
-
-    print(f"Failed after {max_retries} retries", file=sys.stderr)
     return []
 
 
 def parse_arxiv_response(xml_response: str) -> list:
     """Parse ArXiv API XML response and extract paper info."""
     papers = []
-
-    # Simple XML parsing (avoid external XML library dependency)
-    import re
 
     # Extract entries using regex
     entry_pattern = r'<entry>(.*?)</entry>'
@@ -146,22 +127,18 @@ def parse_arxiv_response(xml_response: str) -> list:
             papers.append({
                 "id": arxiv_id,
                 "title": title,
-                "summary": summary[:300],  # Truncate to 300 chars
+                "summary": summary[:300],
                 "published": published,
                 "url": f"https://arxiv.org/abs/{arxiv_id}",
             })
         except Exception as e:
-            print(f"Error parsing entry: {e}", file=sys.stderr)
-            continue
+            pass
 
     return papers
 
 
 def deduplicate_papers(topics_papers: dict) -> tuple:
-    """
-    Deduplicate papers across topics.
-    Returns: (deduplicated_papers, topic_mapping)
-    """
+    """Deduplicate papers across topics."""
     seen = {}  # arxiv_id -> paper
     topic_map = defaultdict(set)  # arxiv_id -> set of topics
 
@@ -175,16 +152,8 @@ def deduplicate_papers(topics_papers: dict) -> tuple:
     return seen, topic_map
 
 
-def get_date_info() -> tuple:
-    """Get current date info for filename and header."""
-    today = datetime.now()
-    return today
-
-
-def format_digest(papers_dict: dict, topic_map: dict) -> str:
+def format_digest(papers_dict: dict, topic_map: dict, today: datetime) -> str:
     """Format papers as markdown digest."""
-    today = get_date_info()
-
     # Group papers by topic
     topic_papers = defaultdict(list)
     for paper_id, paper in papers_dict.items():
@@ -206,6 +175,10 @@ def format_digest(papers_dict: dict, topic_map: dict) -> str:
         lines.append("No papers found this week.")
         return "\n".join(lines)
 
+    total_papers = len(papers_dict)
+    lines.append(f"**Total: {total_papers} papers**")
+    lines.append("")
+
     for topic in topics:
         papers = topic_papers[topic]
         lines.append(f"## {topic} [{len(papers)} paper{'s' if len(papers) != 1 else ''}]")
@@ -217,7 +190,7 @@ def format_digest(papers_dict: dict, topic_map: dict) -> str:
             lines.append(f"   - **Published:** {paper['published']}")
             lines.append(f"   - **Abstract:** {paper['summary']}...")
             lines.append(f"   - **Link:** [{paper['id']}]({paper['url']})")
-            lines.append(f"   - **Tags:** {tags}")
+            lines.append(f"   - **Topics:** {tags}")
             lines.append("")
 
     return "\n".join(lines)
@@ -229,24 +202,26 @@ def main():
     output_dir = os.path.join(os.path.dirname(__file__), "..", "raw", "arxiv-papers")
     os.makedirs(output_dir, exist_ok=True)
 
+    from_date, to_date, today = get_date_range()
+
     # Fetch papers for each topic
     all_topics_papers = {}
     total_queries = sum(len(queries) for queries in TOPIC_QUERIES.values())
     completed = 0
 
-    print(f"Fetching papers from {total_queries} queries...", file=sys.stderr)
+    print(f"Fetching papers from {total_queries} queries (last 7 days)...", file=sys.stderr)
 
     for topic, queries in TOPIC_QUERIES.items():
         all_topics_papers[topic] = []
         for query in queries:
             completed += 1
-            print(f"  [{completed}/{total_queries}] {topic}: {query[:50]}...", file=sys.stderr)
+            print(f"  [{completed}/{total_queries}] {topic}...", file=sys.stderr)
 
-            full_query = build_query(query)
-            papers = fetch_papers(full_query, max_results=5)
+            full_query = build_query(query, from_date, to_date)
+            papers = fetch_papers(full_query, max_results=3)
             all_topics_papers[topic].extend(papers)
 
-            # Polite delay between queries (ArXiv courtesy: ~1-2 requests per second max)
+            # Polite delay between queries
             if completed < total_queries:
                 time.sleep(2)
 
@@ -255,10 +230,9 @@ def main():
     print(f"Found {len(unique_papers)} unique papers", file=sys.stderr)
 
     # Generate digest
-    digest = format_digest(unique_papers, topic_mapping)
+    digest = format_digest(unique_papers, topic_mapping, today)
 
     # Write to file
-    today = get_date_info()
     filename = f"{today.strftime('%Y-%m-%d')}.md"
     filepath = os.path.join(output_dir, filename)
 
