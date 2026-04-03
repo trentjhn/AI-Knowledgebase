@@ -57,7 +57,7 @@ You've picked the agent playbook. Before starting, check if you need any of thes
 
 **Is this agent running for weeks/months with many decisions?**
 - Example: Business operations agent, research agent with long-running tasks
-- See: [agentic-engineering.md](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) lines 1805–1890 (Long-Horizon Planning)
+- See: [agentic-engineering.md](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) lines 1806–1829 (Long-Horizon Planning)
 - Pattern: Add scratchpad for decision persistence
 
 **Starting with just basic agent? → Skip this section, go to Phase 1 below.**
@@ -137,27 +137,235 @@ Design your agent with explicit decision points:
 
 ---
 
-## Recommended Workflow
+## Phase 1: Spec, Tools & Basic Agent
 
-When starting a new agent build, work through these stages in order:
+**Goal:** Define what your agent does, build & test its tools independently, write a working Level 1 prompt, and validate on 3 scenarios.
 
-**Stage 1: Define the task boundary clearly**
-Write out in plain English: what does success look like? What information will the agent start with? What tools will it have? What are the things it should never do? This becomes the foundation of your system prompt.
+**Outcome:** A working agent on a simple task, git repo initialized, first phase complete.
 
-**Stage 2: Design your tools before your prompts**
-The tools determine what the agent can actually do. Get them working correctly in isolation first — test each tool independently before the agent ever touches it.
+---
 
-**Stage 3: Build the simplest possible version first**
-Start with a single-step agent: one tool, one decision, one output. Confirm it works correctly. Add complexity incrementally. Adding multiple tools, multi-step reasoning, and memory management all at once makes failures impossible to diagnose.
+### Step 1.1: Write Your Agent Specification
 
-**Stage 4: Add the planning step**
-Once the basic tool-use works, add an explicit planning phase before action. Observe whether the plans are sensible. Bad plans at this stage reveal gaps in the system prompt or tool descriptions.
+**What you're doing:** Define the agent's purpose, scope, constraints, and success criteria before writing any code.
 
-**Stage 5: Add context management**
-Once multi-step workflows are working, identify where context starts to degrade. Add summarization, scratchpad patterns, or explicit goal reinforcement where needed.
+**KB Reference:** [Seven Properties of Executable Spec](../LEARNING/PRODUCTION/specification-clarity/specification-clarity.md lines 52–83)
 
-**Stage 6: Add guardrails and HITL**
-Identify the highest-risk actions in your workflow. Add human confirmation requirements, validation layers, and fallback behaviors for those specifically.
+**Action:**
+
+1. Create a file: `AGENT-SPEC.md` in your project root
+2. Fill in these sections:
+   ```markdown
+   # Agent Specification
+   
+   ## Purpose
+   [One sentence: What does this agent do?]
+   
+   ## Scope
+   [What is the agent responsible for?]
+   
+   ## What it CAN do (autonomous decisions)
+   - [Decision 1]
+   - [Decision 2]
+   
+   ## What it CANNOT do (require human approval)
+   - [Action 1]
+   - [Action 2]
+   
+   ## Success Criteria
+   - [Measurable outcome 1]
+   - [Measurable outcome 2]
+   - [Measurable outcome 3]
+   
+   ## Constraints (what it should never do)
+   - Never [constraint 1]
+   - Never [constraint 2]
+   
+   ## Starting Input
+   [What information does the agent receive at the start?]
+   
+   ## Expected Output Format
+   [What should the agent return? Structure it clearly]
+   ```
+
+3. Read what you wrote. Are there any ambiguities? (Could someone else misunderstand your intent?) If yes, clarify.
+
+**Validation:**
+- [ ] Spec has all 8 sections filled in
+- [ ] Success criteria are measurable (not just "works well")
+- [ ] At least 2 constraints defined (what it should never do)
+- [ ] You can point to this spec and say "yes, my agent does this"
+
+---
+
+### Step 1.2: Design & Test Tools in Isolation
+
+**What you're doing:** Build each tool your agent will use independently. Test them before the agent ever touches them.
+
+**KB Reference:** [Tool Use: Design, Selection, Restrictions](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 675–847)
+
+**Action:**
+
+1. List the tools your agent needs (from AGENT-SPEC.md "What it CAN do")
+   ```python
+   # tools.py
+   
+   def tool_one(input_param: str) -> dict:
+       """Tool does one specific thing."""
+       # implementation
+       return {"status": "success", "result": result}
+   
+   def tool_two(input_param: str) -> dict:
+       """Tool does one specific thing."""
+       # implementation
+       return {"status": "success", "result": result}
+   ```
+
+2. Write a test for each tool:
+   ```python
+   # test_tools.py
+   
+   def test_tool_one_happy_path():
+       result = tool_one("valid_input")
+       assert result["status"] == "success"
+       assert "result" in result
+   
+   def test_tool_one_invalid_input():
+       result = tool_one("invalid_input")
+       assert result["status"] == "error"
+   ```
+
+3. Run tests: `pytest test_tools.py -v`
+4. Confirm all tests pass before moving on
+
+**Validation:**
+- [ ] Each tool is a single, focused function (does one thing)
+- [ ] Each tool returns a dict with `{"status": "success|error", "result": ...}`
+- [ ] Each tool has at least 2 tests (happy path + error case)
+- [ ] All tests pass
+
+**Why this matters:** If a tool is broken, your agent will fail. Find tool bugs before the agent touches them.
+
+---
+
+### Step 1.3: Write System Prompt (Level 1 — Minimal)
+
+**What you're doing:** Create a system prompt that defines the agent's role, goal, tools, and reasoning structure.
+
+**KB Reference:** [Prompt Maturity Levels](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 161–192)
+
+**Action:**
+
+1. Create a file: `src/prompts/agent-system.txt`
+2. Start at **Level 1** (simplest possible):
+   ```
+   You are a [agent-name].
+   
+   Your job is to [purpose from AGENT-SPEC].
+   
+   You have access to these tools:
+   - tool_one(param: str): [what it does]
+   - tool_two(param: str): [what it does]
+   
+   CONSTRAINTS:
+   - Never [constraint 1 from spec]
+   - Never [constraint 2 from spec]
+   
+   When given a task:
+   1. Understand what's being asked
+   2. Think about which tools you need
+   3. Use them to complete the task
+   4. Return your result
+   ```
+
+3. Save this file. Don't optimize yet — keep it under 200 tokens.
+
+**Validation:**
+- [ ] Prompt is under 200 tokens
+- [ ] It clearly states the agent's purpose
+- [ ] All tools are listed
+- [ ] Constraints are explicit
+
+---
+
+### Step 1.4: Test on 3 Scenarios
+
+**What you're doing:** Run your agent on 3 test cases: happy path, edge case, failure mode. Confirm it works.
+
+**KB Reference:** [Evaluation: Starting with 3–5 Test Cases](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 1773–1805)
+
+**Action:**
+
+1. Write 3 test scenarios (in a file or as comments):
+   ```python
+   # test_agent.py
+   
+   # Scenario 1: Happy path (expected case)
+   def test_agent_happy_path():
+       agent = Agent(system_prompt=SYSTEM_PROMPT, tools=[tool_one, tool_two])
+       result = agent.run("typical task description")
+       assert result["status"] == "success"
+   
+   # Scenario 2: Edge case
+   def test_agent_edge_case():
+       agent = Agent(system_prompt=SYSTEM_PROMPT, tools=[tool_one, tool_two])
+       result = agent.run("edge case task")
+       assert "result" in result or result["status"] == "error"
+   
+   # Scenario 3: Failure mode
+   def test_agent_failure():
+       agent = Agent(system_prompt=SYSTEM_PROMPT, tools=[tool_one, tool_two])
+       result = agent.run("task that should fail gracefully")
+       assert result["status"] in ["error", "success"]  # Either is ok, should not crash
+   ```
+
+2. Run each scenario: `pytest test_agent.py -v`
+3. Read the output carefully. Does the agent reason sensibly? Does it use the right tools?
+
+**If all tests pass:** Go to Step 1.5  
+**If any test fails:** Adjust the prompt slightly and re-run. (Stay at Level 1, don't add complexity yet)
+
+**Validation:**
+- [ ] 3 scenarios defined and executable
+- [ ] All tests run without crashing
+- [ ] Agent's reasoning is visible in outputs (you can see its thought process)
+- [ ] At least 2 of 3 scenarios work correctly
+
+---
+
+### Step 1.5: Commit Phase 1
+
+**What you're doing:** Save your work to git with a clean commit message.
+
+**Action:**
+
+```bash
+git add AGENT-SPEC.md src/prompts/agent-system.txt src/tools.py tests/test_tools.py tests/test_agent.py
+git commit -m "feat: phase 1 — agent spec, tools, level 1 prompt, passing 3 scenarios
+
+- Spec defines purpose, scope, constraints, success criteria
+- Tools tested independently before agent integration
+- Level 1 system prompt (minimal, 150 tokens)
+- 3 scenario tests: happy path, edge case, failure recovery
+- All tests passing"
+```
+
+**Validation:**
+- [ ] `git log` shows your commit with the message above
+- [ ] All files are tracked (nothing untracked in `git status`)
+
+---
+
+### Next: Phase 2
+
+Once Phase 1 is working and committed, you're ready for Phase 2: **Planning & ReAct Loop**
+
+In Phase 2, you'll:
+- Add explicit planning before tool use
+- Implement the Thought → Action → Observation loop
+- Test on more complex scenarios
+
+See Phase 2 below ↓
 
 ---
 
