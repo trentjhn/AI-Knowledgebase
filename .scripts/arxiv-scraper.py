@@ -169,15 +169,7 @@ def deduplicate_papers(topics_papers: dict) -> tuple:
 
 
 def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_before_filter: int) -> str:
-    """Format papers as markdown digest."""
-    topic_papers = defaultdict(list)
-    for paper_id, paper in papers_dict.items():
-        topics = topic_map[paper_id]
-        for topic in topics:
-            topic_papers[topic].append(paper)
-
-    topics = sorted(topic_papers.keys())
-
+    """Format papers as markdown digest (each paper displayed once)."""
     lines = [
         f"# ArXiv Digest — {today.strftime('%B %d, %Y')}",
         f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}*",
@@ -186,7 +178,7 @@ def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_bef
         "",
     ]
 
-    if not topics:
+    if not papers_dict:
         lines.append("No highly-cited papers found this week.")
         return "\n".join(lines)
 
@@ -194,23 +186,23 @@ def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_bef
     lines.append(f"**Quality Papers: {filtered} (filtered from {total_before_filter} by citation count)**")
     lines.append("")
 
-    for topic in topics:
-        papers = topic_papers[topic]
-        lines.append(f"## {topic} [{len(papers)} paper{'s' if len(papers) != 1 else ''}]")
+    # Sort papers by citation count (descending)
+    papers_sorted = sorted(
+        papers_dict.items(),
+        key=lambda item: item[1].get("citation_count", 0),
+        reverse=True
+    )
+
+    for i, (paper_id, paper) in enumerate(papers_sorted, 1):
+        tags = ", ".join(sorted(topic_map[paper_id]))
+        citations = paper.get("citation_count", 0)
+        lines.append(f"{i}. **{paper['title']}**")
+        lines.append(f"   - **Published:** {paper['published']}")
+        lines.append(f"   - **Citations:** {citations} (Semantic Scholar)")
+        lines.append(f"   - **Abstract:** {paper['summary']}...")
+        lines.append(f"   - **Link:** [{paper['id']}]({paper['url']})")
+        lines.append(f"   - **Topics:** {tags}")
         lines.append("")
-
-        papers_sorted = sorted(papers, key=lambda p: p.get("citation_count", 0), reverse=True)
-
-        for i, paper in enumerate(papers_sorted, 1):
-            tags = ", ".join(sorted(topic_map[paper["id"]]))
-            citations = paper.get("citation_count", 0)
-            lines.append(f"{i}. **{paper['title']}**")
-            lines.append(f"   - **Published:** {paper['published']}")
-            lines.append(f"   - **Citations:** {citations} (Semantic Scholar)")
-            lines.append(f"   - **Abstract:** {paper['summary']}...")
-            lines.append(f"   - **Link:** [{paper['id']}]({paper['url']})")
-            lines.append(f"   - **Topics:** {tags}")
-            lines.append("")
 
     return "\n".join(lines)
 
