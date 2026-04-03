@@ -11,7 +11,34 @@ Built for personal reference and as a methodology foundation for consulting/audi
 - `CAREER/` — PM context, interview materials
 - `KB-INDEX.md` — flat navigation catalog (line counts, read times, descriptions)
 - `builds-log.md` — running record of AI systems built
+- `raw/` — sourced raw materials (papers, digests, datasets)
+  - `raw/arxiv-papers/` — auto-generated weekly ArXiv research digests (see Automated Systems below)
 - `.sessions/` — **local only, not in GitHub** — session workspace for in-progress investigations, design explorations, and working notes that don't yet warrant formal KB structure
+- `.scripts/` — **hidden from public view** — automation scripts (ArXiv scraper, etc.)
+
+## Automated Systems
+
+### ArXiv Weekly Research Digest
+
+**What it does:** Every Friday at 8am UTC, GitHub Actions automatically queries ArXiv for AI research papers matching your KB topics from the past 1-4 weeks, filters by citation count (1+), and deposits results in `raw/arxiv-papers/YYYY-MM-DD.md`.
+
+**How it works:**
+1. `.scripts/arxiv-scraper.py` — Queries ArXiv API for 9 KB topics (Prompt Engineering, Context Engineering, Reasoning LLMs, etc.)
+2. Fetches ~10 papers per topic from 1-4 weeks prior
+3. Queries Semantic Scholar for citation counts (keeps papers with 1+ citations)
+4. Deduplicates papers that match multiple topics
+5. Formats as markdown with abstracts, links, and topic tags
+6. Writes to `raw/arxiv-papers/{YYYY-MM-DD}.md`
+7. Auto-commits and pushes to GitHub
+
+**Output:** ~4-6 quality papers per week in `raw/arxiv-papers/`
+
+**Integration:** Review digest when available, manually integrate interesting papers into KB docs by adding them to the sources list and synthesizing findings into the appropriate topic doc.
+
+**Configuration:** Adjustable thresholds in `.scripts/arxiv-scraper.py`:
+- `CITATION_THRESHOLD = 1` (line 57) — minimum citations to include
+- Date window in `get_date_range()` (lines 59-63)
+- `max_results=10` (line 90) — papers per query
 
 ## Research Protocol — last30days
 When asked to research, update, or distill a topic (e.g. "let's update the agentic engineering doc",
