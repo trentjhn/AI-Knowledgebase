@@ -550,6 +550,29 @@ The recommended format for tracking every prompt attempt:
 - When working with RAG systems (retrieval-augmented generation — where you inject retrieved documents into the prompt), also record the query, chunk settings, and what content was actually injected
 - Once a prompt is production-ready, add it to automated evaluation pipelines so you catch regressions when models update
 
+### Testing Output Format Expectations
+
+Before declaring a prompt "done," explicitly test that the LLM's output matches your format requirements. This is the most commonly skipped step and causes cascading failures downstream.
+
+**Why this matters:** LLMs generate probabilistic text. Even with explicit instructions like "output JSON" or "format as markdown," the model may occasionally deviate—outputting partial JSON, adding prose before the JSON block, using invalid markdown syntax, or mixing formats. These edge cases are silent failures: the prompt runs, but downstream parsing breaks.
+
+**How to test it:**
+
+1. **Run the prompt 5–10 times** with the same model and temperature you'll use in production. Record every output, even the good ones.
+
+2. **Check for format violations:**
+   - Does the JSON parse cleanly with `json.loads()`? Or does it have trailing commas, extra newlines, or preamble text?
+   - Does the markdown render without syntax errors? (Unmatched brackets, missing pipes in tables, etc.)
+   - For CSV: does every row have the same number of columns? No quote escaping issues?
+
+3. **Test edge cases:**
+   - Ask for output when the task has no valid results ("generate 5 email templates" when the context is empty). Does it gracefully return an empty array, or does it return malformed JSON?
+   - Vary inputs: short vs. long, simple vs. complex, edge-case domains. Output format can degrade with extremes.
+
+4. **Establish a fallback strategy:** If the LLM occasionally fails format validation, decide in advance whether you'll retry, use a fallback model, or surface the error to the user. Document this choice in your prompt file.
+
+**Real example:** A prompt asked GPT-4 to output a JSON object. 95% of the time, it works perfectly. But roughly 1 in 20 runs, the model adds a prose preamble: `"Before I provide the JSON, I should mention..."` followed by the JSON. A naive parser expecting JSON at position 0 crashes. Testing with 10 runs would have caught this; without testing, it only surfaced in production.
+
 ---
 
 ## 8. Anti-Patterns
@@ -570,4 +593,4 @@ The recommended format for tracking every prompt attempt:
 
 ---
 
-*Primary sources: Lee Boonstra, "Prompt Engineering" (Google / Vertex AI whitepaper, Feb 2025) · White et al., "A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT" (Vanderbilt, 2023) · Kojima et al., "Large Language Models are Zero-Shot Reasoners" (NeurIPS 2022) · Wang et al., "Self-Consistency Improves Chain of Thought Reasoning" (ICLR 2023) · Zhou et al., "Large Language Models are Human-Level Prompt Engineers" (ICLR 2023) · Xu et al., "Reprompting: Automated Chain-of-Thought Prompt Inference Through Gibbs Sampling" (ICML 2024) · Sahoo et al., "A Systematic Survey of Prompt Engineering in Large Language Models" (2024)*
+*Primary sources: Lee Boonstra, "Prompt Engineering" (Google / Vertex AI whitepaper, Feb 2025) · White et al., "A Prompt Pattern Catalog to Enhance Prompt Engineering with ChatGPT" (Vanderbilt, 2023) · Kojima et al., "Large Language Models are Zero-Shot Reasoners" (NeurIPS 2022) · Wang et al., "Self-Consistency Improves Chain of Thought Reasoning" (ICLR 2023) · Zhou et al., "Large Language Models are Human-Level Prompt Engineers" (ICLR 2023) · Xu et al., "Reprompting: Automated Chain-of-Thought Prompt Inference Through Gibbs Sampling" (ICML 2024) · Sahoo et al., "A Systematic Survey of Prompt Engineering in Large Language Models" (2024) · Schulman et al., "What's in My Big Data?" (arXiv 2409.13342, 2024)*
