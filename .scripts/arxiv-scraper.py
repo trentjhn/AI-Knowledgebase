@@ -76,8 +76,8 @@ def build_query(topic_query: str) -> str:
     if not topic_query.startswith('(') and not topic_query.startswith('"'):
         topic_query = f'"{topic_query}"'
 
-    # Combine: category + LLM filter + topic query
-    return f"{ARXIV_CATEGORIES} AND {LLM_FILTER} AND ({topic_query})"
+    # Combine: category + topic query (LLM filter removed to avoid no-results)
+    return f"{ARXIV_CATEGORIES} AND ({topic_query})"
 
 
 def fetch_papers(query: str, max_results: int = 10) -> list:
@@ -175,22 +175,15 @@ def deduplicate_papers(topics_papers: dict) -> tuple:
     return seen, topic_map
 
 
-def get_week_info() -> tuple:
-    """Get current week number and date range."""
+def get_date_info() -> tuple:
+    """Get current date info for filename and header."""
     today = datetime.now()
-    year, week, _ = today.isocalendar()
-
-    # Monday of this week
-    monday = today - timedelta(days=today.weekday())
-    # Friday of this week
-    friday = monday + timedelta(days=4)
-
-    return week, year, monday, friday
+    return today
 
 
 def format_digest(papers_dict: dict, topic_map: dict) -> str:
     """Format papers as markdown digest."""
-    week, year, monday, friday = get_week_info()
+    today = get_date_info()
 
     # Group papers by topic
     topic_papers = defaultdict(list)
@@ -204,9 +197,8 @@ def format_digest(papers_dict: dict, topic_map: dict) -> str:
 
     # Build markdown
     lines = [
-        f"# ArXiv Weekly Digest — Week {week} ({year})",
+        f"# ArXiv Digest — {today.strftime('%B %d, %Y')}",
         f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}*",
-        f"*Date Range: {monday.strftime('%Y-%m-%d')} to {friday.strftime('%Y-%m-%d')}*",
         "",
     ]
 
@@ -266,8 +258,8 @@ def main():
     digest = format_digest(unique_papers, topic_mapping)
 
     # Write to file
-    week, year, _, _ = get_week_info()
-    filename = f"arxiv-digest-{year}-W{week:02d}.md"
+    today = get_date_info()
+    filename = f"{today.strftime('%Y-%m-%d')}.md"
     filepath = os.path.join(output_dir, filename)
 
     with open(filepath, "w") as f:

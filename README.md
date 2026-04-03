@@ -4,6 +4,10 @@ A unified reference for AI teachings, findings, experiments, and research—orga
 
 *Last Updated: 2026-04-01*
 
+## Why I Built This
+
+AI engineering knowledge is scattered across 100+ sources of wildly varying depth. Most tutorials are either too shallow for practitioners or benchmark-focused (and decay fast). I built this to synthesize core concepts, frameworks, and operational playbooks at practitioner depth in a form that ages well.
+
 ---
 
 ## 📚 LEARNING (Core Reference Topics)
