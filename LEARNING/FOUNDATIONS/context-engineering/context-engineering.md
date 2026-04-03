@@ -101,6 +101,27 @@ Example: A customer support AI doesn't have your entire product documentation me
 
 This is how AI systems can answer questions about documents, databases, or knowledge bases they were never trained on.
 
+#### The Scale-Dependency Problem
+
+A critical insight from recent research: **retrieval effectiveness depends heavily on your model scale and task**. The common assumption — "bigger models always benefit more from RAG" — is misleading.
+
+Empirical finding from OLMo-2 scaling studies (30M to 3B parameters across 100B pretraining tokens): The marginal utility of retrieval is *non-linear*. A small model (30M) may see 15% accuracy gains from retrieval, while a larger model (1B) sees 8% gains from the same retrieval setup on the same task. Meanwhile, on certain reasoning tasks, both see consistent improvement, but the saturation point (where adding more pretraining data beats adding retrieval) varies by 3-5x across task types.
+
+**Practical implications for practitioners:**
+
+1. **Don't assume RAG helps equally across model scales.** Benchmark RAG vs. scale-only baselines for your specific model size and task domain.
+
+2. **Map your saturation point.** At what ratio of model parameters to pretraining data does adding retrieval become more cost-effective than adding more training tokens? This varies:
+   - Reasoning tasks: saturation later (retrieval stays valuable at higher data budgets)
+   - QA tasks: saturation earlier (parametric knowledge dominates sooner)
+   - Scientific tasks: intermediate
+
+3. **Use a three-dimensional scaling framework** — model size × pretraining budget × retrieval store size — to estimate optimal allocation. Don't treat pretraining and retrieval as independent decisions.
+
+4. **Task-specific optimization matters.** A configuration optimized for open-domain QA may be suboptimal for reasoning-heavy tasks with the same model. Profile your actual workload.
+
+The core principle: **Scale decisions are architecture decisions.** Before committing to a retrieval pipeline, understand whether your model size and task type will actually benefit from it relative to the cost.
+
 ---
 
 ### 6. Tool Definitions
