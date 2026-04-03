@@ -11,6 +11,7 @@ Built for personal reference and as a methodology foundation for consulting/audi
 - `CAREER/` — PM context, interview materials
 - `KB-INDEX.md` — flat navigation catalog (line counts, read times, descriptions)
 - `builds-log.md` — running record of AI systems built
+- `.sessions/` — **local only, not in GitHub** — session workspace for in-progress investigations, design explorations, and working notes that don't yet warrant formal KB structure
 
 ## Research Protocol — last30days
 When asked to research, update, or distill a topic (e.g. "let's update the agentic engineering doc",
@@ -46,7 +47,22 @@ Every KB doc must be educational first, reference second:
 - When adding a new topic: update `KB-INDEX.md` with file path, line count, read time, one-liner
 - Playbooks in `future-reference/playbooks/` are updated when new build techniques are learned
 
+## Session Management — `.sessions/` Workspace
+
+When working on investigations, design explorations, or problems that don't yet have a clear KB home:
+
+- Store working notes, drafts, decision logs in `.sessions/[topic]/` (e.g., `.sessions/arxiv-filtering/`)
+- **Never commit `.sessions/` to GitHub** — it's local-only workspace for continuity between sessions
+- Files here are read by Claude each session to pick up mid-investigation without losing context
+- Once work solidifies into a KB doc or decision, move insights to the formal structure and clean up `.sessions/`
+
+This allows:
+- Mid-session context preservation ("we were exploring X, here's where we left off")
+- Design explorations that might not make the KB but inform future work
+- Investigation logs that help trace how decisions were made
+
 ## GitHub
 Repo: `trentjhn/AI-Knowledgebase` (private)
 Branch: `main`
 After any session with meaningful changes: `git add -A && git commit -m "..." && git push origin main`
+Note: `.sessions/` is git-ignored and never pushed.
