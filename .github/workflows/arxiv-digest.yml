@@ -25,9 +25,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests
+          pip install requests anthropic
 
       - name: Run ArXiv scraper
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           python .scripts/arxiv-scraper.py
 
@@ -39,4 +41,4 @@ jobs:
       - name: Commit and push digest
         run: |
           git add raw/arxiv-papers/ || true
-          git diff --cached --quiet || (git commit -m "feat: add ArXiv weekly digest" && git push origin main)
+          git diff --cached --quiet || (git commit -m "docs: add ArXiv weekly digest (Claude-scored KB relevance)" && git push origin main)

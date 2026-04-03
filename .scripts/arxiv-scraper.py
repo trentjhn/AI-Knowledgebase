@@ -2,9 +2,10 @@
 """
 ArXiv Weekly Digest Generator for AI Knowledge Base
 
-Queries ArXiv API for papers from 2-4 weeks ago (rolling window),
-filters by Semantic Scholar citations (5+), deduplicates across topics,
-and outputs a weekly digest markdown file.
+Queries ArXiv API for papers from the past week, uses Claude to score
+relevance to KB topics (Prompt Engineering, Context Engineering, Reasoning LLMs,
+Agentic Engineering, Skills, Evaluation, Fine-tuning, AI Security, Alignment & Safety),
+and outputs a ranked digest markdown file.
 """
 
 import requests
@@ -15,6 +16,7 @@ import os
 import sys
 import time
 import re
+import anthropic
 
 # Consolidated ArXiv query mapping
 TOPIC_QUERIES = {
@@ -49,18 +51,15 @@ TOPIC_QUERIES = {
 
 ARXIV_CATEGORIES = "(cat:cs.AI OR cat:cs.CL OR cat:stat.ML)"
 ARXIV_API = "http://export.arxiv.org/api/query?"
-SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1/paper/search"
-CITATION_THRESHOLD = 1
 
 
 def get_date_range() -> tuple:
-    """Get 1-4 week rolling window for ArXiv query."""
+    """Get past 7 days for ArXiv query."""
     today = datetime.now()
-    week_4_ago = today - timedelta(days=28)
-    week_1_ago = today - timedelta(days=7)
+    week_ago = today - timedelta(days=7)
 
-    from_date = week_4_ago.strftime("%Y%m%d0000")
-    to_date = week_1_ago.strftime("%Y%m%d2359")
+    from_date = week_ago.strftime("%Y%m%d0000")
+    to_date = today.strftime("%Y%m%d2359")
     return from_date, to_date, today
 
 
@@ -86,7 +85,7 @@ def fetch_papers(query: str, max_results: int = 5) -> list:
             response.raise_for_status()
             return parse_arxiv_response(response.text)
         except requests.exceptions.HTTPError as e:
-            if response.status_code == 429:
+            if e.response.status_code == 429:
                 wait_time = (2 ** attempt) * 5
                 print(f"  Rate limited. Waiting {wait_time}s...", file=sys.stderr)
                 time.sleep(wait_time)
@@ -125,7 +124,6 @@ def parse_arxiv_response(xml_response: str) -> list:
                 "summary": summary[:300],
                 "published": published,
                 "url": f"https://arxiv.org/abs/{arxiv_id}",
-                "citation_count": 0,
             })
         except Exception:
             pass
@@ -133,24 +131,96 @@ def parse_arxiv_response(xml_response: str) -> list:
     return papers
 
 
-def fetch_citation_count(arxiv_id: str) -> int:
-    """Get citation count from Semantic Scholar API."""
-    try:
-        clean_id = arxiv_id.split('v')[0]
-        params = {
-            "query": f"arxiv:{clean_id}",
-            "fields": "citationCount",
-            "limit": 1,
-        }
-        response = requests.get(SEMANTIC_SCHOLAR_API, params=params, timeout=10)
-        response.raise_for_status()
+def score_papers_with_claude(papers_dict: dict) -> dict:
+    """Score paper relevance to KB topics using Claude API.
 
-        data = response.json()
-        if data.get("data") and len(data["data"]) > 0:
-            return data["data"][0].get("citationCount", 0)
-        return 0
-    except Exception:
-        return 0
+    Returns dict mapping paper_id -> (score: float 0-1, matching_topics: list)
+    Note: normalizes IDs by stripping version numbers (v1, v2, etc.)
+    """
+    if not papers_dict:
+        return {}
+
+    client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
+    # Build prompt with papers (use base ID without version for consistency with Claude output)
+    paper_list = "\n\n".join([
+        f"Paper {i+1}: {pid.split('v')[0]}\nTitle: {paper['title']}\nAbstract: {paper['summary']}"
+        for i, (pid, paper) in enumerate(papers_dict.items())
+    ])
+
+    prompt = f"""You are evaluating ArXiv papers for a distilled, practitioner-depth AI Knowledge Base. The KB is NOT comprehensive—it synthesizes and distills. High-signal papers are those that would directly inform KB content updates or reveal gaps.
+
+The KB covers these 9 topics:
+1. Prompt Engineering - prompting techniques, few-shot learning, output control
+2. Context Engineering - RAG, context windows, context management patterns
+3. Reasoning LLMs - chain of thought, planning, reasoning systems
+4. Agentic Engineering - agents, tool use, multi-agent systems, orchestration
+5. Skills - instruction tuning, task-specific specialization
+6. Evaluation - benchmarking, evaluation methodology, metrics
+7. Fine-tuning - LoRA, RLHF, DPO, preference learning
+8. AI Security - adversarial robustness, jailbreaks, safety
+9. Alignment & Safety - alignment, safety, constitutional AI
+
+SCORING CRITERIA (0.0-1.0):
+
+Score 0.8+ if the paper:
+- Reveals a NEW MECHANISM or PATTERN not yet in the KB (e.g., novel architectural insight, unexpected failure mode, counterintuitive finding)
+- DEEPLY explores 1-2 KB topics (not surface coverage of many)
+- Explicitly analyzes WHY something works or WHY it breaks (mechanism > "we got +2% accuracy")
+- Includes failure modes, anti-patterns, or limitations that practitioners need to know
+- Presents a reusable pattern, not a domain-specific application (e.g., "novel RAG filtering" > "medical AI using RAG")
+- Is dense enough to distill into KB content (clear concepts, not incremental tweaks)
+
+Score 0.5-0.8 if the paper:
+- Is solid engineering work but somewhat derivative (confirms existing patterns, not new)
+- Covers practical techniques but shallow across multiple topics
+- Lacks explicit failure mode analysis
+- Is domain-specific but technique could transfer
+
+Score <0.5 if the paper:
+- Is pure theory with limited practical implementation details
+- Narrowly domain-specific with low transfer value
+- Overlaps heavily with existing KB content without new insight
+- Is incremental (small gains, no new understanding)
+
+IMPORTANT: Return ONLY a JSON object with this structure (no markdown, no explanation):
+{{
+  "2402.12345": {{"score": 0.85, "topics": ["Prompt Engineering", "Reasoning LLMs"]}},
+  "2403.54321": {{"score": 0.45, "topics": []}},
+  ...
+}}
+
+Papers to evaluate:
+
+{paper_list}"""
+
+    try:
+        response = client.messages.create(
+            model="claude-opus-4-6",
+            max_tokens=4000,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+
+        # Parse JSON response (strip markdown code fences if present)
+        response_text = response.content[0].text.strip()
+        if response_text.startswith("```"):
+            response_text = response_text.split("```")[1]
+            if response_text.startswith("json"):
+                response_text = response_text[4:]
+        response_text = response_text.strip()
+
+        scores = json.loads(response_text)
+
+        return scores
+    except json.JSONDecodeError as e:
+        print(f"Failed to parse Claude response as JSON: {e}", file=sys.stderr)
+        print(f"Response was: {response_text}", file=sys.stderr)
+        return {}
+    except Exception as e:
+        print(f"Claude API error: {e}", file=sys.stderr)
+        return {}
 
 
 def deduplicate_papers(topics_papers: dict) -> tuple:
@@ -168,40 +238,49 @@ def deduplicate_papers(topics_papers: dict) -> tuple:
     return seen, topic_map
 
 
-def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_before_filter: int) -> str:
-    """Format papers as markdown digest (each paper displayed once)."""
+def format_digest(papers_dict: dict, topic_map: dict, claude_scores: dict, today: datetime, total_before_filter: int, relevance_threshold: float = 0.7) -> str:
+    """Format papers as markdown digest (each paper displayed once, sorted by relevance)."""
     lines = [
         f"# ArXiv Digest — {today.strftime('%B %d, %Y')}",
         f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}*",
-        f"*Date Range: 1-4 weeks ago (rolling window)*",
-        f"*Filtered by: 1+ citations on Semantic Scholar*",
+        f"*Date Range: Past 7 days*",
+        f"*Filtered by: Claude relevance scoring (threshold {relevance_threshold}+)*",
         "",
     ]
 
-    if not papers_dict:
-        lines.append("No highly-cited papers found this week.")
+    # Filter papers by relevance threshold (using base ID for lookup in claude_scores)
+    filtered_papers = {
+        pid: paper for pid, paper in papers_dict.items()
+        if claude_scores.get(pid.split('v')[0], {}).get("score", 0) >= relevance_threshold
+    }
+
+    if not filtered_papers:
+        lines.append(f"No papers above relevance threshold ({relevance_threshold}) found this week.")
         return "\n".join(lines)
 
-    filtered = len(papers_dict)
-    lines.append(f"**Quality Papers: {filtered} (filtered from {total_before_filter} by citation count)**")
+    filtered_count = len(filtered_papers)
+    lines.append(f"**KB-Relevant Papers: {filtered_count} (filtered from {total_before_filter})**")
     lines.append("")
 
-    # Sort papers by citation count (descending)
+    # Sort by Claude relevance score (descending)
     papers_sorted = sorted(
-        papers_dict.items(),
-        key=lambda item: item[1].get("citation_count", 0),
+        filtered_papers.items(),
+        key=lambda item: claude_scores.get(item[0].split('v')[0], {}).get("score", 0),
         reverse=True
     )
 
     for i, (paper_id, paper) in enumerate(papers_sorted, 1):
-        tags = ", ".join(sorted(topic_map[paper_id]))
-        citations = paper.get("citation_count", 0)
+        arxiv_topics = ", ".join(sorted(topic_map[paper_id]))
+        base_id = paper_id.split('v')[0]
+        kb_topics = claude_scores.get(base_id, {}).get("topics", [])
+        kb_topics_str = ", ".join(kb_topics) if kb_topics else "General"
+
         lines.append(f"{i}. **{paper['title']}**")
         lines.append(f"   - **Published:** {paper['published']}")
-        lines.append(f"   - **Citations:** {citations} (Semantic Scholar)")
+        lines.append(f"   - **KB Topics:** {kb_topics_str}")
         lines.append(f"   - **Abstract:** {paper['summary']}...")
         lines.append(f"   - **Link:** [{paper['id']}]({paper['url']})")
-        lines.append(f"   - **Topics:** {tags}")
+        lines.append(f"   - **ArXiv Topics:** {arxiv_topics}")
         lines.append("")
 
     return "\n".join(lines)
@@ -227,7 +306,7 @@ def main():
             print(f"  [{completed}/{total_queries}] {topic}...", file=sys.stderr)
 
             full_query = build_query(query, from_date, to_date)
-            papers = fetch_papers(full_query, max_results=10)
+            papers = fetch_papers(full_query, max_results=20)
             all_topics_papers[topic].extend(papers)
 
             if completed < total_queries:
@@ -236,24 +315,19 @@ def main():
     # Deduplicate
     unique_papers, topic_mapping = deduplicate_papers(all_topics_papers)
     total_before_filter = len(unique_papers)
-    print(f"Found {total_before_filter} unique papers. Fetching citation counts...", file=sys.stderr)
+    print(f"Found {total_before_filter} unique papers. Scoring relevance with Claude...", file=sys.stderr)
 
-    # Get Semantic Scholar citations
-    for paper_id, paper in unique_papers.items():
-        citation_count = fetch_citation_count(paper_id)
-        paper["citation_count"] = citation_count
-        time.sleep(0.3)
+    # Score papers with Claude
+    claude_scores = score_papers_with_claude(unique_papers)
 
-    # Filter by citation threshold
-    filtered_papers = {
-        pid: paper for pid, paper in unique_papers.items()
-        if paper.get("citation_count", 0) >= CITATION_THRESHOLD
-    }
+    if not claude_scores:
+        print("Claude scoring failed. Exiting.", file=sys.stderr)
+        return None
 
-    print(f"After filtering (5+ citations): {len(filtered_papers)} papers", file=sys.stderr)
+    print(f"Scored {len(claude_scores)} papers. Generating digest...", file=sys.stderr)
 
-    # Generate digest
-    digest = format_digest(filtered_papers, topic_mapping, today, total_before_filter)
+    # Generate digest (threshold 0.8 for high-signal practical engineering patterns)
+    digest = format_digest(unique_papers, topic_mapping, claude_scores, today, total_before_filter, relevance_threshold=0.8)
 
     # Write to file
     filename = f"{today.strftime('%Y-%m-%d')}.md"
