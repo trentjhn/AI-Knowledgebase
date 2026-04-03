@@ -2,7 +2,6 @@
 
 > **Purpose:** [One sentence describing what you're building and when to use this playbook]
 > 
-> **Time Estimate:** X–Y hours  
 > **Prerequisites:** [What you need before starting]
 
 ---
@@ -63,8 +62,6 @@ Are you building an agent?
 - [ ] Python/Node.js environment set up (if applicable)
 - [ ] [Other prerequisite]
 
-**Estimated time:** X–Y hours total (Y hours for Phase 1, etc.)
-
 ---
 
 ## Phases
@@ -72,8 +69,6 @@ Are you building an agent?
 ### Phase 1: [Phase Name]
 
 **Goal:** [What you accomplish in this phase]
-
-**Estimated time:** 45–90 minutes
 
 ---
 
@@ -99,8 +94,6 @@ def example():
 - [ ] [Specific thing happened]
 - [ ] [Specific output is visible]
 - [ ] [You can point to evidence]
-
-**Estimated time:** X–Y minutes
 
 ---
 
@@ -159,11 +152,11 @@ git commit -m "feat: [phase achievement]
 
 If your playbook has multiple valid approaches, include a comparison:
 
-| Approach | Complexity | Time | When to Use |
-|---|---|---|---|
-| Simple approach | Low | 1–2h | Starting out, prototyping |
-| Standard approach | Medium | 3–4h | Most projects |
-| Advanced approach | High | 6–8h | High-performance needs |
+| Approach | Complexity | When to Use |
+|---|---|---|
+| Simple approach | Low | Starting out, prototyping |
+| Standard approach | Medium | Most projects |
+| Advanced approach | High | High-performance needs |
 
 ---
 
