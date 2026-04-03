@@ -327,16 +327,36 @@ Prerequisites: fine-tuning.md, evaluation.md
 
 **Practical, ready-to-use guides for building AI systems**
 
+**New Structure (as of 2026-04-03):** Playbooks follow a consistent pattern:
+1. **Decision tree** routes you to the right primary playbook (agent, RAG, chatbot, or prompting)
+2. **"Add Optional Capabilities"** section cross-references other playbooks for secondary features
+3. **Phases** contain **3–5 granular steps** (10–30 min each)
+4. **Every step** includes: KB reference (file + exact lines) + action + validation checklist
+5. **No time estimates** (redundant with AI assistance)
+
+See [playbooks/README.md](future-reference/playbooks/README.md) for the complete structure explanation.
+
+---
+
+**Primary Pattern Playbooks** (Follow new structure)
+
+| Playbook | Primary Pattern | When to Use | Structure |
+|----------|---|---|---|
+| [**building-ai-agents.md**](future-reference/playbooks/building-ai-agents.md) | Multi-step autonomous task | Research agent, workflow automation, data processing | Decision tree → 5 phases → Step-by-step with KB citations |
+| [**building-rag-pipelines.md**](future-reference/playbooks/building-rag-pipelines.md) | Document retrieval & ranking | Search internal docs, extract structured info, question-answering | (To be enhanced with new structure) |
+| [**building-chatbots.md**](future-reference/playbooks/building-chatbots.md) | Real-time conversation | User interaction, multi-turn state, conversational UI | (To be enhanced with new structure) |
+| [**writing-production-prompts.md**](future-reference/playbooks/writing-production-prompts.md) | Single LLM call | Classification, generation, summarization, one-shot tasks | (To be enhanced with new structure) |
+
+---
+
+**Specialized & Meta Playbooks** (Existing structure)
+
 | Playbook | Best for | Key Topics |
 |----------|----------|-----------|
 | [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
 | [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery |
 | [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
-| [building-ai-agents.md](future-reference/playbooks/building-ai-agents.md) | Agent implementation | Step-by-step from scratch |
-| [building-chatbots.md](future-reference/playbooks/building-chatbots.md) | Conversational systems | Chatbot architecture and patterns |
-| [building-rag-pipelines.md](future-reference/playbooks/building-rag-pipelines.md) | RAG workflows | Retrieval-augmented generation patterns |
-| [writing-production-prompts.md](future-reference/playbooks/writing-production-prompts.md) | Production prompts | Crafting reliable prompts for deployment |
 | [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
 | [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |
 | [project-template.md](future-reference/playbooks/project-template.md) | New projects | General AI project template structure |
@@ -405,4 +425,4 @@ See [skills-catalog/README.md](skills-catalog/README.md) for the full index, des
 | **SKILLS-CATALOG** | 35 skills + 15 agents | ~15,000 | Per project |
 | **Total** | **14 learning topics + skills catalog + extras** | **~26,000+** | **28-31h learning** |
 
-Last updated: 2026-04-01 (added skills-catalog with 35 skills + 15 agents; deepened multi-agent orchestration + hooks sections in agentic-engineering.md; fixed playbook index count)
+Last updated: 2026-04-03 (enhanced playbooks with decision trees, step-by-step structure, KB citations; added playbooks/README.md explaining new format; building-ai-agents.md now has complete Phase 1 with validation)
