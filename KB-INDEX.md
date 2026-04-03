@@ -212,7 +212,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1,100+ lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1,200+ lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -222,6 +222,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 63–145 | Governance framework for AI agents |
 | 146–289 | OWASP LLM Top 10 threat landscape |
 | 290–512 | Deep dives: key attack vectors (injection, poisoning, model theft, etc.) |
+| **NEW:** | **Agent-Specific Attack Vectors: 6-trap taxonomy (Content Injection, Semantic Manipulation, Cognitive State, Behavioral Control, Systemic, Human-in-Loop) with empirical success rates** |
 | 513–718 | Core security principles: Zero Trust, least privilege, defense in depth |
 | 719–897 | Identity & Access Management for agents |
 | 898–1045 | AI Firewall / Gateway pattern |

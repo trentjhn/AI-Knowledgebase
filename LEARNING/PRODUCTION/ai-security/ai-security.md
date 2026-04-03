@@ -179,6 +179,28 @@ The defense is architectural: build the system so that privilege escalation is s
 
 ---
 
+### Agent-Specific Attack Vectors
+
+Agents face a distinct attack surface compared to single-model systems. While general LLM attacks focus on jailbreaking or output manipulation, agents are vulnerable to exploitation across their entire functional lifecycle — from perception (input parsing) through reasoning (decision-making) to action (tool execution) and learning (memory updates).
+
+A comprehensive framework identifies **six classes of attacks** targeting different agent components:
+
+**1. Content Injection Traps** exploit the gap between machine-readable and human-visible rendering. Agents parse HTML/CSS/metadata layers that humans never see. Example: HTML comments or CSS-hidden text can inject adversarial instructions while remaining invisible to human reviewers. Empirical finding: Injecting adversarial HTML elements into static webpages alters AI summarization outputs in 15–29% of cases (Verma & Yadav, 2025).
+
+**2. Semantic Manipulation Traps** corrupt reasoning by biasing source material with sentiment-laden language, framing, or contextual priming. The agent's output gets skewed toward conclusions that align with the biased input, even when the underlying task stays fixed. Example: Wrapping a simple question in authoritative-sounding language ("Industry-standard solution...") increases likelihood the model recommends that solution. Finding: LLMs exhibit systematic response-order and label biases that persist across model scales (Shafaei et al., 2025).
+
+**3. Cognitive State Traps** poison agent memory and learning. RAG systems are highly susceptible: injecting a handful of carefully optimized documents into a knowledge base reliably manipulates model outputs on targeted queries (Zou et al., 2025). Latent memory poisoning (implanting innocuous data that activates under specific retrieval conditions) can steer agents toward attacker-specified behavior without direct prompts. In-context learning can be broken by small, adversarial edits to demonstration examples (Liu et al., 2025).
+
+**4. Behavioral Control Traps** hijack action execution via embedded jailbreak sequences, data exfiltration, or sub-agent spawning. Embedded jailbreak sequences hide adversarial prompts within external resources the agent consumes during normal operation — when injected, they override safety alignment. Data exfiltration attacks force agents to leak privileged information: attacks embedded in mundane inputs (emails, web pages, API responses) achieve ~20–93% success rates depending on delivery method (Chen et al., 2025; Zhang et al., 2025).
+
+**5. Systemic Traps** target multi-agent dynamics. Congestion traps broadcast signals that trigger synchronized overdemand, causing systemic failure. Interdependence cascades exploit fragile equilibria in agent coordination loops. Compositional fragment traps partition malicious payloads across multiple benign-looking data sources; only when reassembled during multi-agent collaboration do they constitute a full attack. A single attacker can thus deploy multiple fake agent identities to manipulate collective decision-making without detection (Sybil attacks).
+
+**6. Human-in-the-Loop Traps** exploit cognitive biases of human overseers. Invisible CSS or off-screen content can misdirect summarization tools into generating outputs specifically crafted to trigger automation bias or cognitive fatigue in reviewers. Early evidence: CSS-obfuscated prompt injections embedded in AI summaries reliably cause human acceptance of poisoned outputs (Zychlinski, 2025).
+
+**Key insight:** Agents are uniquely vulnerable to cascading attacks. A content injection in step 1 poisons memory in step 3, which corrupts reasoning in step 5, which triggers behavioral control in step 4 — each layer amplifying the attacker's impact. Defense requires isolation at multiple layers: input validation, memory integrity checks, behavior sandboxing, and multi-human oversight for high-stakes decisions.
+
+---
+
 ## 5. Core Security Principles
 
 ### Principle of Least Privilege
