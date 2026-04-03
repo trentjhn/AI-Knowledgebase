@@ -4,51 +4,63 @@
 
 ---
 
-## Decision Tree: Should You Build an Agent?
+## Decision Tree: What's Your Primary Pattern?
 
-**Use this flowchart to determine if this is the right playbook, or if you need a different approach.**
+**Use this flowchart to find the right PRIMARY playbook. After building your primary pattern, you can add optional capabilities (retrieval, actions, etc.) — see "Add Optional Capabilities" section below.**
 
 ```
-Do you need an AI to take actions beyond answering questions?
+What's the core interaction pattern?
 │
-├─ No → Not an agent problem.
-│        Consider instead:
-│        - Simple prompting (prompt-engineering.md)
-│        - Fine-tuning for domain expertise (fine-tuning.md)
-│        - Evaluation/testing (evaluation.md)
+├─ Real-time conversation with users
+│  └─ PRIMARY PLAYBOOK: building-chatbots.md
+│     (User interruption, multi-turn state, response streaming)
 │
-└─ Yes → Does the AI interact with users in real-time conversation?
-         │
-         ├─ Yes (e.g., customer support, chat interface)
-         │  → Use chatbot playbook
-         │     (Agents in chatbots are different: state management,
-         │      multi-turn context, user interruption handling)
-         │
-         └─ No → Does it need to retrieve/process documents you have?
-                 │
-                 ├─ Yes (e.g., search documents, extract info, summarize)
-                 │  → Use RAG pipeline playbook
-                 │     (RAG is about retrieval quality, not agent autonomy)
-                 │
-                 └─ No → Does it execute multi-step tasks autonomously?
-                         │
-                         ├─ Yes (e.g., research, data processing, workflow automation)
-                         │  → STAY HERE — This playbook is for you
-                         │     (ReAct loops, planning, context management)
-                         │
-                         └─ Unsure → See decision matrix below
+├─ Process/search through documents I have
+│  └─ PRIMARY PLAYBOOK: building-rag-pipelines.md
+│     (Retrieval quality, ranking, chunking, indexing)
+│
+├─ Execute multi-step tasks autonomously
+│  └─ PRIMARY PLAYBOOK: building-ai-agents.md (THIS ONE)
+│     (ReAct loops, planning, tool orchestration, error recovery)
+│
+└─ Single LLM call (classify, generate, summarize)
+   └─ PRIMARY PLAYBOOK: writing-production-prompts.md
+      (Prompt engineering, output format, reliability)
 ```
 
-**Decision Matrix: Still not sure?**
+**Quick Reference: Which Playbook?**
 
-| Task Type | Right Playbook | Why |
+| Your Task | Primary Playbook | File |
 |---|---|---|
-| "Classify customer emails into categories" | Classification (prompt-engineering) | Single decision, no actions needed |
-| "Answer questions about a knowledge base" | RAG pipeline | Retrieve + answer, not multi-step action |
-| "Chat with users, answer their questions" | Chatbot | Real-time conversation, stateful |
-| "Research a topic, compile results, send report" | **Agent (this playbook)** | Multi-step task, sequences of actions |
-| "Monitor data, detect anomalies, trigger alerts" | **Agent (this playbook)** | Autonomous, decision-based actions |
-| "Extract tables from PDFs I uploaded" | RAG + document understanding | Retrieval + parsing, not sequential decision-making |
+| "Customer support chatbot that answers questions" | Chatbot | building-chatbots.md |
+| "Search my internal documents for answers" | RAG | building-rag-pipelines.md |
+| "Autonomous research agent that gathers data and writes reports" | **Agent** | **building-ai-agents.md** |
+| "Monitor data, detect anomalies, trigger alerts" | **Agent** | **building-ai-agents.md** |
+| "Extract info from PDFs, structure it, save to DB" | **Agent** | **building-ai-agents.md** |
+| "Classify emails or categorize content" | Prompt | writing-production-prompts.md |
+
+---
+
+## Add Optional Capabilities
+
+You've picked the agent playbook. Before starting, check if you need any of these optional capabilities. If yes, see the linked playbook for that specific section, then return here.
+
+**Does your agent need to retrieve documents?**
+- Example: Agent searches internal docs to answer questions before planning actions
+- See: [building-rag-pipelines.md](building-rag-pipelines.md) Phase 1–2 (retrieval setup + ranking)
+- Then: Return here for Phase 2.3 (Tool Design) to integrate retrieval as a tool
+
+**Does your agent need to handle real-time user interruption?**
+- Example: Agent is running a multi-step task, user can pause/modify mid-way
+- See: [building-chatbots.md](building-chatbots.md) section "Multi-Turn State Management"
+- Then: Return here for Phase 4 (Adding Human-in-the-Loop)
+
+**Is this agent running for weeks/months with many decisions?**
+- Example: Business operations agent, research agent with long-running tasks
+- See: [agentic-engineering.md](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) lines 1805–1890 (Long-Horizon Planning)
+- Pattern: Add scratchpad for decision persistence
+
+**Starting with just basic agent? → Skip this section, go to Phase 1 below.**
 
 ---
 
