@@ -46,12 +46,13 @@
 | 205–289 | 4 failure modes: Poisoning / Distraction / Confusion / Clash (with empirical evidence) |
 | 290–406 | Custom context formats, ordering rules, long-term memory, workflow engineering |
 | 390–446 | Anti-patterns, tools, integration checklist |
+| **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
 | **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
 | **NEW:** 11. | Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |
 
 ---
 
-### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (268 lines)
+### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (268+ lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
 
@@ -62,6 +63,7 @@
 | 131–197 | Prompting rules: no manual CoT, thinking effort tiers (low/medium/high) |
 | 198–256 | Limitations, failure modes, when NOT to use reasoning |
 | 257–268 | Decision workflow + key takeaways |
+| **NEW:** | **Function-Calling CoT Budget Constraints: Non-monotonic relationship between CoT tokens and tool-use accuracy; practical implications for agentic reasoning** |
 
 ---
 

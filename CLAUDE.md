@@ -70,7 +70,11 @@ Every KB doc must be educational first, reference second:
 ## Workflow
 - Primary doc per folder — one comprehensive synthesized file, not a collection of fragments
 - Distill from sources — synthesize, never copy verbatim
-- After adding or updating content: commit and push to GitHub
+- **After any KB content change (adding/updating sections):**
+  - Commit changes to the KB file itself
+  - Update `KB-INDEX.md` with new line ranges, sections, and brief descriptions
+  - Update any folder-level README if the doc structure changed
+  - Commit all index updates together with KB edits
 - When adding a new topic: update `KB-INDEX.md` with file path, line count, read time, one-liner
 - Playbooks in `future-reference/playbooks/` are updated when new build techniques are learned
 
