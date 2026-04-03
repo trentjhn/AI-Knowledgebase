@@ -1,8 +1,15 @@
 # AI Knowledgebase
 
 ## Purpose
+
 Personal AI knowledge library. Distilled, practitioner-depth reference docs on AI engineering topics.
-Built for personal reference and as a methodology foundation for consulting/audit work.
+
+**Primary Use Case:** Decision rubric for all new projects. When proposing any idea—building an agent, designing a system, evaluating tech, writing specs, optimizing infrastructure—Claude retrieves relevant KB sections and grounds recommendations in captured best practices. The KB is the operational foundation for sound judgment, not just a reference library.
+
+**Secondary Uses:**
+- Personal reference and continuous learning
+- Methodology foundation for consulting/audit work
+- Rubric for decision-making across projects
 
 ## Structure
 - `LEARNING/` — evergreen conceptual knowledge (what things are, how they work)
