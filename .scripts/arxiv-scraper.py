@@ -130,10 +130,10 @@ def parse_arxiv_response(xml_response: str) -> list:
     for entry in entries:
         try:
             # Extract fields
-            id_match = re.search(r'<id>http://arxiv\.org/abs/([\d.]+)</id>', entry)
+            id_match = re.search(r'<id>http://arxiv\.org/abs/([\d.v]+)</id>', entry)
             title_match = re.search(r'<title>(.*?)</title>', entry)
             summary_match = re.search(r'<summary>(.*?)</summary>', entry)
-            published_match = re.search(r'<published>([\d-]+)', entry)
+            updated_match = re.search(r'<updated>([\d-]+)', entry)
 
             if not (id_match and title_match and summary_match):
                 continue
@@ -141,7 +141,7 @@ def parse_arxiv_response(xml_response: str) -> list:
             arxiv_id = id_match.group(1)
             title = title_match.group(1).strip()
             summary = summary_match.group(1).strip().replace('\n', ' ')
-            published = published_match.group(1) if published_match else ""
+            published = updated_match.group(1) if updated_match else ""
 
             papers.append({
                 "id": arxiv_id,
