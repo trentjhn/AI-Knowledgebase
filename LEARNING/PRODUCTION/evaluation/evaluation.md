@@ -173,6 +173,23 @@ DeepEval's G-Eval is a prominent implementation of this pattern. It uses the jud
 
 The practical takeaway: LLM-as-a-judge is powerful but should never be used naively. Design binary (pass/fail) criteria rather than 1-5 scales when possible. Validate your judge's agreement with human labels on a golden dataset. Use an ensemble of judges for high-stakes decisions.
 
+### External Metrics Over LLM Judgment
+
+The fundamental limitation of LLM-as-a-judge is that evaluation quality remains tethered to the judge's reasoning ability and biases. A more robust approach — especially for research automation, hypothesis generation, or discovery tasks — is to replace the LLM judge with an external, domain-specific metric that is independent of the LLM's persuasiveness.
+
+The principle is simple but powerful: **anchor evaluation in numerical criteria that the LLM cannot talk itself around**. In empirical research, this means metrics like empirical fit (does the generated theory match observed data?), prediction accuracy (does it forecast unseen outcomes correctly?), or parsimony (does it explain the phenomenon with the fewest parameters?). These metrics are objective in the sense that they reward actual performance, not rhetoric.
+
+The AutoTheory system (Lopez-Lira, Seyfi, Tang 2026) demonstrates this pattern applied to economic theory discovery. The system generates candidate economic theories using LLMs, then evaluates them not by asking another LLM "is this plausible?" but by: (1) translating the theory to executable code, (2) optimizing its parameters against empirical targets (prices, returns, market moments), (3) scoring fit via mean squared error and parsimony penalties. The result: theories that would sound compelling if an LLM described them may fail empirical tests, while seemingly counterintuitive ones can match data with only two free parameters. The empirical metric is the true judge.
+
+This pattern applies beyond economics. Whenever you have:
+- **Quantifiable targets** (benchmark scores, customer completion rates, latency bounds, prediction accuracy on held-out data)
+- **Reproducible evaluation** (the metric can be rerun identically)
+- **Independence from LLM confidence** (the metric does not measure how well the LLM convinced you, but how well it performed)
+
+...you should consider replacing LLM judgment with the external metric. The cost-benefit is high: you trade the flexibility of LLM reasoning for the integrity of reproducible measurement.
+
+**Practical implementation**: When building a discovery or generation system (hypothesis generator, code synthesizer, theory proposer), structure your pipeline as: **Generate (LLM) → Translate to Measurable Form → Evaluate Against External Metrics → Select Best**. The external metrics function as a filter that LLMs cannot persuade their way through — they either meet the criterion or they do not. This is what makes automated discovery viable at scale: the evaluation cannot be hallucinated.
+
 ### SelfCheckGPT — Consistency-Based Hallucination Detection
 
 A complementary approach to LLM-as-a-judge for hallucination detection is **SelfCheckGPT**: generate multiple independent responses to the same prompt (at higher temperature), then measure consistency across those responses. The insight is that factual claims the model genuinely "knows" will be stated consistently across runs, while hallucinated details — which are effectively confabulations sampled from the model's probability distribution — will vary widely from run to run.
