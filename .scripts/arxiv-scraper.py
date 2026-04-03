@@ -50,17 +50,17 @@ TOPIC_QUERIES = {
 ARXIV_CATEGORIES = "(cat:cs.AI OR cat:cs.CL OR cat:stat.ML)"
 ARXIV_API = "http://export.arxiv.org/api/query?"
 SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1/paper/search"
-CITATION_THRESHOLD = 5
+CITATION_THRESHOLD = 1
 
 
 def get_date_range() -> tuple:
-    """Get 2-4 week rolling window for ArXiv query."""
+    """Get 1-4 week rolling window for ArXiv query."""
     today = datetime.now()
     week_4_ago = today - timedelta(days=28)
-    week_2_ago = today - timedelta(days=14)
+    week_1_ago = today - timedelta(days=7)
 
     from_date = week_4_ago.strftime("%Y%m%d0000")
-    to_date = week_2_ago.strftime("%Y%m%d2359")
+    to_date = week_1_ago.strftime("%Y%m%d2359")
     return from_date, to_date, today
 
 
@@ -181,8 +181,8 @@ def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_bef
     lines = [
         f"# ArXiv Digest — {today.strftime('%B %d, %Y')}",
         f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}*",
-        f"*Date Range: 2-4 weeks ago (rolling window)*",
-        f"*Filtered by: 5+ citations on Semantic Scholar*",
+        f"*Date Range: 1-4 weeks ago (rolling window)*",
+        f"*Filtered by: 1+ citations on Semantic Scholar*",
         "",
     ]
 
@@ -235,7 +235,7 @@ def main():
             print(f"  [{completed}/{total_queries}] {topic}...", file=sys.stderr)
 
             full_query = build_query(query, from_date, to_date)
-            papers = fetch_papers(full_query, max_results=5)
+            papers = fetch_papers(full_query, max_results=10)
             all_topics_papers[topic].extend(papers)
 
             if completed < total_queries:
