@@ -1,6 +1,6 @@
 # Reasoning LLMs
 
-**Sources:** Prompting Guide — Reasoning LLMs *(2025)*
+**Sources:** Prompting Guide — Reasoning LLMs *(2025)*, Brief Is Better: Non-Monotonic Chain-of-Thought Budget Effects in Function-Calling Language Agents *(2026)*
 
 ---
 
@@ -292,6 +292,33 @@ A well-crafted prompt at Low thinking effort will often outperform a vague promp
 - If Low produces wrong or shallow answers on a task where you know the correct answer, move to Medium.
 - If Medium still fails, move to High.
 - If High consistently fails: this is the important signal. Stop escalating tokens and instead ask whether this is actually a reasoning problem. Many failures that look like "not enough thinking" are actually retrieval problems (the model doesn't have the right information in context) or task decomposition problems (the task is too coarsely specified). More tokens won't fix a missing knowledge problem. Diagnose before spending more.
+
+---
+
+## Special Case: Function-Calling Agents and the Reasoning Paradox
+
+There's a surprising failure mode you'll encounter when using reasoning models in agentic systems: **excessive reasoning tokens actively degrade performance in function-calling tasks**.
+
+On the surface, this seems backward. More thinking should be better, right? But in practice, when you give an agent unlimited tokens to reason before calling a function, something goes wrong: the agent overthinks the problem, second-guesses its own decisions, hallucinates functions that don't exist, and makes worse tool-calling choices than a model that reasons briefly.
+
+**The empirical pattern (from a 2026 study on Qwen2.5-1.5B-Instruct):**
+
+- **Brief reasoning (8–32 tokens)**: 45% relative accuracy improvement over no reasoning. Function routing works reliably.
+- **Extended reasoning (128+ tokens)**: Accuracy collapses to 25%. Wrong function selections spike from 1.5% to 28%, and the model hallucinates nonexistent functions 18% of the time.
+
+Why? The mechanism appears to be that **extended reasoning time allows the agent to talk itself out of good decisions**. With limited tokens, the agent commits to a function and executes. With extensive tokens, it cycles through uncertainty, explores alternative paths that don't actually exist in the tool set, and eventually calls something wrong out of accumulated confusion.
+
+This contradicts the intuition from reasoning-model research that "more thinking helps." That's true for analytical tasks (research synthesis, complex debugging, architectural decisions). It's not true for structured tool-use loops where the agent needs to make fast, confident function-routing decisions.
+
+**Practical implications:**
+
+1. **Don't default to High thinking effort in agentic systems.** Start at Low. If the agent is misrouting functions, the issue is usually prompt clarity or tool ambiguity — not insufficient thinking. More tokens won't fix either.
+
+2. **Prefer templated reasoning (FR-CoT) over free-form CoT.** The study found that a simple templated approach — structuring CoT output to separate reasoning from function calls — achieved equivalent accuracy to extended free-form reasoning while eliminating function hallucination entirely (0% hallucination rate). Constraint improves reliability.
+
+3. **Separate orchestration from reasoning.** If your agent needs deep reasoning, route it upstream (let a standard model with a reasoning-class model review the plan). Don't embed extended thinking in the function-calling loop itself.
+
+4. **Test your specific model.** This finding comes from a smaller model (1.5B parameters). Frontier models (Claude 3.7 Sonnet, GPT-4o, Gemini 2.5) may handle extended reasoning in function-calling better. Run your own tests before assuming it applies universally.
 
 ---
 

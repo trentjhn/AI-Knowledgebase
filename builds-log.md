@@ -15,7 +15,6 @@ Quick look at what's been built and why each matters:
 | **edge_lab** | Live | Trading Automation | Trading frameworks break down under real-time pressure — steps skipped, math approximated, thesis drifted |
 | **Zenkai** | Functional | Learning Platform | Good reference material doesn't create retention; needed active recall and spaced repetition for AI content |
 | **AI-Knowledgebase** | Continuously growing | Knowledge Library | AI engineering knowledge scattered across 100+ sources with no practitioner-depth synthesis that ages well |
-| **ArXiv Research Digest** | Live | Automated Research Sourcing | Finding KB-relevant papers without sifting through 100+ irrelevant results; citations don't correlate with practitioner utility |
 | **interview-prep** | Live | Job Search OS | 10+ concurrent applications across memory-less sessions; needed live-state CRM with company-specific context |
 | **mariana-interview** | Complete | Case Study Prep | Generic PM templates fail in industrial domains — wrong personas, wrong success metrics, missing physical constraints |
 | **security-var-agent** | Functional | Recommendation Engine | VAR workflows require market-real vendor analysis, ROI modeling, and confidence scoring; manual comparison is error-prone |
@@ -310,68 +309,16 @@ The KB now has a behavioral contract. The key rule: when asked to research or up
 **6. builds-log.md (this file) as the meta-layer**
 A record of what was built, why, and what patterns are running across systems. Turns building into deliberate practice — not just shipping and forgetting.
 
----
+**7. ArXiv Research Digest — Automated KB-aligned paper sourcing**
+Infrastructure that feeds the KB. Problem: finding high-signal papers manually is inefficient (Twitter ~2/week, ArXiv raw ~50/week at 90% noise). Solution: automated weekly digest that queries ArXiv across 9 KB topics (past 7 days), scores with Claude for KB relevance (not citations), outputs 8 papers/week directly updatable into KB.
 
-### 5. ArXiv Research Digest — Automated KB-Aligned Paper Sourcing
+*Stack:* ArXiv API (9 topics) → Claude Opus batch scoring → GitHub Actions workflow (Friday 8am UTC) → `/raw/arxiv-papers/YYYY-MM-DD.md` digest.
 
-**Status:** Live (production-ready, auto-runs Friday 8am UTC)
-**Location:** `.scripts/arxiv-scraper.py`
-**Workflow:** `.github/workflows/arxiv-digest.yml`
-
-#### The Problem
-High-signal AI research papers matter for KB updates — new mechanisms, failure modes, architectural insights. But finding them manually is inefficient: scrolling Twitter yields 1-2 papers/week; ArXiv raw query returns 50+ papers/week, 90% noise. Citation counts don't correlate with practitioner utility. A paper with zero citations (like Google DeepMind's latest) might be more valuable than a 10-citation incremental optimization paper. Manual review of 50+ papers is unsustainable.
-
-#### What It Is
-Automated weekly research digest that queries ArXiv for papers across 9 KB topics (past 7 days), scores each paper with Claude for KB relevance (not community adoption), and outputs 8-12 high-signal papers ranked by relevance. Runs on schedule (GitHub Actions), commits digest to repo.
-
-#### Stack
-- **Source:** ArXiv API (9 topic queries across CS.AI, CS.CL, stat.ML categories)
-- **Scoring:** Claude Opus 4.6 (single batch API call for all papers)
-- **Infrastructure:** GitHub Actions (scheduled workflow, ANTHROPIC_API_KEY secret)
-- **Output:** Markdown digest in `/raw/arxiv-papers/YYYY-MM-DD.md`
-
-#### Key Decisions and Why They're Elegant
-
-**1. Claude-based relevance scoring replaces citations**
-Citations measure *community adoption over time* (slow signal). Claude scores *immediate KB relevance* (fast signal). A paper published yesterday with zero citations can score 0.85 if it reveals a new mechanism or failure mode. This catches fresh, high-signal papers before they accumulate citations.
-
-**2. KB-aligned scoring criteria prioritize implementable patterns**
-The scoring prompt explicitly weights:
-- **Mechanism over incrementalism:** Papers analyzing *why* something works (induction heads in in-context learning, why CoT length doesn't always help) score higher than "+2% accuracy on benchmark"
-- **Failure modes first-class:** Papers that explicitly document anti-patterns, breakage cases, and limitations score higher than papers hiding edge cases
-- **Deep on 1-2 topics, not scattered:** A paper deeply exploring "memory in agents" scores higher than a paper mentioning agents, prompting, and evaluation shallowly
-- **Reusable patterns over domain applications:** "Novel RAG filtering technique" (0.8+) vs. "medical AI using RAG" (0.5) — pattern transfer matters
-
-**3. Past 7 days instead of 1-4 weeks**
-Original design fetched 1-4 weeks to account for citation lag. Realized: high-signal papers surface immediately in authors' announcements, Twitter shares, HN discussions. Week-old papers are still fresh, and newer papers are higher signal. Simplified window, better signal.
-
-**4. Reduces output volume from 50 to 8 papers/week**
-With citation filtering (1+): ~50 papers. With KB-aligned criteria (0.8+ relevance): ~8 papers. This is intentional — you integrate 1-2 papers/session, not 50. Quality over volume. The 8 papers that make the cut are mechanistically interesting, failure-mode-focused, and actually updatable into KB content.
-
-**5. Single Claude batch call vs per-paper scoring**
-All papers sent in one prompt with KB context. Claude returns JSON with scores + matched topics. Cheaper (one API call), faster (parallel evaluation), and Claude has full context (can compare papers relatively, not evaluate in isolation).
-
-**6. Version-aware paper ID handling**
-ArXiv returns versioned IDs (e.g., `2604.01733v1`). Claude's JSON response strips versions (`2604.01733`). Scraper normalizes both to base ID for lookup. Without this, all papers would be marked as "not scored."
-
-**7. Auto-commit to repo**
-GitHub Actions workflow commits digest to `/raw/arxiv-papers/` with timestamp. No manual step. Digest becomes part of your KB history — git log shows exactly when you discovered each paper, what was live in the KB at that time.
-
-**8. Environment-based API key management**
-`ANTHROPIC_API_KEY` stored in GitHub Secrets, passed to Actions as env var. Prompt accesses via `os.getenv()`. No hardcoded keys, no token exposure in logs.
-
-#### Output Quality Example
-Week of April 3, 2026: 107 ArXiv papers fetched, 8 made final digest:
-1. "To Memorize or to Retrieve: Scaling Laws for RAG-Considerate Pretraining" — mechanism (when does memorization beat retrieval?)
-2. "Brief Is Better: Non-Monotonic CoT Budget Effects" — anti-pattern (more reasoning ≠ better)
-3. "Wired for Overconfidence: Mechanistic Perspective on Verbalized Confidence" — failure mode (why models hallucinate confidently)
-4. "ContextBudget: Budget-Aware Context Management for Agents" — constraint problem (real deployment limitation)
-
-All mechanism-focused, all directly updatable into KB content. This is the signal you wanted.
+*Key insights:* (1) Citation lag makes citations a poor signal; Claude scores immediate relevance. (2) KB-aligned criteria prioritize mechanisms over metrics, failure modes over successes, reusable patterns over domain applications. (3) Past 7 days beats 1-4 weeks — high-signal papers surface immediately. (4) Single batch call is cheaper and gives Claude full context for relative comparison. (5) Version-aware ID normalization prevents silent failures. (6) 0.8+ relevance threshold yields ~8 papers/week (vs 50 with citation-only filtering) — quality over volume.
 
 ---
 
-### 6. interview-prep — Job Search OS
+### 5. interview-prep — Job Search OS
 
 **Status:** Live
 **Location:** `/Users/t-rawww/interview-prep/`
@@ -429,7 +376,7 @@ The CLAUDE.md has explicit language rules: no em dashes, no filler phrases, don'
 
 ---
 
-### 7. mariana-interview — Case Study Preparation System
+### 6. mariana-interview — Case Study Preparation System
 
 **Status:** Complete (used for Round 2 interview)
 **Location:** `/Users/t-rawww/mariana-interview/`
@@ -492,7 +439,7 @@ Every feature analysis forces: systems first (inputs→process→outputs→feedb
 
 ---
 
-### 8. security-var-agent — Value-Added Reseller Recommendation Engine
+### 7. security-var-agent — Value-Added Reseller Recommendation Engine
 
 **Status:** Functional (reached solid state, business case closed)
 **Location:** `/Users/t-rawww/AI-Agent-Project/`
@@ -540,7 +487,7 @@ Jest coverage for service logic, recommendation scoring, ROI calculations, and c
 
 ## What These Systems Demonstrate
 
-Collectively, these eight systems show depth across the full AI engineering stack:
+Collectively, these seven systems (plus ArXiv sourcing infrastructure) demonstrate depth across the full AI engineering stack:
 
 **Full-Stack Capability**: From production deployment (YouTube Summarizer), full-stack architecture (Zenkai), to real-time automation (edge_lab). Not just backend or frontend — end-to-end product thinking.
 
@@ -556,7 +503,7 @@ Collectively, these eight systems show depth across the full AI engineering stac
 
 **Dual AI Portability**: Same behavioral contract across different AI tools (Claude↔Gemini), proving that agent behavior can be decoupled from implementation.
 
-These patterns are replicable and applicable to other AI systems beyond these eight examples.
+These patterns are replicable and applicable to other AI systems beyond these seven primary systems.
 
 ---
 

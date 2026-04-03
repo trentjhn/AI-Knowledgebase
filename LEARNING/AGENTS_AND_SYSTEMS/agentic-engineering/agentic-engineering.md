@@ -1,7 +1,6 @@
 # Agentic Engineering
 
-> Distilled from *Agentic Engineering* by Jaymin West
-> Source: https://github.com/jayminwest/agentic-engineering-book
+> Distilled from *Agentic Engineering* by Jaymin West (https://github.com/jayminwest/agentic-engineering-book), plus empirical studies on function-calling optimization (Brief Is Better: Non-Monotonic Chain-of-Thought Budget Effects, 2026)
 > Guiding philosophy: **"One agent, one purpose, one prompt."**
 
 ---
@@ -735,6 +734,8 @@ Rule of thumb: **more than ~50 tools degrades selection performance.** When you'
 **The production pattern: decision trees first, model second.**
 
 Not every decision should run through the LLM. In production agents, the right architecture is to handle routine, high-confidence cases with deterministic logic — simple if-else trees or rule-based lookups — and only invoke the model when genuine ambiguity exists. This avoids burning tokens and adding latency on decisions that don't actually require reasoning. Routing a support ticket to the billing team doesn't need an LLM; recognizing that a request is ambiguous between two departments does. Structure your agent so the model is a last resort for hard cases, not the default path for every case.
+
+**A specific trap: extended reasoning in tool selection.** If you're using a reasoning-class model (o3, Claude Sonnet with extended thinking, etc.), resist the instinct to give it high thinking budgets for tool-calling loops. Empirical research shows that excessive reasoning tokens degrade function-calling accuracy: brief reasoning (8–32 tokens) improves selection reliability, while extended reasoning (128+ tokens) causes the model to second-guess itself, hallucinate nonexistent tools, and make worse choices. Keep reasoning budgets low in tight tool-selection loops and reserve extended thinking for the planning and validation layers, not the execution layer.
 
 ---
 
