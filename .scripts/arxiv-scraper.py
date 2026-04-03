@@ -2,7 +2,8 @@
 """
 ArXiv Weekly Digest Generator for AI Knowledge Base
 
-Queries ArXiv API for papers from last 7 days, deduplicates across topics,
+Queries ArXiv API for papers from 2-4 weeks ago (rolling window),
+filters by Semantic Scholar citations (5+), deduplicates across topics,
 and outputs a weekly digest markdown file.
 """
 
@@ -15,8 +16,7 @@ import sys
 import time
 import re
 
-# Consolidated ArXiv query mapping: topic -> list of search queries
-# Reduced from 26 to 9 queries by combining similar topics
+# Consolidated ArXiv query mapping
 TOPIC_QUERIES = {
     "Prompt Engineering": [
         '("prompt engineering" OR "in-context learning" OR "few-shot learning")',
@@ -47,28 +47,29 @@ TOPIC_QUERIES = {
     ],
 }
 
-# Category filter
 ARXIV_CATEGORIES = "(cat:cs.AI OR cat:cs.CL OR cat:stat.ML)"
 ARXIV_API = "http://export.arxiv.org/api/query?"
+SEMANTIC_SCHOLAR_API = "https://api.semanticscholar.org/graph/v1/paper/search"
+CITATION_THRESHOLD = 5
 
 
 def get_date_range() -> tuple:
-    """Get 7-day date range for ArXiv query."""
+    """Get 2-4 week rolling window for ArXiv query."""
     today = datetime.now()
-    week_ago = today - timedelta(days=7)
-    # ArXiv uses YYYYMMDDHHMM format for submittedDate
-    from_date = week_ago.strftime("%Y%m%d0000")
-    to_date = today.strftime("%Y%m%d2359")
+    week_4_ago = today - timedelta(days=28)
+    week_2_ago = today - timedelta(days=14)
+
+    from_date = week_4_ago.strftime("%Y%m%d0000")
+    to_date = week_2_ago.strftime("%Y%m%d2359")
     return from_date, to_date, today
 
 
 def build_query(topic_query: str, from_date: str, to_date: str) -> str:
     """Build a full ArXiv query with category, date range, and topic filters."""
-    # Combine: category + date range + topic query
     return f'{ARXIV_CATEGORIES} AND submittedDate:[{from_date} TO {to_date}] AND ({topic_query})'
 
 
-def fetch_papers(query: str, max_results: int = 3) -> list:
+def fetch_papers(query: str, max_results: int = 5) -> list:
     """Fetch papers from ArXiv API with rate limit handling."""
     params = {
         "search_query": query,
@@ -78,7 +79,6 @@ def fetch_papers(query: str, max_results: int = 3) -> list:
         "sortOrder": "descending",
     }
 
-    # Retry logic with exponential backoff
     max_retries = 2
     for attempt in range(max_retries):
         try:
@@ -86,31 +86,26 @@ def fetch_papers(query: str, max_results: int = 3) -> list:
             response.raise_for_status()
             return parse_arxiv_response(response.text)
         except requests.exceptions.HTTPError as e:
-            if response.status_code == 429:  # Rate limited
+            if response.status_code == 429:
                 wait_time = (2 ** attempt) * 5
                 print(f"  Rate limited. Waiting {wait_time}s...", file=sys.stderr)
                 time.sleep(wait_time)
             else:
-                print(f"HTTP Error {response.status_code}", file=sys.stderr)
                 return []
-        except requests.RequestException as e:
-            print(f"Error: timeout/connection issue", file=sys.stderr)
+        except requests.RequestException:
             return []
 
     return []
 
 
 def parse_arxiv_response(xml_response: str) -> list:
-    """Parse ArXiv API XML response and extract paper info."""
+    """Parse ArXiv API XML response."""
     papers = []
-
-    # Extract entries using regex
     entry_pattern = r'<entry>(.*?)</entry>'
     entries = re.findall(entry_pattern, xml_response, re.DOTALL)
 
     for entry in entries:
         try:
-            # Extract fields
             id_match = re.search(r'<id>http://arxiv\.org/abs/([\d.v]+)</id>', entry)
             title_match = re.search(r'<title>(.*?)</title>', entry)
             summary_match = re.search(r'<summary>(.*?)</summary>', entry)
@@ -130,17 +125,38 @@ def parse_arxiv_response(xml_response: str) -> list:
                 "summary": summary[:300],
                 "published": published,
                 "url": f"https://arxiv.org/abs/{arxiv_id}",
+                "citation_count": 0,
             })
-        except Exception as e:
+        except Exception:
             pass
 
     return papers
 
 
+def fetch_citation_count(arxiv_id: str) -> int:
+    """Get citation count from Semantic Scholar API."""
+    try:
+        clean_id = arxiv_id.split('v')[0]
+        params = {
+            "query": f"arxiv:{clean_id}",
+            "fields": "citationCount",
+            "limit": 1,
+        }
+        response = requests.get(SEMANTIC_SCHOLAR_API, params=params, timeout=10)
+        response.raise_for_status()
+
+        data = response.json()
+        if data.get("data") and len(data["data"]) > 0:
+            return data["data"][0].get("citationCount", 0)
+        return 0
+    except Exception:
+        return 0
+
+
 def deduplicate_papers(topics_papers: dict) -> tuple:
     """Deduplicate papers across topics."""
-    seen = {}  # arxiv_id -> paper
-    topic_map = defaultdict(set)  # arxiv_id -> set of topics
+    seen = {}
+    topic_map = defaultdict(set)
 
     for topic, papers in topics_papers.items():
         for paper in papers:
@@ -152,31 +168,30 @@ def deduplicate_papers(topics_papers: dict) -> tuple:
     return seen, topic_map
 
 
-def format_digest(papers_dict: dict, topic_map: dict, today: datetime) -> str:
+def format_digest(papers_dict: dict, topic_map: dict, today: datetime, total_before_filter: int) -> str:
     """Format papers as markdown digest."""
-    # Group papers by topic
     topic_papers = defaultdict(list)
     for paper_id, paper in papers_dict.items():
         topics = topic_map[paper_id]
         for topic in topics:
             topic_papers[topic].append(paper)
 
-    # Sort topics
     topics = sorted(topic_papers.keys())
 
-    # Build markdown
     lines = [
         f"# ArXiv Digest — {today.strftime('%B %d, %Y')}",
         f"*Generated: {datetime.now().strftime('%Y-%m-%d %H:%M UTC')}*",
+        f"*Date Range: 2-4 weeks ago (rolling window)*",
+        f"*Filtered by: 5+ citations on Semantic Scholar*",
         "",
     ]
 
     if not topics:
-        lines.append("No papers found this week.")
+        lines.append("No highly-cited papers found this week.")
         return "\n".join(lines)
 
-    total_papers = len(papers_dict)
-    lines.append(f"**Total: {total_papers} papers**")
+    filtered = len(papers_dict)
+    lines.append(f"**Quality Papers: {filtered} (filtered from {total_before_filter} by citation count)**")
     lines.append("")
 
     for topic in topics:
@@ -184,10 +199,14 @@ def format_digest(papers_dict: dict, topic_map: dict, today: datetime) -> str:
         lines.append(f"## {topic} [{len(papers)} paper{'s' if len(papers) != 1 else ''}]")
         lines.append("")
 
-        for i, paper in enumerate(papers, 1):
+        papers_sorted = sorted(papers, key=lambda p: p.get("citation_count", 0), reverse=True)
+
+        for i, paper in enumerate(papers_sorted, 1):
             tags = ", ".join(sorted(topic_map[paper["id"]]))
+            citations = paper.get("citation_count", 0)
             lines.append(f"{i}. **{paper['title']}**")
             lines.append(f"   - **Published:** {paper['published']}")
+            lines.append(f"   - **Citations:** {citations} (Semantic Scholar)")
             lines.append(f"   - **Abstract:** {paper['summary']}...")
             lines.append(f"   - **Link:** [{paper['id']}]({paper['url']})")
             lines.append(f"   - **Topics:** {tags}")
@@ -198,18 +217,16 @@ def format_digest(papers_dict: dict, topic_map: dict, today: datetime) -> str:
 
 def main():
     """Main workflow."""
-    # Ensure output directory exists
     output_dir = os.path.join(os.path.dirname(__file__), "..", "raw", "arxiv-papers")
     os.makedirs(output_dir, exist_ok=True)
 
     from_date, to_date, today = get_date_range()
+    print(f"Querying ArXiv for papers from {from_date[:8]} to {to_date[:8]}...", file=sys.stderr)
 
-    # Fetch papers for each topic
+    # Fetch papers
     all_topics_papers = {}
     total_queries = sum(len(queries) for queries in TOPIC_QUERIES.values())
     completed = 0
-
-    print(f"Fetching papers from {total_queries} queries (last 7 days)...", file=sys.stderr)
 
     for topic, queries in TOPIC_QUERIES.items():
         all_topics_papers[topic] = []
@@ -218,19 +235,33 @@ def main():
             print(f"  [{completed}/{total_queries}] {topic}...", file=sys.stderr)
 
             full_query = build_query(query, from_date, to_date)
-            papers = fetch_papers(full_query, max_results=3)
+            papers = fetch_papers(full_query, max_results=5)
             all_topics_papers[topic].extend(papers)
 
-            # Polite delay between queries
             if completed < total_queries:
                 time.sleep(2)
 
     # Deduplicate
     unique_papers, topic_mapping = deduplicate_papers(all_topics_papers)
-    print(f"Found {len(unique_papers)} unique papers", file=sys.stderr)
+    total_before_filter = len(unique_papers)
+    print(f"Found {total_before_filter} unique papers. Fetching citation counts...", file=sys.stderr)
+
+    # Get Semantic Scholar citations
+    for paper_id, paper in unique_papers.items():
+        citation_count = fetch_citation_count(paper_id)
+        paper["citation_count"] = citation_count
+        time.sleep(0.3)
+
+    # Filter by citation threshold
+    filtered_papers = {
+        pid: paper for pid, paper in unique_papers.items()
+        if paper.get("citation_count", 0) >= CITATION_THRESHOLD
+    }
+
+    print(f"After filtering (5+ citations): {len(filtered_papers)} papers", file=sys.stderr)
 
     # Generate digest
-    digest = format_digest(unique_papers, topic_mapping, today)
+    digest = format_digest(filtered_papers, topic_mapping, today, total_before_filter)
 
     # Write to file
     filename = f"{today.strftime('%Y-%m-%d')}.md"
@@ -240,7 +271,6 @@ def main():
         f.write(digest)
 
     print(f"Digest written to {filepath}", file=sys.stderr)
-    print(f"Total papers: {len(unique_papers)}", file=sys.stderr)
 
     return filepath
 
