@@ -1803,6 +1803,30 @@ Improving per-step accuracy from 95% to 99% more than doubles success on 50-step
 
 ---
 
+### Long-Horizon Planning Under Compounding Consequences
+
+When agents must maintain strategic coherence over extended periods (weeks, months), new failure modes emerge that don't surface in short-horizon tasks. YC-Bench (He et al., 2026) benchmarked agents on a simulated year-long startup operation with hundreds of decision points, revealing three critical insights for real-world systems that must manage long-term state and adapt to unfolding circumstances.
+
+**Scratchpad Usage Predicts Success.** Agents that consistently maintained internal notes—tracking assumptions, past decisions, and implications—significantly outperformed those relying purely on prompt context. This is context management at the agent's own layer: when task length exceeds context windows, the agent must externalize its reasoning to persist information across turns. Unlike tool-use patterns that can be scripted, note-taking is a learned discipline. Agents that performed well explicitly created decision logs ("We chose vendor X because Y; if Z changes, reconsider this"), tracked financial state across turns, and maintained a running list of assumptions about client behavior. This mirrors human practice: domain experts maintain personal rubrics and decision journals. Absence of scratchpad forced agents to re-derive context from previous outputs on every turn, leading to inconsistent decisions and forgotten constraints.
+
+**Adversarial Reasoning is the Primary Failure Mode.** 47% of agent bankruptcies in YC-Bench stemmed from agents failing to detect or respond appropriately to adversarial clients—a reasoning gap distinct from planning execution. The environment included clients who would deliberately mislead agents about contract terms, demand unfavorable renegotiations, or claim disputes to avoid payment. Agents trained on benign interactions lacked mental models for adversarial actors. When faced with a suspicious client, successful agents explicitly asked: "Is this actor trying to exploit us? What incentives do they have? How do we verify their claims?" Unsuccessful agents treated all interactions as honest information exchange. This reveals a gap in agent-level threat modeling: systems that lack explicit reasoning about adversarial scenarios default to assuming good faith, which is often false in competitive environments.
+
+**Compounding Consequences Require Explicit Modeling.** Early mistakes (hiring the wrong employee, accepting a bad contract, over-committing runway) cascade into late-game constraints (payroll spirals, lost customer relationships, inability to pivot). Agents that succeeded explicitly modeled these compound effects rather than treating each decision independently. Successful agents maintained projections: "If we hire this team member, payroll becomes $X/month; we have Y months of runway; that leaves Z for marketing." They could trace how early mistakes constrained later options. Unsuccessful agents optimized each decision locally (take the contract, hire the person) without modeling the accumulating constraints. By month 6, they found themselves in untenable positions (high payroll, low revenue, no path forward) because no one was reasoning backward from the end state.
+
+**Practical implications for deployment:**
+
+For long-horizon agent applications (research assistants managing multi-month projects, business operations agents, supply-chain planners), three practices make a measurable difference:
+
+1. **Mandatory scratchpad checkpoints.** At each turn or decision, require the agent to write a decision summary: what changed, what was decided, and what assumptions underpin the decision. Periodically (every 10 steps or when context nears capacity), have the agent review and synthesize its scratchpad to consolidate implicit learnings into explicit rubrics.
+
+2. **Adversarial stress-testing.** Before deploying a long-horizon agent, test it against scenarios where information sources are unreliable, actors are incentive-misaligned, or explicit deception is involved. Add this to the evaluation suite. Agents that score well on benign test suites often fail dramatically when stakes create incentives for lying.
+
+3. **Consequence-chain prompting.** When the agent makes a major decision (hiring, spending, committing to a strategy), insert a step that forces backward reasoning: "Assume this decision goes wrong; what would that look like? How would it constrain us later? Is that acceptable?" This simple frame dramatically improves detection of compound-consequence traps.
+
+Scratchpad availability is not optional for long-horizon tasks — it's the agent's external memory for multi-turn coherence. Without it, agents lose information and repeat mistakes. The adversarial reasoning gap is often invisible until deployment, making pre-deployment stress-testing essential. And modeling compounding consequences is not sophisticated reasoning; it's basic second-order thinking that improves measurably when explicitly prompted.
+
+---
+
 ### Intent Engineering
 
 Prompt engineering tells an agent *what to do*. Context engineering tells it *what to know*. Intent engineering tells it *what to want* — and it operates at a level above both.

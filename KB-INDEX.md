@@ -112,7 +112,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,603 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,742 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -133,6 +133,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 2186–2225 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
 | 2226–2270 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
 | 2273–2603 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
+| **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
 
 ---
 
