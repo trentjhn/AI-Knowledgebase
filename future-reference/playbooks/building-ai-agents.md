@@ -4,6 +4,54 @@
 
 ---
 
+## Decision Tree: Should You Build an Agent?
+
+**Use this flowchart to determine if this is the right playbook, or if you need a different approach.**
+
+```
+Do you need an AI to take actions beyond answering questions?
+│
+├─ No → Not an agent problem.
+│        Consider instead:
+│        - Simple prompting (prompt-engineering.md)
+│        - Fine-tuning for domain expertise (fine-tuning.md)
+│        - Evaluation/testing (evaluation.md)
+│
+└─ Yes → Does the AI interact with users in real-time conversation?
+         │
+         ├─ Yes (e.g., customer support, chat interface)
+         │  → Use chatbot playbook
+         │     (Agents in chatbots are different: state management,
+         │      multi-turn context, user interruption handling)
+         │
+         └─ No → Does it need to retrieve/process documents you have?
+                 │
+                 ├─ Yes (e.g., search documents, extract info, summarize)
+                 │  → Use RAG pipeline playbook
+                 │     (RAG is about retrieval quality, not agent autonomy)
+                 │
+                 └─ No → Does it execute multi-step tasks autonomously?
+                         │
+                         ├─ Yes (e.g., research, data processing, workflow automation)
+                         │  → STAY HERE — This playbook is for you
+                         │     (ReAct loops, planning, context management)
+                         │
+                         └─ Unsure → See decision matrix below
+```
+
+**Decision Matrix: Still not sure?**
+
+| Task Type | Right Playbook | Why |
+|---|---|---|
+| "Classify customer emails into categories" | Classification (prompt-engineering) | Single decision, no actions needed |
+| "Answer questions about a knowledge base" | RAG pipeline | Retrieve + answer, not multi-step action |
+| "Chat with users, answer their questions" | Chatbot | Real-time conversation, stateful |
+| "Research a topic, compile results, send report" | **Agent (this playbook)** | Multi-step task, sequences of actions |
+| "Monitor data, detect anomalies, trigger alerts" | **Agent (this playbook)** | Autonomous, decision-based actions |
+| "Extract tables from PDFs I uploaded" | RAG + document understanding | Retrieval + parsing, not sequential decision-making |
+
+---
+
 ## What an AI Agent Actually Is
 
 Before getting into techniques, it's worth being precise about what distinguishes an agent from a regular LLM call. A standard LLM interaction is stateless and single-turn: you send a prompt, you get a response, done. An agent is different in three ways:
