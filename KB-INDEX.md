@@ -193,7 +193,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/evaluation/evaluation.md (1,000+ lines)
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1,050+ lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -203,12 +203,14 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 146–289 | 3-level eval stack: offline / online / human |
 | 290–412 | What you're actually measuring: faithfulness, relevance, coherence, hallucination rate |
 | 413–598 | LLM-as-judge with all 4 bias types and mitigations (GPT-4 >80% human agreement) |
-| 599–756 | RAG evaluation via Ragas framework (4 metrics: retrieval, relevance, etc.) |
-| 757–889 | Agent evaluation (task completion, trajectory quality) |
-| 890–1045 | Benchmarks + contamination risk (39.4% drop on uncontaminated) |
-| 1046–1200 | Framework comparison table (Ragas, DeepEval, Braintrust, etc.) |
+| 599–756 | **External Metrics Over LLM Judgment**: Empirical fit / parsimony / accuracy as independent evaluators; pattern from AutoTheory research automation system |
+| 757–914 | RAG evaluation via Ragas framework (4 metrics: retrieval, relevance, etc.) |
+| 915–1047 | Agent evaluation (task completion, trajectory quality) |
+| 1048–1203 | Benchmarks + contamination risk (39.4% drop on uncontaminated) |
+| 1204–1362 | Framework comparison table (Ragas, DeepEval, Braintrust, etc.) |
 | **NEW:** 14. | Evaluation Patterns: checkpoint-based vs. continuous evals, pass@k vs. pass^k metrics |
 | **NEW:** 15. | Eval-Driven Development (EDD): evals BEFORE implementation, cost-benefit analysis (pays for itself on 2nd similar feature) |
+| **NEW:** 16. | **External Metrics Anchoring**: Replace LLM self-assessment with domain-specific numerical criteria (empirical fit, prediction accuracy, parsimony) for discovery and generation tasks |
 
 ---
 
