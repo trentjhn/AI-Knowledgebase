@@ -4,6 +4,54 @@
 
 ---
 
+## Decision Tree: Should You Build a RAG Pipeline?
+
+**Use this flowchart to determine if RAG is the right pattern, or if you need something different.**
+
+```
+Do you have documents you want to retrieve from?
+│
+├─ No → Not a retrieval problem.
+│        Consider instead:
+│        - Simple prompting (writing-production-prompts.md)
+│        - Fine-tuning (if you want domain expertise without retrieval)
+│
+└─ Yes → Are the documents static or do they change frequently?
+         │
+         ├─ Static (won't change, or rarely updates)
+         │  → PRIMARY PLAYBOOK: building-rag-pipelines.md (THIS ONE)
+         │     (Chunking, retrieval, ranking, generation)
+         │
+         └─ Frequently updated (daily/hourly changes)
+            → Still use RAG, but add real-time sync layer
+              See: Add Optional Capabilities below
+```
+
+---
+
+## Add Optional Capabilities
+
+You've picked the RAG playbook. Before starting, check if you need any of these optional capabilities.
+
+**Does your RAG system need real-time document updates?**
+- Example: Knowledge base updates hourly; you can't wait until nightly reindex
+- Pattern: Sync layer between document source and vector store
+- See: Phase X.X (to be added) — real-time indexing
+
+**Does your RAG system need to handle agent queries?**
+- Example: Agent uses RAG as a tool to retrieve docs before taking action
+- See: [building-ai-agents.md](building-ai-agents.md) section "Add Optional Capabilities" → RAG as tool
+- Then: Return here for Phase 1 (basic RAG) to understand retrieval quality
+
+**Does your RAG system need to rank/rerank retrieved results?**
+- Example: Basic semantic search misses relevant docs; you need stronger ranking
+- Pattern: Cross-encoder reranking after initial retrieval
+- See: Phase X.X (to be added) — reranking strategies
+
+**Starting with basic RAG? → Skip this section, go to Phase 1 below.**
+
+---
+
 ## What RAG Is and Why It Matters
 
 Every language model has a knowledge cutoff — it knows what it was trained on and nothing more. Beyond that, even within its training data, it can confabulate: generate plausible-sounding but wrong answers for specific facts, names, dates, and figures.
@@ -29,7 +77,107 @@ The retrieved chunks are injected into the prompt alongside the user's question.
 
 ---
 
-## Core Technique Stack
+## Phase 1: Basic RAG (Strategy, Chunking, Retrieval)
+
+**Goal:** Ingest documents, set up basic semantic retrieval, test end-to-end.
+
+**Outcome:** A working RAG system that answers questions based on your documents.
+
+---
+
+### Step 1.1: Define Retrieval Strategy
+
+**What you're doing:** Decide how you'll chunk documents, what retrieval method to use, and how many results to return.
+
+**KB Reference:** [Context Management Strategies](../LEARNING/FOUNDATIONS/context-engineering/context-engineering.md lines 132–204)
+
+**Action:**
+
+1. List your documents and their structure (format: PDF, markdown, database, etc.)
+2. Decide: semantic search only, or semantic + keyword hybrid?
+3. Decide: how many results to retrieve (K)? Start with 5–8, adjust based on quality
+
+**Validation:**
+- [ ] Document types identified
+- [ ] Retrieval strategy chosen (semantic vs. hybrid)
+- [ ] K value decided
+
+---
+
+### Step 1.2: Implement Chunking
+
+**What you're doing:** Split documents into chunks, preserving semantic units.
+
+**KB Reference:** [Chunking Strategy](building-rag-pipelines.md lines 34–42 — semantic units, overlap, metadata)
+
+**Action:**
+
+1. Choose chunking approach per document type
+2. Implement with overlap (10–15%)
+3. Test: retrieve a chunk, does it contain a complete idea?
+
+**Validation:**
+- [ ] Chunks are semantic units (not fixed character length)
+- [ ] Overlap configured
+- [ ] Metadata preserved (source, section, date)
+
+---
+
+### Step 1.3: Ingest into Vector Store
+
+**What you're doing:** Convert documents to embeddings and store in vector database.
+
+**Action:**
+
+1. Choose vector store (Pinecone, Weaviate, Chroma, Milvus, etc.)
+2. Embed & index your chunks
+3. Test: query with a sample question, does it retrieve relevant chunks?
+
+**Validation:**
+- [ ] Documents successfully ingested
+- [ ] Retrieval returns relevant chunks
+- [ ] Query latency acceptable
+
+---
+
+### Step 1.4: Build Generation Prompt
+
+**What you're doing:** Write a prompt that takes retrieved chunks and synthesizes an answer.
+
+**KB Reference:** [Context Injection](building-rag-pipelines.md lines 53–62 — where to put retrieved content, grounding instructions)
+
+**Action:**
+
+1. Write system prompt with grounding instructions (use only retrieved docs, cite sources)
+2. Structure: system → [retrieved chunks] → user question
+3. Test on 3 queries: does it answer from the docs?
+
+**Validation:**
+- [ ] Prompt includes grounding instructions
+- [ ] Retrieved chunks appear before user question
+- [ ] Answers cite sources
+- [ ] No hallucinations on 3 test queries
+
+---
+
+### Step 1.5: Commit Phase 1
+
+**Action:**
+
+```bash
+git add [ingestion code] [prompts] [tests]
+git commit -m "feat: phase 1 — basic RAG (chunking, ingestion, retrieval, generation)
+
+- Chunking strategy per document type with overlap
+- Vector store ingestion (embeddings + storage)
+- Semantic retrieval (K=$K)
+- Generation prompt with grounding + citation
+- 3-query end-to-end test passing"
+```
+
+---
+
+## Core Technique Stack (Reference)
 
 ### 1. Chunking Strategy — The Most Underrated Decision
 
