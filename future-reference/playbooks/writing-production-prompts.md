@@ -4,6 +4,41 @@
 
 ---
 
+## Decision Tree: Is This a Single-Prompt Task?
+
+**Use this flowchart to determine if production-prompt is the right pattern.**
+
+```
+Is this a single LLM call with structured input/output?
+│
+├─ No, it's multi-turn conversation → chatbot playbook
+├─ No, it's document retrieval → RAG playbook
+├─ No, it's multi-step autonomous task → agent playbook
+│
+└─ Yes → PRIMARY PLAYBOOK: writing-production-prompts.md (THIS ONE)
+         (Classification, generation, summarization, extraction)
+```
+
+---
+
+## Add Optional Capabilities
+
+You've picked the production-prompts playbook. Before starting, check if you need secondary capabilities.
+
+**Does this prompt need to handle variable inputs dynamically?**
+- Example: Classification prompt needs company/user/context injected
+- Pattern: Variables & templating (not hardcoded values)
+- See: Step 1.4 below (variables in production prompts)
+
+**Does your application need evaluation/testing of this prompt?**
+- Example: You want to test accuracy before shipping
+- See: [Evaluation](../../LEARNING/PRODUCTION/evaluation/evaluation.md) — prompt evaluation metrics
+- Integration: Test harness before production deploy
+
+**Starting with basic prompt? → Skip this section, go to Phase 1 below.**
+
+---
+
 ## What Makes a Prompt "Production-Ready"
 
 There's a big difference between a prompt that works in a demo and one that holds up in production. In a demo, you see the happy path. In production, you get:
@@ -18,7 +53,136 @@ A production prompt is one that you've designed, tested, and documented with all
 
 ---
 
-## Core Technique Stack
+## Phase 1: Basic Production Prompt (Zero-Shot → Format → Instructions → Test)
+
+**Goal:** Write a working prompt that specifies output format, uses instructions (not constraints), and handles your task reliably.
+
+**Outcome:** A production-ready prompt you can ship and iterate on.
+
+---
+
+### Step 1.1: Write Zero-Shot Prompt
+
+**What you're doing:** Start with the simplest possible prompt and test it. This shows you what the model's defaults are.
+
+**KB Reference:** [Zero-Shot Prompting](../../LEARNING/FOUNDATIONS/prompt-engineering/prompt-engineering.md lines 87–102)
+
+**Action:**
+
+1. Write the simplest 1–2 sentence prompt for your task
+   ```
+   Classify this email as Urgent, Normal, or Low.
+   Email: {email_text}
+   ```
+
+2. Test on 3–5 examples
+3. Does it work? If yes, you've found your baseline. If no, note what's missing.
+
+**Validation:**
+- [ ] Zero-shot prompt written
+- [ ] Tested on 3–5 examples
+- [ ] Baseline quality established
+
+---
+
+### Step 1.2: Lock Down Output Format
+
+**What you're doing:** Make output format explicit and consistent so downstream code can parse it reliably.
+
+**KB Reference:** [Output Format](writing-production-prompts.md lines 46–56)
+
+**Action:**
+
+1. Define: What format does the application need? (JSON, structured text, specific fields?)
+2. Add to prompt:
+   ```
+   Return result as JSON: {"classification": "Urgent"|"Normal"|"Low", "confidence": 0.0-1.0, "reason": string}
+   ```
+
+3. Test: Does every response return valid format?
+
+**Validation:**
+- [ ] Output format explicitly specified
+- [ ] Example provided in prompt
+- [ ] 3 test responses all return valid format
+
+---
+
+### Step 1.3: Write Instructions, Not Constraints
+
+**What you're doing:** Replace vague constraints with specific, positive instructions.
+
+**KB Reference:** [Instructions vs. Constraints](writing-production-prompts.md lines 38–44)
+
+**Action:**
+
+1. Find all constraints in your prompt (don't, never, avoid)
+2. Rewrite as positive instructions (do, always, focus)
+3. Example: "Don't miss urgent emails" → "Flag any email with ALL CAPS, threats, or immediate action requests as Urgent"
+
+**Validation:**
+- [ ] All constraints rewritten as instructions
+- [ ] Instructions are specific (not "be careful")
+- [ ] Test: 5 examples pass
+
+---
+
+### Step 1.4: Set Temperature for Task
+
+**What you're doing:** Match temperature to your task type for consistent, reliable output.
+
+**KB Reference:** [Temperature for Task Type](writing-production-prompts.md lines 58–71 — table of task types and recommended temps)
+
+**Action:**
+
+1. Identify your task type (classification, Q&A, reasoning, creative, etc.)
+2. Set temperature per table in KB reference
+3. Test: Does output consistency improve?
+
+**Validation:**
+- [ ] Temperature chosen per task type
+- [ ] 10 test runs produce consistent output
+- [ ] Quality acceptable
+
+---
+
+### Step 1.5: Test on Production-Like Data
+
+**What you're doing:** Test your prompt on real-world examples, edge cases, and failure modes.
+
+**KB Reference:** [Evaluation](../../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 1773–1805)
+
+**Action:**
+
+1. Run prompt on: happy path (3), edge case (3), failure mode (3)
+2. Check: accuracy, format consistency, tone (if applicable)
+3. If failures, go back to Step 1.3 and add instructions
+
+**Validation:**
+- [ ] 9 test cases (happy + edge + failure)
+- [ ] Format valid on all
+- [ ] Accuracy acceptable (define threshold: e.g., 8/9 correct)
+
+---
+
+### Step 1.6: Commit Phase 1
+
+**Action:**
+
+```bash
+git add [prompt-file] [tests] [code]
+git commit -m "feat: phase 1 — production prompt (format, instructions, temperature)
+
+- Zero-shot baseline established
+- Output format explicit (JSON/structured)
+- Instructions specific (no vague constraints)
+- Temperature set per task type
+- 9-test validation passing (happy + edge + failure)"
+```
+
+---
+
+## Core Technique Stack (Reference)
 
 ### 1. Start with Zero-Shot, Then Add
 
