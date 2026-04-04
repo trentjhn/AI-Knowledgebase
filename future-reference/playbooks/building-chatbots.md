@@ -4,6 +4,48 @@
 
 ---
 
+## Decision Tree: Should You Build a Chatbot?
+
+**Use this flowchart to determine if chatbot is the right pattern.**
+
+```
+Is the primary interaction real-time, conversational, multi-turn?
+│
+├─ No → Not a chatbot pattern.
+│        Consider instead:
+│        - Agent (for autonomous multi-step tasks)
+│        - RAG (for document Q&A without conversation)
+│        - Single-turn prompting (for one-shot tasks)
+│
+└─ Yes → PRIMARY PLAYBOOK: building-chatbots.md (THIS ONE)
+         (System prompt, persona, context management, few-shot examples)
+```
+
+---
+
+## Add Optional Capabilities
+
+You've picked the chatbot playbook. Before starting, check if you need any of these optional capabilities.
+
+**Does your chatbot need to retrieve documents or knowledge bases?**
+- Example: Support bot answers based on internal docs
+- See: [building-rag-pipelines.md](building-rag-pipelines.md) Phase 1 (basic RAG setup)
+- Then: Return here for Phase 2 (integration) to add retrieval as a tool
+
+**Does your chatbot need to take actions (send emails, update tickets, etc.)?**
+- Example: Support bot can escalate, create tickets, send confirmations
+- See: [building-ai-agents.md](building-ai-agents.md) section "Tool Design" (lines 675–847)
+- Then: Return here for Phase X.X (action integration)
+
+**Does your chatbot need persistent memory between sessions?**
+- Example: Bot remembers past conversations with the same user across days
+- Pattern: External memory store (vector DB + semantic retrieval)
+- See: Phase X.X (to be added) — multi-session memory
+
+**Starting with basic conversational chatbot? → Skip this section, go to Phase 1 below.**
+
+---
+
 ## What Makes Chatbots Different
 
 Chatbots seem simple — a user says something, the AI responds — but they introduce a distinct set of challenges that don't show up in single-turn prompting:
@@ -20,7 +62,117 @@ The techniques below address each of these specifically.
 
 ---
 
-## Core Technique Stack
+## Phase 1: Basic Chatbot (System Prompt, Persona, Few-Shot)
+
+**Goal:** Write a system prompt with clear identity, tone, boundaries, and few-shot examples. Test basic conversation.
+
+**Outcome:** A chatbot with consistent tone that handles common and edge-case messages.
+
+---
+
+### Step 1.1: Define System Prompt
+
+**What you're doing:** Write the foundation prompt that defines who the bot is, what it can do, and how it behaves.
+
+**KB Reference:** [System Prompting](../../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 207–280 — system prompt structure)
+
+**Action:**
+
+1. Write 4 sections:
+   - Identity & Purpose (who, what it's for)
+   - Tone & Personality (how it communicates)
+   - Scope & Boundaries (what it helps with, what to decline/escalate)
+   - Format Requirements (bullet points? paragraphs? length?)
+
+2. Test the prompt by asking adversarial questions (off-topic, edge cases)
+3. For each gap exposed, add a line to the prompt
+
+**Validation:**
+- [ ] All 4 sections filled in
+- [ ] At least 3 edge-case questions asked
+- [ ] Prompt explicitly handles off-topic / escalation
+
+---
+
+### Step 1.2: Define Persona
+
+**What you're doing:** Give the bot a stable, consistent identity that shapes all responses.
+
+**KB Reference:** [Persona Pattern](../../LEARNING/FOUNDATIONS/prompt-engineering/prompt-patterns.md — persona definition, tone calibration)
+
+**Action:**
+
+1. Define: Name, domain expertise, communication style, what it does NOT do
+2. Write persona statement (1–2 paragraphs)
+3. Add to system prompt
+
+**Validation:**
+- [ ] Persona name defined
+- [ ] Domain expertise clear
+- [ ] "Does not do" list explicit
+- [ ] Persona statement added to system prompt
+
+---
+
+### Step 1.3: Add Few-Shot Examples
+
+**What you're doing:** Include 3–4 sample exchanges showing how the bot handles common and edge-case messages.
+
+**Action:**
+
+1. Write example exchanges covering:
+   - Happy path (standard request)
+   - Unclear request (ask for clarification)
+   - Off-topic (graceful redirect)
+   - Emotional/frustrated user (de-escalation)
+
+2. Add examples to system prompt after persona
+
+**Validation:**
+- [ ] 3–4 examples written
+- [ ] Examples cover: happy path, ambiguous, off-topic, emotional
+- [ ] Tone consistent with persona
+
+---
+
+### Step 1.4: Test on Conversations
+
+**What you're doing:** Run the chatbot on 5–10 test messages covering happy path and edge cases.
+
+**KB Reference:** [Evaluation](../../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md lines 1773–1805 — 3–5 test scenarios)
+
+**Action:**
+
+1. Run 5–10 test exchanges
+2. Check: Does tone stay consistent? Does it stay in scope?
+3. If gaps appear, update system prompt and re-test
+
+**Validation:**
+- [ ] 5–10 test exchanges completed
+- [ ] Tone consistent across exchanges
+- [ ] Off-topic requests handled gracefully
+- [ ] No scope violations
+
+---
+
+### Step 1.5: Commit Phase 1
+
+**Action:**
+
+```bash
+git add [system-prompt] [tests] [code]
+git commit -m "feat: phase 1 — basic chatbot (system prompt, persona, few-shot)
+
+- System prompt with identity, tone, scope, format
+- Persona definition (name, expertise, communication style)
+- 3–4 few-shot examples (happy path, ambiguous, off-topic, emotional)
+- 5–10 test exchanges passing
+- Consistent tone across conversations"
+```
+
+---
+
+## Core Technique Stack (Reference)
 
 ### 1. System Prompt as the Foundation
 
