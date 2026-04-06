@@ -494,6 +494,117 @@ A minimal test suite: 10–20 representative tasks that cover the failure modes 
 
 ---
 
+## Self-Organizing Multi-Agent Systems (Dochkina 2026)
+
+### When to Use This Pattern
+
+The 13-agent model works well for structured development workflows with **known, fixed responsibilities**. But some problems benefit from a different approach: agents that **discover their own roles dynamically** based on task context, without pre-assignment.
+
+**Use self-organizing when:**
+- Task structure is ambiguous (agents should decide what needs doing)
+- Task complexity varies widely (self-abstention optimizes for different scales)
+- You want emergent specialization rather than pre-designed roles
+- Cost matters (voluntary self-abstention at scale reduces token consumption)
+
+**Stick with 13-agent model when:**
+- Roles are well-defined and stable
+- Parallel execution of fixed responsibilities is your priority
+- You need deterministic behavior (debugging is easier with assigned roles)
+
+### The Sequential Protocol: Core Implementation
+
+Instead of assigning roles upfront, use the **Sequential Protocol** (Dochkina 2026, 25,000-task study):
+
+1. **Initialize N identical agents** — no role assignment, only mission statement
+   ```python
+   agents = [Agent(model=claude, instruction="You are a team member analyzing this task.") for _ in range(N)]
+   ```
+
+2. **Run agents in fixed order** — each agent observes completed outputs of predecessors
+   ```
+   For agent_i in agents:
+     completed_work = [outputs from agent_0 to agent_i-1]
+     agent_i analyzes: "What role should I play? What's missing?"
+     if agent_i.can_add_value(completed_work):
+       contribute_output()
+     else:
+       ABSTAIN  # voluntary, endogenous
+   ```
+
+3. **Measure emergence:** Track RSI (role specialization index → 0), abstention rate (8–15% healthy), quality per task
+
+**Why Sequential beats alternatives:**
+- **Coordinator (centralized):** One agent's judgment bottleneck → 14% quality loss
+- **Shared (fully autonomous):** Agents work blind, duplicate roles → 44% quality loss
+- **Sequential (hybrid):** Agents see factual predecessor outputs → optimal information for role decisions
+
+### Deployment Checklist
+
+**Phase 1 — Design (2 hours)**
+- [ ] Define mission + values (NOT role assignments)
+- [ ] Choose protocol: Sequential (default) or Coordinator (weak models only)
+- [ ] Select model tier: Claude/DeepSeek (L3–L4), GLM-5 (L2–L3), Gemini (L1 only)
+- [ ] Design evaluation: 5-criteria LLM-as-judge (accuracy, completeness, coherence, actionability, mission relevance)
+
+**Phase 2 — Implementation (4 hours)**
+- [ ] Initialize agents (identical instructions)
+- [ ] Implement Sequential loop (see code pattern above)
+- [ ] Set up judge model (separate from agents, consistent across runs)
+- [ ] Test on small task set (N=8)
+
+**Phase 3 — Scaling (4 hours)**
+- [ ] Run 8→16→32→64 agent progression
+- [ ] Verify quality stability (p > 0.05, no significant degradation)
+- [ ] Monitor self-abstention (target: 8–15%)
+- [ ] Measure role diversity (RSI → 0, unique roles increasing)
+
+**Phase 4 — Production (ongoing)**
+- [ ] Deploy with multi-model strategy (cheap models L1–L2, strong models L3–L4)
+- [ ] Route tasks by complexity level (auto-classifier or manual)
+- [ ] Monitor resilience (recovery within 1 iteration after perturbations)
+- [ ] Expected cost savings: 40–50% vs. all-strong-model
+
+### Cost Optimization: Multi-Model Routing
+
+Don't use one model for all tasks. Route by task complexity:
+
+| Level | Type | Example | Model Choice | Cost |
+|---|---|---|---|---|
+| **L1** | Simple, single-domain | API review | Gemini-3-flash | $0.08/MTok |
+| **L2** | Cross-domain | Architecture with 2 domains | GLM-5 or DeepSeek | $0.15–0.20/MTok |
+| **L3** | Multi-phase | Zero-trust migration | DeepSeek v3.2 (95% quality, 24× cheaper) | $0.20/MTok |
+| **L4** | Adversarial | CEO vs. Legal conflicts | Claude Sonnet 4.6 | $4.50/MTok |
+
+**Result:** 40–50% cost reduction, 92–97% quality retention vs. all-Claude.
+
+### Validation Metrics
+
+Monitor three signals that emergence is working:
+
+1. **RSI (Role Specialization Index):** Converges to ~0 (agents invent new roles per task, not recycling)
+   - Target: Unique role count at N=64 ≈ 5,000+ across sample tasks
+   - Bad: Same agents doing same roles repeatedly (mission unclear)
+
+2. **Self-Abstention Rate:** Agents recognizing when they can't add value
+   - Target: 8–15% at N=8–16; 20–45% at N=64–256
+   - Low (< 2%): Agents lack self-reflection; switch to Coordinator protocol
+   - High (> 70%): Task too simple; reduce agents or increase complexity
+
+3. **Quality Stability at Scale:** No degradation from N=8 to N=64
+   - Target: Kruskal-Wallis p > 0.05 (no statistical difference)
+   - Cost grows only ~12% while agent count increases 8×
+
+### For Deep Dive
+
+See **agentic-engineering.md, Section "Self-Organizing Multi-Agent Systems: The Endogeneity Paradox"** for:
+- Complete system architecture and empirical findings
+- Model selection with capability thresholds
+- Scaling mechanics to 256 agents
+- Failure modes and guardrails
+- Resilience to perturbations (agent removal, model substitution)
+
+---
+
 ## Implementation Checklist
 
 **Architecture**
