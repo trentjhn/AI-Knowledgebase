@@ -112,7 +112,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,742 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,755 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -125,6 +125,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 507–670 | Context management, degradation thresholds, advanced patterns |
 | 671–841 | Tool design, selection, restrictions, scaling, MCP, tool lifecycle |
 | 842–1269 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
+| **1018–1055** | **Fundamental Limits on Delegation: Information-theoretic bounds on multi-agent planning (Ao et al. 2026). Delegated agents improve outcomes only with asymmetric information. Communication bottleneck creates information loss (posterior divergence). Practical architecture guidance for when to centralize vs. distribute** |
 | 1270–1525 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
 | 1526–1726 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
 | 1967–2058 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
@@ -137,7 +138,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/ai-system-design.md (897 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/ai-system-design.md (919 lines)
 
 **Architectural patterns for AI systems at scale**
 
@@ -145,11 +146,12 @@ Prerequisites: Complete FOUNDATIONS first.
 |---|---|
 | 1–145 | Design thinking for AI systems |
 | 146–412 | 11 core design patterns (agents, RAG, classification, content generation, etc.) |
+| **253–267** | **Reliability boundary on multi-agent architectures: When delegation fails (Ao et al. 2026). Information loss in agent-to-orchestrator handoffs. Asymmetric information as prerequisite for distributed coordination** |
 | 413–678 | Data pipelines: ingestion, processing, retrieval, monitoring |
 | 679–834 | Observability: logging, tracing, alerting, metrics |
 | 835–1000 | Scalability: caching, batching, parallel processing, resource management |
 | 776–799 | MLOps Engineering Patterns: reproducibility, hyperparameter optimization |
-| 800–897 | Production Safety Rules: 6 non-negotiable rules (port stability, database safety, feature completeness, infrastructure lock, dependency safety, pattern following) + Verification Paradox |
+| 800–919 | Production Safety Rules: 6 non-negotiable rules (port stability, database safety, feature completeness, infrastructure lock, dependency safety, pattern following) + Verification Paradox |
 
 ---
 

@@ -251,6 +251,10 @@ Offline inference: generating embeddings for a document corpus, pre-computing re
 
 **Trade-offs.** Each agent interaction is an LLM call that adds cost and latency. Coordination overhead grows superlinearly with agent count. Debugging requires tracing across agent boundaries. Handoff failures are common if task boundaries are unclear.
 
+**The reliability boundary on multi-agent architectures.** Not all decomposition improves outcomes. When all agents reason over the same training data and shared context, increasing agent count can actually reduce reliability without providing information gain. Ao et al. (2026) formalize this: delegated multi-agent planning is decision-theoretically dominated by centralized coordination unless delegated agents access novel external information (asymmetric data, local sensors, separate real-time feeds). The mechanism is **information loss during communication** — every agent-to-orchestrator handoff introduces posterior divergence measurable in information-theoretic terms.
+
+The implication for architects: Before decomposing a task across multiple agents, ask whether each agent contributes *new information* or just parallel computation. If agents operate on identical context, you're paying communication cost without information benefit. Delegation wins when agents have asymmetric information: different databases, specialized datasets, access to real-time local data, or domain expertise not available centrally.
+
 ---
 
 ## 4. System Design Trade-offs Specific to AI
@@ -891,6 +895,7 @@ Implementation options:
 
 ## Sources
 
+- [On the Reliability Limits of LLM-Based Multi-Agent Planning (Ao, Gao, Simchi-Levi, arXiv 2603.26993, 2026)](https://arxiv.org/abs/2603.26993) — Formal decision-theoretic analysis showing delegated multi-agent planning is dominated by centralization unless agents access new information. Information loss in communication via posterior divergence.
 - [AI Engineering (Chip Huyen, O'Reilly, 2025)](https://www.oreilly.com/library/view/ai-engineering/9781098166298/) — Architecture patterns, RAG, agents, evaluation, model routing
 - [Designing Machine Learning Systems (Chip Huyen, O'Reilly, 2022)](https://www.oreilly.com/library/view/designing-machine-learning/9781098107956/) — Online vs. offline inference, data pipelines, feature engineering
 - [Patterns for Building LLM-based Systems & Products (Eugene Yan, 2023)](https://eugeneyan.com/writing/llm-patterns/) — 7-pattern taxonomy including RAG, evals, guardrails, caching, user feedback

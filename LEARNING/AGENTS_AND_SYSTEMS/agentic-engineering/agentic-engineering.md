@@ -1015,6 +1015,18 @@ Before each phase transition, verify that the previous phase produced acceptable
 - Orchestrator reads 1-2 files directly: quick lookups, small configs
 - Delegate to sub-agents: 3+ files, codebase exploration, pattern searching
 
+**Fundamental Limits on Delegation: The Information-Theoretic Constraint**
+
+A deceptively simple question: when does delegating a decision to a specialist subagent actually improve outcomes compared to a centralized coordinator? The answer is: only when the specialist has access to information the coordinator doesn't.
+
+Ao, Gao, and Simchi-Levi's 2026 formal analysis of multi-agent planning establishes a hard theoretical boundary: any delegated multi-agent system operating under finite communication capacity is *decision-theoretically dominated* by a centralized Bayes decision-maker—unless the delegated agents access new external information sources (separate sensors, local real-time data, asymmetric context).
+
+**The mechanism is communication bottleneck.** Delegation forces agents to communicate decisions back through language, which has finite bandwidth. Every communication step introduces information loss, measurable as posterior divergence or conditional mutual information. If all agents reason over the same training data and shared context, the cost of communication loss exceeds the benefit of distribution. Empirically, LLM experiments (2026) confirm this bound holds in practice.
+
+**Practical implication:** When architecting multi-agent systems, ask: "Do the delegated agents have access to information the orchestrator doesn't?" If no—if they operate on shared context, same training data, no special sensors or local expertise—centralization often beats distribution. Your agents pay the communication cost without gaining information advantage. Delegation wins when agents have **asymmetric information**: local expertise, different sensors, real-time data flows unavailable to the center, or specialized datasets.
+
+**This changes how you evaluate orchestrator vs. multi-agent trade-offs.** Before distributing work across agents, establish what novel information each agent will contribute. If the answer is "just compute the same thing in parallel," you're paying for communication without information gain.
+
 ---
 
 ### ReAct Pattern (Reasoning + Acting)
@@ -2735,6 +2747,7 @@ The multi-agent context problem is fundamentally a **prediction under uncertaint
 
 ## References (Section 15)
 
+- **Reliability limits of multi-agent planning:** Ao, Gao, Simchi-Levi, "On the Reliability Limits of LLM-Based Multi-Agent Planning" (arXiv 2603.26993, 2026) — Establishes decision-theoretic bounds on delegation: delegated agents dominated by centralized decision-maker unless they access new external information. Information loss in communication measured via posterior divergence.
 - **In-context learning limits:** Lim et al., "In-Context Learning Unlocked for Transformers" (2024) — Shows that more context doesn't always improve performance; threshold effects exist.
 - **RAG pitfalls:** Lewis et al., "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks" (FAIR, 2020) — Original RAG paper; identifies relevance matching challenges.
 - **Multi-agent coordination:** Mirkovic & Virani, "Multi-Agent Reinforcement Learning" (2024) — Surveys coordination problems; context sharing is discussed but not fully solved.
