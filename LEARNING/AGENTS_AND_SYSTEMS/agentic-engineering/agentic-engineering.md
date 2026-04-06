@@ -1220,6 +1220,400 @@ Notice what's happening: agents are genuinely disagreeing, referencing each othe
 
 ---
 
+### Self-Organizing Multi-Agent Systems: The Endogeneity Paradox
+
+The dominant assumption in multi-agent design is that you should assign roles upfront: agent A handles security, agent B handles architecture, agent C implements. This assumption is wrong. A 25,000-task empirical study (Dochkina 2026) testing coordination across 8 LLM models, 4–256 agents, and 8 protocols reveals a counterintuitive finding: **systems where agents autonomously select their roles—without role pre-assignment—outperform designed hierarchies by 14% (p < 0.001), and outperform fully autonomous systems by 44% (p < 0.0001).**
+
+This is the **endogeneity paradox**: optimal coordination emerges not from maximal external control nor maximal autonomy, but from a hybrid that provides minimal structural scaffolding (fixed ordering) while enabling full role autonomy (emergent specialization). The practical recipe is startlingly simple: give agents a **mission, a communication protocol, and a capable model**—not role assignments. The rest emerges.
+
+#### What the Study Tested
+
+To establish this finding rigorously, the research compared four coordination protocols:
+
+1. **Coordinator (centralized, exogenous):** Agent 0 analyzes the task, assigns roles to all other agents, who execute in parallel. Single point of control. N+1 LLM calls.
+   - Quality: 0.767 (N=16, L3 tasks)
+   - Reasoning: Bottlenecked by one agent's judgment; other agents execute role instructions rather than adapting.
+
+2. **Sequential (hybrid):** Agents process the task in fixed order. Each agent observes **completed outputs of all predecessors**, autonomously selects its role, decides whether to participate or abstain, and contributes accordingly. The ordering is fixed (exogenous), but role selection and participation are fully endogenous. N sequential LLM calls.
+   - Quality: 0.875 (N=16, L3 tasks) — **+14% vs. Coordinator, +44% vs. Shared**
+   - Reasoning: Provides optimal information type—factual, task-specific, accumulated results, not intentions/history/one-agent plans.
+
+3. **Broadcast (signal-based, endogenous):** Two rounds. Agents broadcast role intentions simultaneously, then decide informed by all intentions. 2N LLM calls.
+   - Quality: 0.510 (pilot data)
+   - Reasoning: Agents work with incomplete information (intentions may change before execution).
+
+4. **Shared (fully autonomous, endogenous):** Agents access shared organizational memory from previous tasks, make all decisions simultaneously and independently. N parallel calls.
+   - Quality: 0.503 (pilot data) — **44% worse than Sequential**
+   - Reasoning: Role duplication due to lack of real-time visibility into what others are doing.
+
+**Why Sequential Wins: The Information Argument**
+
+The superiority of Sequential can be understood through information theory. Each agent must decide what role to play. Sequential provides each agent with:
+- **Factual results** of predecessors' work on *this specific task*
+- Not intentions (may change between rounds)
+- Not historical patterns (may not apply to current task)
+- Not someone else's plan (limited by one agent's judgment)
+
+This is informationally superior to all alternatives. The sports draft analogy illuminates it: each team selects knowing all previous picks, naturally filling complementary positions without central planning. The paradox is that minimal structure enables maximal emergence—one simple constraint (fixed ordering) unlocks spontaneous role differentiation, voluntary abstention, and mission alignment that no amount of explicit design achieves.
+
+#### System Architecture: How to Build It
+
+The system follows a discrete-time architecture:
+
+```
+At each timestep t:
+  1. Receive task τt
+  2. State xt encodes: agent roles, interaction topology, organizational memory
+  3. Dynamics: xt+1 = F(xt, ut, τt, wt, εt)
+     where:
+       ut = coordination decisions (protocol, routing)
+       wt = external shocks (model changes, agent failures)
+       εt = LLM stochasticity
+  
+  4. Measure five metrics at each step:
+     • Qt ∈ [0.25, 1.0]: solution quality (multi-criteria LLM-as-judge)
+     • Tt: execution time in minutes
+     • Ct: cost in tokens
+     • Rt: risk (compliance failures, errors)
+     • Mt ∈ [0.25, 1.0]: mission relevance
+
+  5. Optimization objective:
+     max J = E[Σ(αQ·Qt + αM·Mt − αT·Tt − αC·Ct − αR·Rt)]
+     with αi > 0 and constraints on acceptable risk/cost
+```
+
+**Quality Evaluation: Multi-Criteria LLM-as-Judge**
+
+Don't use binary "correct/incorrect" scoring. Use a separate judge model (different from agent models to avoid self-evaluation bias) that evaluates each solution across five dimensions on a 4-point scale with verbal anchors:
+
+| Dimension | What It Measures |
+|-----------|---|
+| **Accuracy** | Factual correctness of claims |
+| **Completeness** | Coverage of all task requirements |
+| **Coherence** | Logical consistency and structure |
+| **Actionability** | Readiness for practical application |
+| **Mission Relevance** | Contribution to organizational mission |
+
+Aggregate as: Qt = (accuracy + completeness + coherence + actionability) / 16, where minimum is 0.25 (floor = each sub-score of 1 on 4-point scale).
+
+#### Protocol Selection: Decision Tree
+
+Choose your coordination protocol based on model capability and task characteristics:
+
+| Characteristic | Protocol Choice | Why |
+|---|---|---|
+| Strong model + complex task (L3–L4) | **Sequential** | Enables autonomy that strong models leverage effectively |
+| Weak model + simple task (L1–L2) | **Coordinator** | Weak models need explicit routing; simple tasks tolerate centralization |
+| Time-sensitive, parallel-friendly | **Broadcast** (use cautiously) | 2 rounds permit some parallelism, but quality suffers (~30% vs Sequential) |
+| Organizational memory available | **Shared** (with caveats) | Only if agents have low-redundancy roles; role duplication tanks quality |
+| Uncertainty about optimal roles | **Sequential** | Always a safe default—emerges roles rather than guessing them |
+
+**Implementation Detail: The Sequential Protocol as Code**
+
+```python
+def sequential_protocol(task, agents, models):
+    """
+    Agents process task in fixed order.
+    Each agent observes predecessors' outputs before deciding its role.
+    """
+    outputs = []
+    
+    for i, agent in enumerate(agents):
+        # Agent i sees what all predecessors (0...i-1) contributed
+        predecessor_context = "\n".join(f"Agent {j} output: {output}" 
+                                       for j, output in enumerate(outputs))
+        
+        # Agent decides: What is my role? Should I participate?
+        agent_prompt = f"""
+        Task: {task}
+        
+        Work completed so far:
+        {predecessor_context}
+        
+        Your turn. What role should you play? Analyze what's missing.
+        If you have no value to add, respond: ABSTAIN
+        If you will contribute, state your role and output.
+        """
+        
+        response = agent.generate(agent_prompt)
+        
+        if response != "ABSTAIN":
+            outputs.append(response)
+        # else: agent self-abstained (voluntary, endogenous)
+    
+    return outputs  # Final solution is aggregate of all contributions
+```
+
+The key: each agent has factual, accumulated information (predecessor outputs) to make an informed decision. No guessing, no re-planning, no communication overhead.
+
+#### Model Selection & Capability Threshold
+
+Not all models benefit from autonomy. The research identified a **capability threshold** below which autonomy hurts performance—rigid structure becomes beneficial for weak models.
+
+**Threshold Requirements (Three Capabilities):**
+
+1. **Self-reflection:** Ability to assess one's own competence. Claude Sonnet 4.6 shows 8.6% voluntary abstention rate (appropriate—most tasks don't need every agent). GLM-5 shows 0.8% (inappropriate—no self-awareness).
+
+2. **Deep reasoning:** Multi-step logical chains. Required to understand task complexity and decide whether participation adds value. Adversarial (L4) tasks expose this: models without deep reasoning collapse.
+
+3. **Instruction following:** Precise adherence to the sequential protocol. Agents must follow a fixed order and interpret the "observe predecessors" instruction correctly.
+
+**Model Rankings & Strategy:**
+
+| Model | Capability | L3 Quality | L4 Quality | Cost Efficiency | Strategy |
+|---|---|---|---|---|---|
+| Claude Sonnet 4.6 | Very High | 0.875 | 0.594 | Baseline | Use for L3–L4; high-stakes decisions |
+| DeepSeek v3.2 | Very High | 0.829 | 0.629 (!) | 24× cheaper | Use for L3–L4; cost-sensitive deployments |
+| GLM-5 | High | 0.800 | 0.579 | Moderate | Use for L2–L3 when DeepSeek unavailable |
+| Gemini-3-flash | Moderate | 0.357 | — | Cheapest | Use only for L1 (simple tasks); expect 70%+ quality drop on L3 |
+
+**Critical Finding: Multi-Model Strategy Beats Single Model**
+
+No single model dominates all dimensions. A hybrid approach:
+- Use strong models (Claude, DeepSeek) for L3–L4 (adversarial, multi-stakeholder tasks)
+- Use efficient models (DeepSeek if cost-sensitive, GLM-5, Gemini-3 for cost) for L1–L2 (simple, single-domain tasks)
+- Result: ~95% quality of all-Claude at 24× lower average cost
+
+**The Reversal Effect: When to Abandon Autonomy**
+
+Below the capability threshold, autonomy becomes *harmful*. When comparing free-form (self-organized) vs. fixed-role operation:
+- Claude Sonnet 4.6: free-form Q = 0.594 > fixed Q = 0.574 (autonomy helps +3.5%)
+- GLM-5: free-form Q = 0.519 < fixed Q = 0.574 (autonomy hurts −9.6%)
+
+**Rule:** If a model scores < 0.65 on L3 tasks, use Coordinator protocol with fixed roles instead of Sequential autonomy.
+
+#### Scaling from 4 to 256 Agents: Sub-Linear Cost Growth
+
+One of the most surprising findings: scaling to 256 agents produces **no quality degradation** while cost grows only ~11.8%. This enables very large systems without diminishing returns.
+
+**Scaling Data (Fixed Roles, GPT-4.1-mini, 8,020 tasks):**
+
+| Agents | Quality | Tokens | Cost Increase |
+|---|---|---|---|
+| 8 | 0.954 | 3,164 | — |
+| 16 | 0.952 | 3,200 | +1.1% |
+| 32 | 0.955 | 3,270 | +3.4% |
+| 64 | 0.949 | 3,537 | +11.8% |
+
+Scaling to 256 agents (self-organization, L1 tasks):
+
+| Agents | Quality ± σ | Coordination Overhead | Time |
+|---|---|---|---|
+| 64 | 0.964 ± 0.039 | 0.180 | 10.9 min |
+| 128 | 0.958 ± 0.038 | 0.180 | 11.5 min |
+| 256 | 0.967 ± 0.032 | 0.179 | 13.0 min |
+
+Kruskal-Wallis test: H = 1.84, p = 0.61 (no statistically significant difference).
+
+**Why Scaling Works Without Degradation:**
+
+1. **Fixed ordering (Sequential) is O(N) in latency but O(1) in quality degradation.** Each agent adds one inference step, not one re-planning cycle.
+
+2. **Voluntary self-abstention becomes a cost-optimization mechanism at scale.** At N = 256, ~45% of agents self-abstain, effectively creating an adaptive team size. The system does cost reduction automatically.
+
+3. **Emergent properties intensify with scale:**
+   - Unique role specialization: 75% at N=4 → 91% at N=64 (fewer agents doing the same thing)
+   - Hierarchy depth: 1.0 (trivial) at N=4 → 2.0 at N=64 (naturally forms 2-layer structure)
+   - Adaptation speed: 0.7 → 3.0 (larger systems respond faster to external changes)
+
+**Scaling Strategy:**
+
+1. Test your system at N=8–16 with your target protocol.
+2. Run a scaling campaign: 8 → 16 → 32 → 64 agents on representative tasks.
+3. If quality remains stable at 64, you can safely deploy to 128–256.
+4. Monitor coordination overhead (stays ~0.18 even at 256); if it rises above 0.25, switch to batched Sequential (groups of K agents in parallel, next group sees all previous).
+
+#### Task Complexity Levels: Your Quality Ceiling
+
+Task complexity is the primary predictor of what's achievable. The four levels map to organizational problem types:
+
+| Level | Type | Example | Complexity | Typical Quality |
+|---|---|---|---|---|
+| **L1** | Single-domain, simple steps | API security review | 1 domain, 3–5 steps, no dependencies | 0.986 ± 0.011 |
+| **L2** | Cross-domain, integration | Architecture decision with 2 domains | 2 domains, 5–10 steps, knowledge fusion | 0.992 ± 0.008 |
+| **L3** | Multi-phase, sequential deps | Zero-trust migration plan | 3+ domains, 10–20 steps, phase ordering | 0.948 ± 0.019 |
+| **L4** | Adversarial, conflicting stakes | CEO vs. Legal vs. CFO resource allocation | 3+ domains, conflicting interests, incomplete info | 0.614 ± 0.020 (current frontier) |
+
+**Hierarchy Depth as a Stability Signal:**
+
+Self-organized systems spontaneously deepen hierarchy as task complexity increases:
+
+| Task Level | Hierarchy Depth | Meaning |
+|---|---|---|
+| L1 | 1.22 | Flat—all agents peers |
+| L2 | 1.06 | Still flat—minimal dependencies |
+| L3 | 1.30 | Slight hierarchy—some agents specialize in synthesis |
+| L4 | 1.56 | Deeper structure—system organizes into management layers |
+
+This is emergent, not designed. Don't force hierarchy depth; let it emerge based on task needs.
+
+#### Practical Deployment Workflow
+
+Here's how to actually build and deploy a self-organizing system:
+
+**Phase 1: Design (Days 1–2)**
+
+1. Define mission and values (NOT role assignments)
+   - Example: "Analyze this architectural decision for security, cost, and maintainability trade-offs."
+   - Don't specify: "Agent A checks security, Agent B checks cost, Agent C checks maintainability"
+
+2. Select coordination protocol
+   - Default to Sequential for unknown scenarios
+   - Switch to Coordinator only if models score < 0.65 on L3 tasks
+
+3. Choose model tier based on task complexity
+   - L1–L2: Efficient model (Gemini-3-flash, GLM-5, or DeepSeek for cost)
+   - L3: Strong model (Claude Sonnet 4.6 or DeepSeek v3.2)
+   - L4: Your strongest model (Claude Sonnet 4.6 or equivalent)
+
+**Phase 2: Implementation (Days 3–5)**
+
+1. Initialize agents with minimal role scaffolding
+   ```python
+   agents = [
+       Agent(model=claude, instruction="You are a member of an analysis team."),
+       Agent(model=claude, instruction="You are a member of an analysis team."),
+       Agent(model=claude, instruction="You are a member of an analysis team."),
+       # ... N agents, identical instructions
+   ]
+   ```
+
+   Note: No role pre-assignment. Agents are identical at init time.
+
+2. Implement Sequential protocol loop (see code example above)
+
+3. Set up multi-criteria LLM-as-judge evaluation
+   - Separate judge model (e.g., GPT-5.4 or Claude)
+   - Fixed judge across all evaluation runs
+   - Evaluate on all 5 dimensions, not just accuracy
+
+4. Test on representative tasks at N=8
+   - L1 task: Should achieve ~0.98 quality
+   - L3 task: Should achieve ~0.85–0.90 quality
+
+**Phase 3: Scaling (Days 6–7)**
+
+1. Run scaling campaign
+   - N = 8, 16, 32, 64 on same task set
+   - Measure quality, cost, time
+   - If p > 0.05 (no significant quality difference), safe to scale further
+
+2. Monitor self-abstention rate
+   - Target: 30–50% abstention at large N
+   - If < 10%: agents lack self-reflection; likely weak models
+   - If > 70%: task is too simple; reduce agent count or increase task complexity
+
+3. Measure emergent role diversity
+   - Calculate unique role count: should reach 90%+ at N=64
+   - If < 50%: agents stuck in fixed patterns; check prompt clarity
+
+**Phase 4: Production (Day 8+)**
+
+1. Deploy to live workload
+   - Start with N=16–32 (sweet spot for quality/cost)
+   - Monitor cost, latency, quality per task type
+
+2. Implement multi-model strategy
+   - Route L1–L2 tasks to efficient model
+   - Route L3–L4 to strong model
+   - Cost savings: 40–50% vs. all-strong-model
+
+3. Set up resilience testing
+   - Introduce perturbations: random agent removal, model substitution (25% of agents)
+   - System should recover within 1 iteration
+   - Spectral Hierarchy model achieved RI = 0.959 with zero quality variance
+
+#### Emergent Properties to Monitor
+
+As your system scales, watch for these signatures of healthy self-organization:
+
+**1. Dynamic Role Specialization (RSI → 0)**
+
+Agents should *not* settle into fixed roles. Instead, RSI (Role Stability Index) converges to zero, meaning agents reinvent their specialization for each task.
+
+Observable: With 8 agents, system invents 5,006 unique role names across tasks. With 64 agents, 5,010 (+0.1%). About 54% of roles used exactly once—agents aren't recycling roles; they're creating new ones per task.
+
+Action: If you see role consolidation (same agents doing the same role repeatedly), your mission statement is unclear or your task set is too narrow.
+
+**2. Voluntary Self-Abstention**
+
+Healthy systems show high voluntary abstention rates:
+- Claude: 8.6% abstain (agents recognize incompetence)
+- DeepSeek: 4–5% abstain
+- Weak models: 0.2–0.8% abstain (unable to self-assess)
+
+Observable: In Sequential protocol, agents announce "ABSTAIN" without coordinator pressure. Compare to Coordinator (100% of non-contributing agents directed to abstain by coordinator).
+
+Action: If abstention < 2%, your model may lack self-reflection; consider switching to Coordinator or a stronger model.
+
+**3. Shallow Spontaneous Hierarchy**
+
+The system should form 1–2 management layers naturally, not 3+ (which suggests unnecessary coordination overhead).
+
+Observable: Hierarchy Depth stable around 1.0–2.0 even as N scales from 4 to 256.
+
+Action: If HD > 2.5, your mission may be ambiguous or your task genuinely requires deep sequencing. Re-examine the problem structure.
+
+#### Failure Modes & Guardrails
+
+**1. The Capability Cliff**
+
+Below model threshold, autonomy reverses:
+- Claude Sonnet 4.6 + Sequential: Q = 0.594 ✓
+- GLM-5 + Sequential: Q = 0.519 ✗ (switch to Coordinator)
+
+Mitigation: Always run a 10-task L3 pilot to measure model performance. If Q < 0.65, use Coordinator protocol instead.
+
+**2. Role Duplication (Shared Protocol Failure)**
+
+Fully autonomous agents without real-time visibility duplicate roles:
+- Broadcast quality: 0.510 (38% worse than Sequential)
+- Shared quality: 0.503 (44% worse than Sequential)
+
+Reason: Agents can't see what others are doing in real time; multiple agents tackle the same subtask.
+
+Mitigation: Default to Sequential. Use Shared only if you have persistent organizational memory from previous runs and verified low-redundancy role sets.
+
+**3. L4 Adversarial Task Collapse**
+
+Adversarial tasks (conflicting stakeholders, incomplete info) show 37% quality drop from L1:
+- L1 quality: 0.986
+- L4 quality: 0.614
+
+Current frontier: System struggles when stakeholders have genuinely conflicting interests and no single correct answer exists.
+
+Mitigation: For L4 tasks, expect lower absolute quality. Use strong models + Sequential + human-in-the-loop for final decision-making.
+
+**4. Sequential Latency at Very Large N**
+
+Sequential is O(N) in latency. At N = 256, execution time is 13 minutes; at N = 1,024 (future), could be 50+ minutes.
+
+Mitigation: Implement **batched Sequential** variant—groups of K agents work in parallel, next group observes all previous. O(N/K) latency while preserving Sequential's informational advantage.
+
+#### Cost Optimization & Multi-Model Strategy
+
+Token consumption scales sub-linearly despite agent count increase. Average token cost per agent drops as N grows (from ~400 tokens per agent at N=8 to ~55 at N=64). Leverage this with multi-model strategy:
+
+**Cost Comparison (N=16, L3 tasks, 120 tasks per model):**
+
+| Model | L3 Quality | L4 Quality | Tokens | Cost/1K Tokens | Strategy |
+|---|---|---|---|---|---|
+| Claude Sonnet 4.6 | 0.875 | 0.594 | 37K | 0.0236 | Strong; use for L3–L4 |
+| DeepSeek v3.2 | 0.829 | 0.629 | 47K | 0.0177 | 95% Claude quality, 24× cheaper |
+| GLM-5 | 0.800 | 0.579 | 57K | 0.0140 | Efficient; L2–L3 only |
+
+**Deployment Strategy:**
+
+1. **Task Router:** Classify incoming task complexity (L1–L4)
+2. **Model Selection:**
+   - L1 → Gemini-3-flash ($0.08/MTok)
+   - L2 → GLM-5 ($0.15/MTok) or DeepSeek ($0.20/MTok)
+   - L3 → DeepSeek ($0.20/MTok) or Claude ($4.50/MTok for high-stakes)
+   - L4 → Claude (only option currently for adversarial)
+3. **Cost Savings:** ~40–50% vs. all-Claude deployment, with 92–97% quality retention.
+
+---
+
 ### Real-World Orchestration Patterns
 
 The patterns above describe collaboration architectures. This section covers the production-grade mechanisms for making orchestration actually work at scale — based on the ECC system, an open-source agent harness built from 10+ months of intensive daily use.

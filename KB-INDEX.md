@@ -112,7 +112,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (2,755 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3,149 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -135,6 +135,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 2226–2270 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
 | 2273–2603 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
 | **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
+| **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
 
 ---
 
