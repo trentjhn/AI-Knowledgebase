@@ -18,7 +18,6 @@ Quick look at what's been built and why each matters:
 | **interview-prep** | Live | Job Search OS | 10+ concurrent applications across memory-less sessions; needed live-state CRM with company-specific context |
 | **mariana-interview** | Complete | Case Study Prep | Generic PM templates fail in industrial domains — wrong personas, wrong success metrics, missing physical constraints |
 | **security-var-agent** | Functional | Recommendation Engine | VAR workflows require market-real vendor analysis, ROI modeling, and confidence scoring; manual comparison is error-prone |
-| **Instacart APM Challenge** | Submitted | Strategic Pitch | Build credible 5-8 slide pitch in 48 hours that differentiates from 100+ applicants without generic strategy or underselling complexity |
 
 ---
 
@@ -483,69 +482,6 @@ Services communicate via strict interfaces — a change to the Recommendation ou
 Jest coverage for service logic, recommendation scoring, ROI calculations, and confidence algorithms. Ensures scoring logic stays consistent as vendor datasets and market conditions change.
 
 **Project Status:** Built to specification for a VAR workflow automation opportunity. Reached functional state with core services operational. Client opportunity closed, but the system demonstrates patterns (modular scoring, financial modeling, confidence transparency) applicable to other recommendation engines (cloud provider selection, SaaS stack optimization, etc.).
-
----
-
-### 8. Instacart APM Challenge — Autonomous Delivery Strategic Pitch
-
-**Status:** Submitted
-**Location:** `/Users/t-rawww/Instacart-APM-Challenge/`
-**Artifact:** `Trenton_Johnson_-_2026_APM_Challenge.pdf` (8 slides)
-
-#### The Problem
-Build a credible, persuasive 5-8 slide pitch for a major corporation's product challenge in 48 hours. The challenge: recommend a 90-day autonomous delivery pilot for Instacart without:
-- Generic strategy (needed to differentiate from 100 other applicants)
-- Underestimating complexity (risk analysis, unit economics, scope definition)
-- Overselling (maintain credibility with sophisticated stakeholders)
-
-#### What It Is
-A strategic presentation on autonomous grocery delivery that positions Instacart as the demand-layer infrastructure for drone delivery — not a hardware operator. The deck proves economic viability through a scoped Phoenix pilot while managing real risks (safety, weather, adoption, store ops friction).
-
-#### The Methodology (Elegant Part)
-**Phase-based workflow from presentation-mastery skill:**
-1. **Foundation (Phase 1):** Locked strategic objective, narrative arc, empowerment promise
-2. **Structure (Phase 2):** Locked 8-slide architecture with transitions, core STAR framework
-3. **Execution (Phase 3):** Fast content + visual generation (2 hours) using Beautiful.ai + Figma AI
-4. **Polish (Phase 4):** Audit against PM presentation rules
-
-**Why this matters:** Separating thinking (Phases 1-2, done in prior session) from execution (Phases 3-4, done in new session) meant the second session focused entirely on filling structure, not debating strategy. The deck went from locked architecture → finished PDF in a single 4-hour work block.
-
-#### Stack & Tools
-- **Writing:** Structured prompts (1-blueprint, narrative-arc, opening-promise, slide-structure, core-idea STAR)
-- **Design:** Beautiful.ai (primary presentation tool) + Figma AI (high-fidelity mobile UX mocks for Slide 3)
-- **Export:** Beautiful.ai → PDF (clean, no watermarks)
-
-#### Key Decisions and Why They're Elegant
-
-**1. Hybrid tool approach**
-Beautiful.ai for slides 1-2, 4-8 (charts, tables, diagrams, text) + Figma AI for Slide 3 (mobile app mockups only). Avoided forcing one tool to do everything poorly. Instead: tool selection matched to task specificity.
-
-**2. Research grounding**
-Every strategic claim traced back to `/last30days` research on autonomous delivery, Zipline funding, Wing-Walmart expansion, FAA regulatory timeline. No speculation — backed by verifiable market data.
-
-**3. Opening promise mirrored in close**
-Slide 1 opens with "when autonomy makes sense, why we have advantage, what a pilot proves." Slide 8 delivers answers to all three + explicit go/no-go approval ask. Nothing left hanging.
-
-**4. One job per slide**
-Slide 1: urgency (cost crisis + competitive threat). Slide 2: cost math + when it works. Slide 3: UX (both sides). Slide 4: risks + mitigations. Slide 5: pilot specificity. Slide 6: MVP scope. Slide 7: metrics + kill conditions. Slide 8: expansion criteria. No filler.
-
-**5. Credible constraints in mocks**
-The Figma AI mocks (Slide 3) show real workflows: store associate handoff via app, customer live tracking with map. Not placeholder icons — actual thought on how the system operates from both sides.
-
-**6. Metrics-driven + binary decision**
-Slide 7 defines North Star (% eligible orders fulfilled autonomously), supporting metrics (repeat rate, completion rate, CSAT), diagnostics (opt-in rate, handoff time, cost per order), and explicit kill conditions (safety incident pauses immediately; cost >$20 at Day 45 winds down). Not "we'll see how it goes."
-
-**7. Risk pre-wiring**
-Slide 8 doesn't just list risks — each includes "why it matters" and "how we de-risk" with specific mitigations. Addresses three anticipated pushbacks from leadership (too early, not our lane, Walmart locks us out) embedded throughout.
-
-#### Why This Approach Worked
-
-The presentation-mastery workflow enforced discipline at the right moments:
-- **Phases 1-2 (thinking):** No rushing. Locked the objective, story structure, core idea, slide architecture before writing anything
-- **Phase 3 (execution):** Fast, confident content generation because the structure was ironclad
-- **Phase 4 (polish):** Final audit against PM presentation rules (50 words/slide, 40pt font, one job per slide, no slide crimes)
-
-Result: A deck that competes on substance (grounded research, specific pilot design, credible metrics) not on visual flash. The strategy is the thing.
 
 ---
 
