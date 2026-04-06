@@ -112,7 +112,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3,149 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,050+ lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -124,16 +124,17 @@ Prerequisites: Complete FOUNDATIONS first.
 | 344–506 | Model selection, behavior, multi-model architectures |
 | 507–670 | Context management, degradation thresholds, advanced patterns |
 | 671–841 | Tool design, selection, restrictions, scaling, MCP, tool lifecycle |
-| 842–1269 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
+| **842–1746** | **AUTOMATED HARNESS OPTIMIZATION (NEW — Meta-Harness, Lee et al. 2026): Systematic discovery of model wrapping patterns via filesystem-mediated search. The harness problem (manual prompt/tool/context structure design). Why text-based optimization fails (output compression loses implementation detail). The Meta-Harness architecture with agentic proposer + execution trace analysis. Harness patterns discovered (CoT structuring, self-correction, RAG integration, tool trace management, constraint reinforcement). Empirical results (12–18% accuracy gains on retrieval tasks, 8–15% on code generation, 75% context reduction). Three-phase implementation workflow (baseline → automated search → validation & deployment). Observable signals for production monitoring (accuracy drift, token efficiency, failure pattern clustering). Failure modes & practical limits (60–75% cross-task transfer ceiling, model overfitting, instruction sensitivity, long-horizon bottleneck). Practical application to agentic systems (planning agents, tool-using agents, RAG agents, multi-turn agents).** |
+| 1747–2074 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
 | **1018–1055** | **Fundamental Limits on Delegation: Information-theoretic bounds on multi-agent planning (Ao et al. 2026). Delegated agents improve outcomes only with asymmetric information. Communication bottleneck creates information loss (posterior divergence). Practical architecture guidance for when to centralize vs. distribute** |
-| 1270–1525 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
-| 1526–1726 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
-| 1967–2058 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
-| 2060–2130 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
-| 2131–2185 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
-| 2186–2225 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
-| 2226–2270 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
-| 2273–2603 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
+| 2075–2330 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
+| 2331–2531 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
+| 2772–2863 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
+| 2865–2935 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
+| 2936–2990 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
+| 2991–3030 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
+| 3031–3075 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
+| 3078–3408 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
 | **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
 | **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
 

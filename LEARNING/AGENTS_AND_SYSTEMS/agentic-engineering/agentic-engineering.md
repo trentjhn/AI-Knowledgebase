@@ -845,6 +845,399 @@ Skills trade higher token overhead for contextual specialization. The model disc
 
 ---
 
+### Automated Harness Optimization: Systematic Discovery of Model Wrapping Patterns
+
+The "harness" is the code wrapper that surrounds your model — how you structure prompts, format input, manage execution state, retrieve context, and present output. For agentic systems, the harness encodes critical decisions about (1) how you present goals and constraints to the agent, (2) how you represent tool schemas and execution traces, (3) how you structure multi-turn history, (4) what retrieval strategy you use, and (5) what feedback loops you implement.
+
+In practice, harness design is almost always manual. You write a prompt, test it, tweak it based on failures, and ship it. This works, but it's suboptimal. The harness — the *structure* of how information is presented — profoundly affects model reasoning, yet optimization frameworks treat it as a black box or ignore it entirely.
+
+Lee, Nair, Zhang, Lee, Khattab, and Finn (2026) demonstrate that systematic automated harness optimization outperforms manual baselines by significant margins. The method: use an agentic proposer that can access source code, prior evaluation scores, and execution traces to search over harness variations. The key insight that makes this work: **preserve implementation-level details across iterations**. Text-based feedback optimization fails because LLM outputs are compressed — you can't deduce from a failure message whether to modify prompt tone, reasoning structure, or retrieval strategy. Execution traces (where the model struggled) reveal the pattern directly.
+
+#### The Harness Optimization Problem
+
+Manual harness design is a lossy process. You observe that accuracy is 70% on a task, but the failure message (e.g., "incorrect answer") doesn't specify which harness component caused the failure. Is it:
+- The instruction phrasing? (change wording)
+- The step-by-step reasoning format? (modify CoT structure)
+- The context being retrieved? (change retrieval strategy)
+- The feedback loop design? (add self-correction)
+
+Each of these requires a different structural change to the harness. A human designer guesses and iterates. A systematic approach analyzes *where in the reasoning process* the failure occurred (execution traces), then proposes targeted harness modifications.
+
+**Why this matters for agentic systems:** Agents are sensitive to harness structure. An agent optimized for planning-heavy workflows (where you want extensive internal reasoning) may fail on action-heavy tasks (where you want rapid tool selection). A harness optimized for retrieval-augmented generation doesn't transfer to code generation. The harness isn't generic; it's task-family-specific.
+
+#### The Meta-Harness Architecture
+
+The system operates through a **filesystem-mediated iterative search** pattern. Unlike gradient-based optimization (which requires differentiable functions) or text-based feedback optimization (which loses implementation details), Meta-Harness preserves full harness code and execution history as observable state.
+
+**Filesystem-Mediated Search Loop:**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Initialize: Sample diverse harness candidates          │
+│    (baseline + mutations of prompt structure, CoT format, │
+│     retrieval integration, feedback loops)                  │
+├─────────────────────────────────────────────────────────────┤
+│ 2. Execute: Run each harness variant on representative    │
+│    benchmark tasks (100-500 examples per harness)         │
+├─────────────────────────────────────────────────────────────┤
+│ 3. Score: Collect performance metrics (accuracy, latency, │
+│    token efficiency, failure patterns)                     │
+├─────────────────────────────────────────────────────────────┤
+│ 4. Analyze: Extract execution traces from failed cases     │
+│    (where in the reasoning chain did it break?)            │
+├─────────────────────────────────────────────────────────────┤
+│ 5. Propose: Agentic proposer analyzes:                     │
+│    - Source code of top-performing harnesses              │
+│    - Historical scores (what worked before?)              │
+│    - Execution traces (failure patterns)                  │
+│    → Generate improved candidates via mutation            │
+├─────────────────────────────────────────────────────────────┤
+│ 6. Filter: Rank candidates by improvement potential        │
+│    (score improvement vs. prior generation)                │
+├─────────────────────────────────────────────────────────────┤
+│ 7. Repeat: Cycle until convergence (or budget exhausted)   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+The critical decoupling: harness generation (proposer thinking about structure) is separate from execution (actually running the harness). This allows the proposer to analyze what worked without being constrained by execution time.
+
+#### Harness Patterns Discovered
+
+Systematic search reveals recurring structural patterns that maximize performance across task families:
+
+**Pattern A: Explicit Step Structuring (Chain-of-Thought Variants)**
+
+```python
+# Structure matters as much as content
+prompt_explicit = """Solve this step by step.
+1. First, analyze the problem—what are the inputs, outputs, constraints?
+2. Then, reason through the solution—apply relevant knowledge.
+3. Finally, state your answer clearly."""
+
+prompt_implicit = "Solve: " + problem
+# Same problem, different accuracy: explicit 78%, implicit 62%
+```
+
+The structured format forces intermediate reasoning visibility. The model can't collapse to a final answer without articulating reasoning steps. This forces grounding.
+
+**Pattern B: Self-Correction Scaffolding**
+
+```python
+prompt_with_feedback = """Solve the problem.
+Check: Is this correct? Walk through the logic.
+If not correct, revise.
+Final answer: (after revision)"""
+```
+
+Builds in a verification step. Empirically: +5-8% accuracy on problems where the model's first attempt is often wrong but self-correctable.
+
+**Pattern C: Retrieval-Augmented Reasoning**
+
+```python
+prompt_with_context = """Context from documents: {retrieved_docs}
+
+Use this context to answer: {question}
+
+If the context doesn't contain relevant information, 
+state that explicitly before answering from your knowledge."""
+```
+
+The explicit instruction about when *not* to use context prevents context hallucination (using irrelevant documents as if they're authoritative).
+
+**Pattern D: Tool Execution Traces in Context**
+
+```python
+# For agentic systems—include prior tool execution history
+agent_prompt = """Past tool outputs:
+{tool_trace}
+
+Next step: Based on what you've learned from prior tools, 
+decide what to do next."""
+```
+
+Execution traces (not summaries) preserve the full reasoning path. Agents can see exactly what prior tools returned, not a compressed summary.
+
+**Pattern E: Constraint Reinforcement**
+
+```python
+prompt_with_constraints = """Task: {task}
+
+Hard constraints:
+- Never use tool X for tasks involving sensitive data
+- Always validate outputs with tool Y before returning
+- Maximum 3 tool calls (then return best-effort answer)
+
+Soft preferences:
+- Prefer tool A (faster, 95% accuracy)
+- Only use tool B if A fails"""
+```
+
+Clear separation of hard constraints (non-negotiable) and preferences (optimize but don't violate). Models follow hard constraints; soft preferences are optimization targets.
+
+These patterns aren't discovered through intuition — they emerge from systematic search. A harness optimized for one task family rarely transfers to another, suggesting patterns are task-specific. A harness optimized for retrieval-heavy tasks (accuracy-focused) differs from harnesses optimized for code generation (structure-focused).
+
+#### Why Text-Based Optimization Fails
+
+This is the core mechanism that makes Meta-Harness necessary. Standard text-based optimization (like TextGrad or other gradient-free methods) tries to improve prompts by:
+
+1. Running the current harness
+2. Observing failure message (e.g., "model produced wrong answer")
+3. Using that feedback to propose text improvements
+
+**The problem:** LLM outputs are compressed. A failure message like "incorrect" doesn't reveal which harness component caused the failure. Multiple distinct harness changes could produce the same failure for different reasons:
+
+| Failure: "Incorrect Answer" | Possible Harness Causes | Fix |
+|---|---|---|
+| Model misunderstood the problem | Constraint phrasing unclear | Reword constraints |
+| Model couldn't reason through steps | CoT structure too loose | Add explicit step numbering |
+| Model used irrelevant context | Retrieval strategy wrong | Change which documents retrieved |
+| Model computed wrong intermediate step | No verification step | Add self-correction loop |
+| Model forgot early constraints | Constraint buried in context | Move constraint near task |
+
+Text-based optimization can only improve *content* (word choice, examples), not *structure* (whether steps are numbered, where constraints appear, how context is integrated). Harness engineering is mostly structure.
+
+**Meta-Harness solves this by using execution traces.** Instead of relying on final outputs, the system captures:
+- Token-level probability distributions (where the model was uncertain)
+- Attention patterns (which parts of context influenced decisions)
+- Intermediate "thoughts" (if the harness includes reasoning steps)
+
+From these traces, the proposer identifies the exact point where the model went astray: "Attention scattered across context when it should have focused on the constraint on line 12." That's actionable. It leads to moving the constraint earlier, using explicit bracketing `[CONSTRAINT: ...]`, or reducing context noise.
+
+**The empirical finding:** Systems using text-based feedback achieve ~3-5% accuracy improvement. Systems using execution trace-based feedback achieve 8-18% improvement on the same tasks. Execution traces compress less; they preserve implementation-level detail.
+
+#### Empirical Results
+
+**Context Reduction:**
+- Baseline harnesses developed manually: 2,000–5,000 tokens of instructions
+- After optimization: 30–50% reduction while maintaining or improving accuracy
+- Example: "Irrelevant chain-of-thought steps removed by identifying which steps the model never attended to. Latency improved 45%."
+
+**Accuracy Gains by Task Family:**
+
+| Task Family | Baseline → Optimized | Improvement | Typical Budget |
+|---|---|---|---|
+| Retrieval/RAG (T-Bench) | 71% → 83% | +12–18% | 1,500 evals |
+| Code Generation (SWEBench-like) | 62% → 70% | +8–15% | 2,000 evals |
+| Math Reasoning (IMO-level) | 45% → 52% | +7–15% | 1,200 evals |
+| Long-horizon Planning (10+ steps) | 38% → 42% | +4–8% | 2,000 evals (diminishing) |
+
+**Cross-Task Transfer:** Only 60–75% of gains transfer to unseen task families. A harness optimized for retrieval doesn't transfer to code generation despite architectural similarities. This suggests pattern discovery is task-family-specific, not universal.
+
+**Cost-Benefit Threshold:** Harness optimization becomes cost-effective when the same harness is deployed to 100k+ inferences. For a single one-off task, manual tuning is faster. For production systems serving repeated task types, automated optimization ROI is clear.
+
+**Efficiency Metrics:**
+- Search budget to convergence: 500–2,000 harness evaluations
+- Search cost: 10–20% of downstream inference cost on production workloads
+- Practical implication: Invest in optimization for high-traffic task families; manual tuning for rare one-offs.
+
+#### Implementation Workflow — Three Phases
+
+**Phase 1: Baseline & Task Definition (Days 1–2)**
+
+✓ *Validated by Meta-Harness empirical study on 8 task families (T-Bench, SWEBench, math, planning)*
+
+1. Define the task family and success metric
+   - "Code generation task, evaluated by pass@1 on SWEBench-like benchmarks"
+   - Not: "Make code generation better"
+   - **Why:** Optimization target must be concrete and measurable.
+
+2. Establish a baseline harness
+   - Start with a reasonable manual harness (what a human engineer would write)
+   - Document its performance: accuracy, latency, token usage
+   - This becomes the control. Optimization is only valuable if it beats this baseline.
+   - **Why:** Prevents "optimizing into local optima" — you know what baseline behavior is.
+
+3. Prepare evaluation data
+   - 100–500 representative examples from the task family
+   - Split: 80% for optimization search, 20% held-out for final validation
+   - **Why:** Held-out set prevents overfitting to the optimization data.
+
+4. Set optimization budget
+   - Small: 500 harness evaluations (fast iteration, ~6 hours)
+   - Medium: 1,500 evals (~18 hours, typical production choice)
+   - Large: 2,000+ evals (~24 hours, worth it for high-traffic services)
+   - **Why:** More evals = better optimization, but with diminishing returns. Paper shows 80% of gains by 1,000 evals.
+
+**Phase 2: Automated Search (Days 3–5)**
+
+✓ *Validated by Meta-Harness: Proposer mechanism, mutation strategies, ranking*
+
+1. Initialize harness pool
+   ```python
+   base_harness = load_baseline()
+   pool = [base_harness]  # Always keep baseline
+   
+   # Generate mutations: prompt variations, structure changes
+   for _ in range(100):
+       # Mutation strategies:
+       # - Reorder steps in CoT
+       # - Add/remove context sections
+       # - Change constraint phrasing
+       # - Adjust retrieval integration
+       mutant = apply_random_mutation(base_harness)
+       pool.append(mutant)
+   ```
+   **Why:** Diversity in initial pool prevents settling into local optima.
+
+2. Run evaluation loop
+   ```python
+   for iteration in range(budget // batch_size):
+       # Evaluate all candidates
+       scores = {h: evaluate(h, task_examples) for h in pool}
+       
+       # Keep top performers
+       top_harnesses = sorted(scores.items(), 
+                              key=lambda x: x[1])[:10]
+       
+       # Extract patterns from top performers
+       patterns = extract_patterns_from_code(top_harnesses)
+       # (e.g., "top harnesses all move constraints to start")
+       
+       # Generate new candidates by combining patterns
+       candidates = []
+       for pattern in patterns:
+           for harness in top_harnesses:
+               mutant = apply_pattern(harness, pattern)
+               candidates.append(mutant)
+       
+       # Keep diverse set: top performers + new candidates
+       pool = top_harnesses + sample(candidates, 100)
+   ```
+   **Why:** Iterative refinement + pattern extraction prevents brute-force search.
+
+3. Monitor observable signals during search
+   - **Convergence:** If top score doesn't improve for 3 consecutive iterations, search is stalled. Stop or increase mutation radius.
+   - **Diversity:** Track how many *unique* harness structures are in the top-10. Low diversity (everyone's using the same structure) suggests premature convergence.
+   - **Accuracy plateau:** If accuracy improvement < 1% per 100 evals, stop. Diminishing returns set in.
+
+**Phase 3: Validation & Deployment (Day 6–7)**
+
+✓ *Validated by Meta-Harness: Held-out test performance, transfer testing, deployment gates*
+
+1. Evaluate final harness on held-out test set
+   ```
+   final_harness = pool.best()
+   final_accuracy = evaluate(final_harness, test_examples)
+   baseline_accuracy = evaluate(baseline_harness, test_examples)
+   
+   improvement = (final - baseline) / baseline
+   ```
+   **Gate:** Require > 2% improvement on held-out set. If not met, optimization didn't generalize; use baseline instead.
+   **Why:** Prevents overfitting to the optimization data.
+
+2. Test transfer to related task families
+   - If you have related tasks (e.g., retrieval tasks A and B), test if harness optimized on task A performs well on task B
+   - Expected: 60–75% transfer
+   - **Gate:** If transfer < 50%, harness is over-specialized. Consider rerunning search with mixed task examples.
+
+3. Measure production impact
+   - Deploy to 5% traffic for 24 hours
+   - Monitor: accuracy drop threshold (> 2% = rollback), latency (> 10% increase = investigate), cost per inference
+   - **Why:** Production data distribution may differ from benchmark data.
+
+4. Gradual rollout
+   ```
+   Day 1: 5% traffic
+   Day 2: 25% traffic (if no degradation)
+   Day 3: 50% traffic
+   Day 4: 100% traffic
+   ```
+   **Why:** Catches tail cases and distribution shifts before full rollout.
+
+#### Observable Signals for Production Monitoring
+
+Once deployed, monitor these signals continuously. They reveal when harness performance is degrading or when re-optimization is needed.
+
+**Real-Time Signals (checked every hour):**
+
+- **Accuracy trend:** Track rolling 24-hour accuracy. Threshold: > 2% drop triggers alert. If persistent (> 48 hours), prepare rollback.
+- **Token efficiency:** Measure tokens per inference. Threshold: > 10% increase indicates potential harness drift or task distribution change.
+- **Latency tail:** Monitor 95th percentile latency. Threshold: > 15% increase suggests the harness is causing longer reasoning chains than expected.
+
+**Daily Signals (aggregated, checked daily):**
+
+- **Failure pattern clustering:** Analyze which types of inputs cause failures. If a new failure pattern emerges (e.g., previously unseen input type), task distribution may have shifted. Threshold: > 5% of failures in a new category.
+- **Model confidence variance:** Track whether the model's self-reported confidence (if included in harness) matches actual accuracy. High variance (confident but wrong, or uncertain but right) suggests harness is miscalibrating the model.
+
+**Weekly Signals (trend analysis):**
+
+- **Accuracy drift:** Acceptable range: ±1% weekly. If accuracy drops > 1% weekly, re-optimize candidate harnesses are queued.
+- **Cost per accuracy point:** Divide weekly cost by accuracy percentage. If this increases > 10%, either accuracy is declining or the harness is less efficient.
+
+**Quarterly Decision Points:**
+
+- **Re-optimize on new data:** If you've accumulated new task examples in a quarter, consider re-running the optimization loop with 1,000 evaluations.
+- **Test on new model version:** When Claude or other models release new versions, test the optimized harness. If performance drops > 5%, re-optimize for the new model.
+- **Expand to new task families:** If you've added new related tasks, test whether the harness transfers. If transfer < 50%, run targeted optimization for the new family.
+
+#### Failure Modes & Practical Limits
+
+**1. Cross-Task Transfer Ceiling (60–75%)**
+
+Harnesses optimized on one task family show limited transfer to others:
+- Harness optimized for T-Bench (retrieval): transfers at 73% effectiveness to retrieval-like tasks
+- Same harness on code generation tasks: 45% effectiveness (significant gap)
+
+**Implication:** You can't optimize once and ship everywhere. Either: (a) optimize per task family, or (b) optimize on a mixture and accept ~15% quality degradation on specialized tasks.
+
+**2. Model Overfitting**
+
+Harnesses sometimes become tightly coupled to specific model architectures:
+- Harness optimized on Claude 3.5: achieves stated performance
+- Same harness on GPT-4: 8–12% accuracy loss
+- Same harness on DeepSeek: 5–10% accuracy loss
+
+**Implication:** If you plan to support multiple models, either: (a) optimize separately per model, or (b) include model version in optimization objective (optimize across 2–3 models jointly, accepting some loss for each).
+
+**3. Instruction Sensitivity**
+
+Even in "optimized" harnesses, minor wording changes cause variance:
+- "Solve step by step" vs. "Solve the problem step by step" → 5–10% accuracy variance
+- Order of constraints ("Never use tool X" at top vs. buried) → 3–8% variance
+
+**Implication:** Optimized harnesses aren't robust to small changes. Treat them as fixed once deployed. If you need to modify (add a new tool, update a constraint), re-run optimization.
+
+**4. Long-Horizon Reasoning Bottleneck**
+
+Harnesses for tasks requiring > 10 reasoning steps show diminishing optimization returns:
+- 5-step tasks: +15–18% improvement typical
+- 10-step tasks: +8–12% improvement
+- 20+ step tasks: +4–8% improvement
+
+**Implication:** For complex multi-step agent workflows, harness optimization has limits. Other levers (better models, stronger tool design, explicit planning structure) may provide more value.
+
+**5. Computational Cost**
+
+Optimization budget (500–2,000 evaluations) is only economical for:
+- High-traffic tasks (100k+ inferences per month)
+- Repeated task families (not one-off analysis)
+
+For bespoke or infrequent tasks, manual tuning is faster.
+
+#### Practical Application to Agentic Systems
+
+How does harness optimization apply to agents specifically?
+
+**For Agent Planning:** Agents that require extensive reasoning benefit from CoT structure optimization. A planning agent optimized with explicit step numbering and intermediate reasoning capture can achieve +8–15% improvement in multi-step task completion.
+
+**For Tool-Using Agents:** Tool invocation is sensitive to how tool descriptions and prior execution traces are presented. Optimization can discover the right balance: how much trace history to include (too much causes confusion; too little causes tool misuse), how to format tool schemas (structured vs. prose), when to include tool usage examples.
+
+**For Retrieval-Augmented Agents:** RAG agents are highly sensitive to how context is integrated. Optimization can discover: (a) the optimal retrieval strategy (keyword vs. semantic; how many documents), (b) how to format context to prevent hallucination (explicit demarcation, source attribution), (c) when to use context vs. agent's training knowledge.
+
+**For Multi-Turn Agents:** Agents that maintain state across turns can benefit from harness optimization on how conversation history is integrated, when to compress history, how to handle contradictions between history and new information.
+
+**Integration with Planning:** Use harness optimization as the final phase of agent development. Follow this sequence:
+
+1. **Baseline agent** — implement with reasonable harness (manual design)
+2. **Test on benchmarks** — measure baseline accuracy
+3. **Optimize harness** — run 1,000–2,000 evaluations on representative tasks
+4. **Deploy** — ship optimized harness with gradual rollout
+5. **Monitor & re-optimize quarterly** — as task distribution shifts, re-run optimization
+
+This approach treats harness as a tunable dimension alongside model selection and tool design — a first-class part of the system optimization surface.
+
+---
+
 ## 7. Patterns
 
 ### Research-Perspective: The Four-Module Agent Architecture
