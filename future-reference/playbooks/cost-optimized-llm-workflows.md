@@ -230,6 +230,83 @@ The 70–85% gray zone is where cascade routing earns its complexity cost. Below
 
 ---
 
+## Harness Optimization — A First-Class Cost Lever
+
+**Most teams think cost only via model selection:** "Use cheaper models for simple tasks." But there's an equally high-impact lever you're missing: **optimize the harness** (prompt structure, context formatting, tool presentation).
+
+Lee, Nair, Zhang, Khattab, and Finn (2026) empirically demonstrate that systematic harness optimization can reduce token usage by 30–50% while *improving* accuracy by 8–18% on the same model. This means a task that costs $0.10 with a hand-tuned prompt can cost $0.05 with an optimized harness — without downgrading the model.
+
+### Why Harness Matters for Cost
+
+A "harness" is how you structure the prompt and context. Suboptimal harnesses lead to:
+- **Bloated context:** Including irrelevant examples, verbose tool descriptions, or redundant context
+- **Inefficient reasoning:** Poor step structure forces the model to work harder (more tokens) to reach the same answer
+- **Repeated queries:** Ambiguous constraints cause the model to ask clarifying questions or loop
+
+Example: A retrieval-augmented task that starts with 5 irrelevant examples uses extra tokens on each call. A retrieval task that embeds constraints late in the prompt (instead of early) causes the model to re-read context unnecessarily.
+
+Optimization discovers:
+- Which examples actually help (remove others)
+- Which instructions are redundant (compress)
+- Which context ordering is most efficient (reorganize)
+- Whether tool descriptions can be shorter (simplify)
+
+### When to Optimize vs. When to Route Models
+
+**Route to a cheaper model when:**
+- Task is clearly simple (classification, extraction)
+- Small model achieves >90% quality
+- Savings are immediate
+
+**Optimize the harness when:**
+- Task is moderately complex (multi-step reasoning, planning)
+- Current model achieves 70–85% quality, but is expensive
+- Task runs 100k+ times/month (optimization investment pays off)
+- You've already routed to the right model and need to squeeze more efficiency
+
+**Use both together:**
+Optimize harnesses for high-volume tasks, route cheaper models for simple tasks → combined 40–60% cost reduction.
+
+### Three-Phase Harness Optimization Workflow
+
+See: [`agentic-engineering/agentic-engineering.md` lines 842–1076](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) (Automated Harness Optimization) for full technical details.
+
+**Abbreviated version:**
+
+**Phase 1: Establish baseline**
+- Collect 100–500 representative examples
+- Split 80/20 (optimization data / held-out validation)
+- Measure current cost per task
+- Set optimization budget (500–2,000 evaluations)
+
+**Phase 2: Systematic search**
+- Use an agentic proposer to generate harness variations
+- Evaluate each on the 80% set
+- Extract patterns from top performers (e.g., "all winners move constraints to the top")
+- Generate new candidates by applying patterns
+- Continue until cost plateaus (diminishing returns)
+
+**Phase 3: Validate & deploy**
+- Test final harness on held-out 20% data
+- Require >2% improvement to accept
+- Deploy gradually (5% → 25% → 50% → 100% over days)
+- Monitor for accuracy drift in production
+
+**Expected outcome:** 30–50% token reduction, 8–18% accuracy improvement.
+
+**ROI calculation:**
+- Current cost per task: $C
+- After optimization: $C × 0.5 (50% reduction is typical)
+- Monthly volume: N tasks
+- Current monthly spend: $C × N
+- Post-optimization spend: $C × 0.5 × N
+- Monthly savings: $C × 0.5 × N
+- Optimization cost (2,000 evaluations at ~$0.005/eval): ~$10
+
+If N > 1,000 / month, the optimization pays for itself in a single month.
+
+---
+
 ## Budget Enforcement Patterns
 
 Cost control without enforcement is just hope. These patterns make budgets enforceable at runtime.

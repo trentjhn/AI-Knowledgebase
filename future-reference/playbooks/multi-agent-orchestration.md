@@ -132,6 +132,107 @@ Debugger:
 
 ---
 
+## Harness Coordination Across Agents
+
+**What is an agent's harness?** The prompt structure, tool description format, context formatting, and feedback loop design that surrounds each agent. In a 13-agent system, each agent has its own harness — and how well those harnesses align with each other (and with inter-agent handoffs) significantly affects system performance.
+
+### The Harness Coordination Problem
+
+In a naive 13-agent setup, each agent's prompt was designed independently:
+- Planner expects task descriptions in natural language
+- Architect expects plan.md with specific sections
+- TDD Guide expects architecture.md with specific format
+- Code Reviewer expects code + standards document
+
+If the Planner's output format doesn't match what the Architect expects, the Architect has to work harder to parse or reinterpret. This creates friction, context bloat, and failures.
+
+**Coordinated harnesses** align agent inputs and outputs so each agent produces exactly what the next agent expects.
+
+### Coordinating Harness Patterns Across Agents
+
+**Pattern 1: Standardize Artifact Schemas**
+
+Define what each artifact (plan, architecture, code, review) should contain. Each agent's prompt includes the schema it should follow:
+
+```
+Planner prompt includes:
+  "Output plan as JSON with schema:
+  {
+    'goals': [...],
+    'phases': [...],
+    'assumptions': [...],
+    'risks': [...]
+  }"
+
+Architect prompt includes:
+  "Input will be plan.json matching this schema. [...] 
+   Output architecture.json with schema:
+  {
+    'components': [...],
+    'interfaces': [...],
+    'rationale': {...}
+  }"
+```
+
+When Architect receives Planner's output, it's already in the expected format. No re-interpretation needed.
+
+**Pattern 2: Optimize the Handoff Harness** (Orchestrator-Specific)
+
+The orchestrator's prompt is the "coordinating harness" — it decides which agent to invoke, what context to pass, how to handle failures. Optimize this separately from individual agents.
+
+Orchestrator optimization differs from individual agent optimization: focus on reducing decision latency (how fast it picks the right agent) and context bloat (how much context it loads before delegating). See: [`agentic-engineering/agentic-engineering.md` lines 842–1076](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) (Automated Harness Optimization) for the systematic approach.
+
+**Pattern 3: Agent Specialization via Harness, Not Prompts**
+
+Rather than writing 13 different prompts from scratch, define:
+1. **Base harness:** Common structure (goal, input, output format, tool list)
+2. **Specialization:** Domain-specific instructions injected into slots
+
+Example:
+```
+Base harness:
+  "You are a {ROLE}.
+   Input: {INPUT_SCHEMA}
+   Output: {OUTPUT_SCHEMA}
+   Tools: {TOOL_LIST}
+   Key principles: {PRINCIPLES}"
+
+Planner harness:
+  Role: Task Planner
+  Principles: ["Break into discrete phases", "Identify blockers early"]
+
+Code Reviewer harness:
+  Role: Code Quality Expert
+  Principles: ["Security over elegance", "Catch common mistakes"]
+```
+
+This approach makes harnesses maintainable — you update the base harness once, all agents benefit.
+
+### When to Coordinate vs. When to Let Agents Diverge
+
+**Coordinate these harnesses:**
+- **Inter-agent handoff schemas** — must match so data flows cleanly
+- **Tool descriptions** — same tool should be described consistently across agents
+- **Context format** — if agents share context, format should be consistent
+
+**Let these diverge:**
+- **Reasoning style** — Code Reviewer's thinking process differs from Architect's
+- **Output verbosity** — Linter produces brief output; Architect produces detailed design docs
+- **Error handling** — Debugger has special "what went wrong" prompts; Test Generator doesn't
+
+### Optimizing Multi-Agent Harnesses (High-Traffic Systems)
+
+Once your 13-agent system is stable and handling significant volume (10k+ invocations/week):
+
+1. **Profile each agent separately:** Measure accuracy, latency, token usage per agent
+2. **Identify bottleneck agents:** Which agent's harness causes most downstream failures?
+3. **Optimize bottleneck harnesses first:** Run systematic optimization on the highest-impact agents (typically Planner, Architect, Code Reviewer)
+4. **Validate coordination:** After optimizing one agent's harness, test that outputs still match downstream agents' expected input format
+
+Expected result: 8–15% accuracy improvement on individual agents, 5–10% cost reduction for the full orchestrated system (from fewer token retries and cleaner handoffs).
+
+---
+
 ## Parallel Execution Patterns
 
 ### Single-Message Parallelism (Most Efficient)

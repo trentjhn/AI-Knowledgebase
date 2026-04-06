@@ -404,4 +404,73 @@ Most agents start with semantic-only or 2-channel hybrid and that covers the maj
 
 ---
 
-*Draw from: `agentic-engineering/agentic-engineering.md` (architecture patterns, tool design, orchestration) · `context-engineering/context-engineering.md` (context strategies, window management) · `prompt-engineering/prompt-engineering.md` (ReAct, CoT, system prompting)*
+## Phase 5: Production Optimization — Harness Tuning (Optional, High-Impact)
+
+**Goal:** After your agent is stable in production with sufficient traffic, systematically optimize the agent's harness (prompt structure, tool presentation, context formatting) to improve accuracy and reduce cost.
+
+**When to do this:** Once you have 100+ executions of the agent on real tasks and baseline metrics are stable. Optimization has diminishing returns on low-traffic agents; it pays for itself when the agent handles 100k+ inferences per month.
+
+**Outcome:** 8–18% accuracy improvement and 30–50% token reduction through systematic discovery of better harness patterns.
+
+---
+
+### Step 5.1: Define Optimization Baseline
+
+Before tuning, establish what you're optimizing for:
+
+1. **Collect representative tasks:** 100–500 real-world examples from your agent's logs. These are your optimization dataset.
+2. **Split the data:** 80% for optimization search, 20% held-out for final validation.
+3. **Measure current performance:** Accuracy, latency, token usage per interaction on the held-out set. This is your baseline.
+4. **Set an optimization budget:** 
+   - Small: 500 evaluations (~6 hours, ~1% improvement)
+   - Medium: 1,500 evaluations (~18 hours, typical choice, 8–12% improvement)
+   - Large: 2,000+ evaluations (~24 hours, for high-traffic services, 12–18% improvement)
+
+---
+
+### Step 5.2: Run Harness Optimization Search
+
+See: [`agentic-engineering/agentic-engineering.md` lines 842–1076](../LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md) (Automated Harness Optimization section — full technical details)
+
+**In brief:** Use the Meta-Harness approach:
+
+1. **Initialize a harness pool:** Your baseline agent + 100 mutations (reordered steps, modified context structure, different tool presentation, varied reasoning scaffolding).
+2. **Iterative search:** For each iteration, evaluate all candidates on your 80% optimization set, identify top performers, extract patterns from their source code (e.g., "top performers all move constraints to the top"), generate new candidates by applying patterns, keep diverse set.
+3. **Convergence signal:** Stop when top score doesn't improve for 3 consecutive iterations or budget exhausted.
+
+**Observable signals during search:**
+- Convergence rate (if accuracy improvement < 1% per 100 evals, diminishing returns)
+- Diversity (if all top-10 harnesses use identical structure, you've found a local optimum)
+- Pattern extraction (what structure patterns emerge from top performers?)
+
+---
+
+### Step 5.3: Validate on Held-Out Set
+
+Once search converges:
+
+1. **Evaluate final harness on held-out 20% data**
+2. **Compare to baseline:** Require > 2% improvement on held-out set. If not met, optimization didn't generalize; use baseline instead.
+3. **Test on related agent tasks:** If you have similar agents, test if this harness transfers to them (expect 60–75% transfer effectiveness).
+
+---
+
+### Step 5.4: Production Rollout & Monitoring
+
+1. **Canary deployment:** Deploy to 5% traffic for 24 hours. Monitor for accuracy drop (> 2% triggers rollback).
+2. **Gradual expansion:** 5% → 25% → 50% → 100% over 3–4 days.
+3. **Ongoing monitoring:**
+   - Accuracy trend (rolling 24h)
+   - Token efficiency (tokens per inference)
+   - New failure patterns (emerging once in production)
+
+---
+
+**When to re-optimize:**
+- Quarterly: if new data shows task distribution shift
+- Whenever a new model version releases (test harness transfer)
+- Whenever you add new tools to the agent
+
+---
+
+*Draw from: `agentic-engineering/agentic-engineering.md` (architecture patterns, tool design, orchestration, **automated harness optimization**) · `context-engineering/context-engineering.md` (context strategies, window management) · `prompt-engineering/prompt-engineering.md` (ReAct, CoT, system prompting)*
