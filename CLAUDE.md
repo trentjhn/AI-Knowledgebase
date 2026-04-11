@@ -11,6 +11,72 @@ Personal AI knowledge library. Distilled, practitioner-depth reference docs on A
 - Methodology foundation for consulting/audit work
 - Rubric for decision-making across projects
 
+## Pattern Recognition — Active Decision Rubric
+
+When any project idea, system design, or problem is described: scan these signals and surface matching pattern(s) *before* implementation. Multiple signals can fire simultaneously — surface all matches and frame the decision explicitly. Never pick one silently.
+
+**Reference format below:** Full path from KB root for direct Read access.
+
+### Multi-Agent Architecture
+**AGENT TEAMS** — peer sessions with shared task list + direct messaging
+Signals: "multiple perspectives," "parallel investigation," "different angles," "competing hypotheses," "multi-layer build (frontend/backend/tests)," "parallel reviewers," "agents debate each other," "independent workstreams"
+→ `LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agent-teams.md`
+→ `future-reference/playbooks/multi-agent-orchestration.md → Claude Code Agent Teams section`
+
+**SUBAGENTS** — disposable workers; only the result returns to the main session
+Signals: "just need the result," "side task flooding context," "research in background," "delegate and summarize," "parallel but results come back to me"
+→ `LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md → Section 7`
+
+**SELF-ORGANIZING AGENTS** — emergent role discovery; agents decide what's needed
+Signals: "don't know what the roles should be," "task structure varies widely," "agents should figure it out," "N > 8 agents," "emergent specialization"
+→ `future-reference/playbooks/multi-agent-orchestration.md → Self-Organizing section`
+
+### Retrieval & Context
+**RAG PIPELINE** — document search, semantic retrieval, Q&A over a corpus
+Signals: "search my documents," "answer questions about [corpus]," "retrieve relevant context," "knowledge base search," "company docs," "find information in"
+→ `future-reference/playbooks/building-rag-pipelines.md`
+
+**CONTEXT ENGINEERING** — what goes in the context window and how
+Signals: "losing track of earlier context," "context too long," "forgetting instructions," "what to put in system prompt," "noise in context," "context window filling up"
+→ `LEARNING/FOUNDATIONS/context-engineering/context-engineering.md`
+
+### Model Selection
+**REASONING MODELS** — extended thinking, o3-class, complex multi-step problems
+Signals: "complex multi-step reasoning," "needs to plan before acting," "math or logic heavy," "architectural decisions with many constraints," "think hard before answering"
+→ `LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md`
+
+**FINE-TUNING** — behavior that prompting can't reliably produce
+Signals: "always responds a certain way," "style prompting can't capture," "thousands of labeled examples," "domain-specific behavior," "too expensive at inference time," "behavior that prompting doesn't fix"
+→ `LEARNING/PRODUCTION/fine-tuning/fine-tuning.md`
+
+### Quality & Production
+**EVALUATION** — measuring whether the AI system actually works
+Signals: "does it actually work," "measure quality," "catch regressions," "A/B test prompts," "how do I know it's improving," "benchmark," "production monitoring"
+→ `LEARNING/PRODUCTION/evaluation/evaluation.md`
+
+**AI SECURITY** — threat modeling, attack vectors, production safety
+Signals: "security review," "prompt injection," "what could go wrong adversarially," "data exposure," "trust boundaries," "production safety," "compliance," "audit"
+→ `LEARNING/PRODUCTION/ai-security/ai-security.md`
+
+**SPECIFICATION** — writing unambiguous requirements for AI systems
+Signals: "requirements aren't clear," "keeps getting the wrong output," "scope creep," "how to write the spec," "ambiguous instructions," "acceptance criteria"
+→ `LEARNING/PRODUCTION/specification-clarity/specification-clarity.md`
+
+**INFERENCE OPTIMIZATION** — latency, throughput, cost at production scale
+Signals: "too slow at inference," "serving costs too high," "self-hosting," "latency matters," "high throughput," "10M+ tokens/day," "quantization"
+→ `LEARNING/PRODUCTION/inference-optimization/inference-optimization.md`
+
+### Tooling
+**MCP** — connecting AI to external systems, tools, APIs
+Signals: "connect to [external tool]," "give the agent access to," "tool integrations," "Claude needs to call [API]," "build an MCP server," "external system access"
+→ `LEARNING/AGENTS_AND_SYSTEMS/mcp/mcp.md`
+
+### Common Multi-Pattern Scenarios
+- RAG + Evaluation → any retrieval system needs eval from day one
+- Agent Teams + Security → multi-agent systems need trust boundary analysis
+- Fine-tuning + Evaluation → fine-tuning without evals is guessing
+- Reasoning Models + Cost → extended thinking is expensive; always check if prompting suffices first
+
 ## Structure
 - `LEARNING/` — evergreen conceptual knowledge (what things are, how they work)
   - `FOUNDATIONS/` → `AGENTS_AND_SYSTEMS/` → `PRODUCTION/` learning path
