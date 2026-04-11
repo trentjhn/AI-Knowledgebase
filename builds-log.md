@@ -43,21 +43,23 @@ The second pattern: **dual AI portability**. Three systems now have both CLAUDE.
 
 ### 1. YouTube Summarizer Premium — Full-Stack AI Video Intelligence
 
-**Status:** Production-deployed
+**Status:** Production-deployed and live
 **Location:** `/Users/t-rawww/Projects/youtube-summarizer-complete/`
-**Repo:** `trentjhn/youtube-summarizer-complete` (private)
+**Repo:** `trentjhn/youtube-summarizer-premium` (private)
+**Live URL:** `https://summarizeyt.app`
 
 #### The Problem
 Long videos require watching in full to extract information. Most AI summarization tools hit context limits and chunk the video — losing the narrative arc and connection between ideas. The result is bullet points that look comprehensive but miss the through-line.
 
 #### What It Is
-Full-stack AI application that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: ~30 seconds, Deep: ~60 seconds) with context-aware agentic chat and seamless timestamp navigation back to source material.
+Full-stack AI SaaS that transforms YouTube videos into structured intelligence. Dual-mode summarization (Quick: concise 3-paragraph summary, Deep: comprehensive narrative) with context-aware agentic chat and timestamp navigation back to source material. Auth, Stripe payments, and a tiered free/pro model.
 
 #### Stack
-- **Frontend:** React + Vite + Tailwind CSS v4 + Framer Motion (Bento Grid layout)
-- **Backend:** Flask (Python) + SQLite + Redis + WebSockets (SocketIO)
+- **Frontend:** React + Vite + Tailwind CSS v4 + Framer Motion (Bento Grid layout, parallax hero)
+- **Backend:** Flask (Python) + SQLAlchemy + PostgreSQL (Supabase) + Flask-Limiter + SocketIO
 - **LLM Models:** Google Gemini 2.5 Flash-Lite (primary), OpenAI GPT-4o-mini (chat fallback)
-- **Infrastructure:** Vercel (frontend), Render (backend with IaC via render.yaml)
+- **Infrastructure:** Vercel (frontend), Render free tier (backend) + UptimeRobot keep-warm pings
+- **Proxy:** ProxyJet rotating residential proxies (`PROXY_URL` env var) — bypasses YouTube IP blocks
 
 #### Key Decisions and Why They're Elegant
 
@@ -66,36 +68,101 @@ Switched from OpenAI GPT-4o-mini → Google Gemini 2.5 Flash-Lite. Economics: 33
 
 **2. Dual-mode summarization architecture**
 Two completely different prompting strategies with identical core principles but different output depth:
-- **Quick Mode:** 5 hyper-focused JSON components (quick takeaway, key points, topics, timestamps, summary)
-- **Deep Mode:** Same 5 components but 8-module breakdown with detailed analysis, key quotes, arguments sections
-The separation lets users choose summarization depth without branching prompt logic — same prompt engine, two different output targets.
+- **Quick Mode:** 3-paragraph full summary (~250 words) + 5–7 key points + timestamps — substantive standalone value
+- **Deep Mode:** 8-module breakdown with detailed analysis, key quotes, arguments sections
+The separation lets users choose summarization depth without branching prompt logic — same prompt engine, two different output targets. Prompt versioning (v5.1) auto-invalidates cache on prompt changes — no stale summaries.
 
 **3. Production-grade prompt engineering**
 Sophistication rarely seen in deployed systems. Core principles baked into prompts:
-- **Comprehensiveness Principle:** Content dictates output length, not arbitrary constraints. 3-hour video gets deeper analysis than 10-minute video.
-- **Faithful Representation:** Preserve tone/intent without sanitizing, intentional for controversial content. Reflects actual speaker message, not watered-down version.
-- **Attribution Preservation:** Clear sourcing when speaker quotes others or references studies. Maintains context connection.
-- **Tone Matching:** 5 configurable tones (Objective, Academic, Casual, Skeptical, Provocative) applied consistently across all outputs.
-- **Few-shot learning embedded:** BAD vs GOOD output examples in prompt itself, teaching the model what to avoid.
-Prompt versioning (v5.0) auto-invalidates cache on prompt changes — no stale summaries.
+- **Comprehensiveness Principle:** Content dictates output length, not arbitrary constraints.
+- **Faithful Representation:** Preserve tone/intent without sanitizing controversial content.
+- **Attribution Preservation:** Clear sourcing when speaker quotes others or references studies.
+- **Tone Matching:** 5 configurable tones (Objective, Academic, Casual, Skeptical, Provocative).
+- **Few-shot learning embedded:** BAD vs GOOD output examples in the prompt itself.
 
-**4. Context-aware chat with layered context management**
-Chat service builds conversation context from three layers: video title → structured summary → transcript (truncated to 5K chars). Conversation history limited to 10 messages to prevent context bloat while maintaining conversational coherence. Context engineering in action: careful composition prevents token waste while preserving relevance.
+**4. Residential proxy architecture for YouTube extraction**
+YouTube blocks all cloud provider and datacenter IPs from transcript/data APIs. Solution: rotating residential proxies via `PROXY_URL` env var, applied to both youtube-transcript-api (via requests Session) and yt-dlp (via native proxy option). Proxy test runs in a background daemon thread at startup — non-blocking, so cold starts aren't delayed. Key insight: datacenter proxies also blocked (different error: "Sign in to confirm you're not a bot" vs "IP belonging to a cloud provider"). Residential IPs are the only reliable path from a cloud backend.
 
-**5. Real-time processing feedback via WebSocket**
-SocketIO integration streams progress during LLM processing. Provides UX feedback for operations taking 30-60 seconds. Progress updates sent in real-time, no artificial polling.
+**5. Three-method extraction with graceful fallback**
+Transcript extraction tries three methods in order: youtube-transcript-api → yt-dlp → Selenium. Each has a hard timeout. `ignoreerrors: False` on yt-dlp — returning None on failure caused a downstream NoneType crash that was harder to diagnose than an explicit exception. All method failures accumulate into a single structured error string for debugging.
 
-**6. YouTube extraction resilience**
-Handles modern YouTube's anti-bot measures: yt-dlp integration + Netscape cookie format parsing + cookie-based auth to bypass datacenter IP blocks. Accumulates extraction errors for debugging without crashing. Solves the "silent 500 error" failure mode.
+**6. Async processing with polling fallback and retry tolerance**
+Background thread processing + `/api/video-status/<id>` polling every 3s. In-memory ProgressTracker is wiped on Render restart — solved with DB fallback in the status endpoint (queries Video table if tracker is empty). Frontend tolerates 5 consecutive poll failures before surfacing an error. Polling endpoint explicitly exempt from Flask-Limiter global rate limits via `@limiter.request_filter` — "50 per hour" global limit was killing polling on active sessions.
 
-**7. Token accounting and context strategy**
-Conservative max input (900K/1M tokens) leaves explicit buffer for 65K-token output. Detailed token-per-word calculation (1.3 tokens/word English, 150 words/minute of speech). Therefore: ~195 tokens per minute of video, ~11,700 tokens per hour. Strategic math prevents runtime surprises.
+**7. Render free tier keep-warm strategy**
+Render free tier spins down after 15 min idle; cold start is 30–60s. `/api/health` endpoint added for UptimeRobot to ping every 5 minutes — keeps server warm at zero cost. Flask-Limiter exemption on the health endpoint prevents pings from counting against rate limits.
 
-**8. Deployment infrastructure-as-code**
-Frontend (Vercel): Root `VITE_API_URL` environment variable points to backend. Backend (Render): `render.yaml` IaC blueprint with Web Service provisioning. Critical decision: Web Service instead of serverless, because Lambda/serverless timeouts before LLM processing finishes. Deployment logic reflects real constraints.
+**8. Context-aware chat with layered context management**
+Chat service builds conversation context from three layers: video title → structured summary → transcript (truncated to 5K chars). Conversation history limited to 10 messages to prevent context bloat. Context engineering: careful composition prevents token waste while preserving relevance.
 
-**9. Cache invalidation strategy**
-SQLite persistence + Redis caching for processed videos. Cache key versioning lets admin clear cache without data loss (`/api/admin/clear-cache` endpoint). Useful for testing prompt changes without incrementing version.
+**9. Mobile-first parallax architecture**
+Parallax hero uses framer-motion scroll-driven transforms (opacity, scale, blur, y). Critical insight: CSS `filter: blur()` triggers GPU compositing on every frame — on mobile this causes jank. Solution: `isMobile` state via `window.matchMedia`, disables blur entirely on mobile and reduces parallax magnitude. `touch-action: manipulation` on all interactive elements eliminates the 300ms double-tap detection delay. Snap scrolling (`snap-mandatory`) retained but `snap-stop-always` removed — allows natural momentum-based arrival at snap points instead of hard braking.
+
+**10. Token accounting and context strategy**
+Conservative max input (900K/1M tokens) leaves explicit buffer for output. Detailed token-per-word calculation (1.3 tokens/word English, 150 words/minute of speech) → ~195 tokens/min of video, ~11,700 tokens/hour. Strategic math prevents runtime surprises.
+
+**11. Deployment infrastructure-as-code**
+Frontend (Vercel): `VITE_API_URL` env var points to backend. Backend (Render): `render.yaml` IaC blueprint. Critical decision: Web Service instead of serverless — Lambda timeouts before LLM processing finishes. Deployment logic reflects real constraints.
+
+**12. Cache invalidation strategy**
+PostgreSQL persistence + cache key versioning. Prompt version bump (e.g. v5.0 → v5.1) auto-invalidates all cached summaries without data loss. `/api/admin/clear-cache` endpoint for manual purge. Admin endpoints protected by `X-Admin-Token` header.
+
+#### Technical Debt Post-Mortem
+
+> *Triggered by: "AI Technical Debt" — the video's core thesis is "speed minus discipline = compounding interest." The git log confirmed it. 84 total commits: ~15% features, ~85% post-deploy fixes. The fix commits weren't bad luck — they cluster into four predictable failure modes, each one preventable with 2 hours of upfront architecture work.*
+
+**Failure Mode 1: Infrastructure not validated before features were built**
+
+Every deployment config issue — CORS, Supabase pooler URL, render.yaml placement, REDIS_URL quote-stripping, eventlet/threading for Python 3.14 — appeared during or after production deployment. These aren't edge cases. They're expected friction points for any Vercel + Render + Supabase stack. The fix was always small. The discovery was always late.
+
+Root cause: features were built and tested on localhost before the production pipeline was validated. When production broke, it was unclear which issue caused which symptom.
+
+**Failure Mode 2: External API fragility not stress-tested in production conditions**
+
+YouTube extraction required 10+ commits to stabilize: IP block → datacenter proxy also blocked → residential proxy → cookie format issues → youtube-transcript-api v1.x breaking change → yt-dlp version pinning. None of this was resolvable on localhost. The extraction module was the highest-risk dependency in the entire system, built last and tested last.
+
+Root cause: the riskiest external dependency (YouTube's IP blocking policy, changing APIs) wasn't isolated and tested against production conditions before anything was built on top of it.
+
+**Failure Mode 3: Silent failures everywhere**
+
+Three separate commits explicitly named making errors visible: `fix: make proxy diagnostics visible and fix silent failures`, `fix: accumulate all extraction errors for proper debugging`, `chore: expose raw unhandled exceptions`. The system was failing and returning opaque error strings. Every debug cycle required re-deploying with more logging.
+
+Root cause: no upfront error handling strategy. `try/except` blocks returned generic messages or swallowed exceptions entirely. The discipline — every failure path must surface a structured, readable error — wasn't established before coding.
+
+**Failure Mode 4: Async architecture applied without thinking through the exceptions**
+
+`fix: exempt video-status polling from global rate limiter` — a global Flask-Limiter rule blocked the polling endpoint that drives the entire processing UX. 50 requests/hour was fine for summarization but killed active polling sessions. The rate limiter was applied correctly for the wrong scope.
+
+Root cause: when adding cross-cutting middleware (rate limiting, CORS, auth), no explicit audit of which endpoints need exemption. Health endpoints, polling endpoints, and webhooks almost always need to be exempt from global rules — this should be documented upfront.
+
+---
+
+#### The Reusable Pre-Flight Framework
+
+Extracted from the failure modes above. Apply before writing any features on the next SaaS build.
+
+**Phase 0 — Validate the pipeline before features (2 hours)**
+- [ ] Deploy empty backend shell to Render — confirm DB connection, env vars parse correctly, build pipeline succeeds
+- [ ] Deploy empty frontend to Vercel — confirm `VITE_API_URL` resolves, CORS headers correct from production domain
+- [ ] Test the riskiest external API from production server specifically (not localhost) — if the system depends on a third-party that blocks cloud IPs or changes APIs, discover this before building on top of it
+
+**Phase 1 — Architecture decisions before coding**
+- [ ] Design async explicitly: which operations are background? which poll? what's the polling interval and retry tolerance?
+- [ ] Rate limiter exemption list: health endpoint, polling endpoints, webhooks — documented before the limiter is added
+- [ ] Error handling contract: every `try/except` must log a structured error; no swallowed exceptions; no generic "something went wrong" returns
+- [ ] Pin all breaking-risk dependencies immediately (`youtube-transcript-api`, `yt-dlp`, anything with a v1.x→v2.x history)
+
+**During build**
+- [ ] Test mobile on actual device at each major UI milestone — not only pre-deploy
+- [ ] Keep external API integration isolated in a single testable module; validate it independently before building features that depend on it
+
+**Pre-deploy checklist**
+- [ ] Rate limiter audit: confirm polling + health endpoints are exempt
+- [ ] Silent failure audit: can you diagnose any failure from logs alone, without re-deploying with more logging?
+- [ ] Production parity check: does any feature depend on environment variables, services, or behavior that differs from localhost?
+
+**The meta-lesson (from the video)**
+Strategic technical debt is fine — conscious, documented, time-bounded, with a remediation plan. Reckless technical debt is what happened here: IP blocking wasn't a surprise risk, it was a known characteristic of cloud-hosted YouTube scrapers. Treating it as an unknown is reckless. The pre-flight framework converts the known risks into upfront validation steps.
 
 ---
 
@@ -559,6 +626,12 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Math offloading to scripts** | edge_lab (calc.py, position-sizer.py) | Eliminates LLM arithmetic errors entirely — deterministic by design |
 | **Token accounting strategy** | YouTube Summarizer | Conservative limits, explicit buffer math, prevent runtime surprises |
 | **Production-grade prompt engineering** | YouTube Summarizer | Comprehensiveness principle, faithful representation, tone matching, few-shot examples embedded |
+| **Residential proxy for cloud extraction** | YouTube Summarizer | Cloud IPs blocked by YouTube; datacenter proxies also blocked; residential rotating proxies are the only reliable path |
+| **Background thread for blocking startup ops** | YouTube Summarizer | Proxy test at import time blocked Gunicorn cold start; moved to daemon thread — server ready immediately |
+| **Rate limiter exemption for polling** | YouTube Summarizer | Global rate limits apply to all routes by default; polling endpoints must be explicitly exempted or they count against per-hour caps |
+| **DB fallback for in-memory state** | YouTube Summarizer | In-memory trackers wiped on restart; DB query as fallback prevents false "not found" errors on server bounce |
+| **Keep-warm via health endpoint + UptimeRobot** | YouTube Summarizer | Free tier spin-down is a user-facing latency problem; lightweight health ping every 5 min prevents idle at zero cost |
+| **Mobile GPU compositing awareness** | YouTube Summarizer | CSS blur() triggers compositing layers on every animated frame; disable on mobile, keep on desktop |
 | **Trusted sources constraint** | edge_lab (6 X accounts in CLAUDE.md) | Agent only pulls from named, curated accounts — not the open web |
 | **Middle layer / news filter** | edge_lab (news-snapshot.md) | Raw news filtered to facts before reaching analysis layer; thesis ownership stays with human |
 | **Modular service architecture** | security-var-agent | Services independently testable/replaceable; changes in one domain don't cascade |
