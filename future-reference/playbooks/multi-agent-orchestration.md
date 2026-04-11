@@ -741,6 +741,263 @@ See **agentic-engineering.md, Section "Self-Organizing Multi-Agent Systems: The 
 
 ---
 
+## Claude Code Agent Teams: Native Multi-Agent Primitive
+
+> **Status:** Experimental (Claude Code v2.1.32+, disabled by default). Enable with `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in settings.json.
+> **Full reference:** `LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agent-teams.md`
+
+The patterns in this playbook — 13-agent models, responsibility-based organization, self-organizing sequential protocols — are architecture-level frameworks. You build them using whatever tools you have: API calls, subagents, your own orchestration code.
+
+Claude Code Agent Teams is a *native platform primitive* for a specific subset of these patterns. Rather than building your coordination infrastructure (task queue, messaging, state management), you get it pre-built. The tradeoff: less flexibility, much faster time to a working team. Understanding when to reach for the native primitive versus rolling your own matters for every project involving parallel agent work.
+
+### How It Compares to the Frameworks in This Playbook
+
+The **13-agent model** defines roles at the architecture level — Planner, Executor, Reviewer, Communicator, etc. These roles exist whether you implement them via API orchestration code, subagents, or Claude Code Agent Teams. The 13-agent model is the *what*; agent teams is one implementation of the *how*.
+
+**Self-organizing systems (Dochkina protocol)** spawn identical agents that discover their own roles. Agent Teams differs: roles are assigned at spawn time, coordination is explicit, and the lead directs rather than emerging from sequential observation. Self-organizing systems are better for variable-structure problems where the task itself determines what roles are needed. Agent Teams are better for known-structure problems where you can define roles in advance.
+
+**When to use Agent Teams instead of custom orchestration:**
+- You want a working multi-agent system in minutes, not days
+- Your task decomposes naturally into 3–5 independent workstreams
+- You need peer communication (teammates talking to each other), not just result aggregation
+- You're prototyping before committing to a full custom orchestration implementation
+- The team will run once or episodically, not as a production pipeline
+
+**When to build custom orchestration instead:**
+- Production pipeline requiring restartable state (Agent Teams lacks session resumption)
+- Team size > 10 (coordination overhead and token costs compound significantly)
+- Nested hierarchies needed (Agent Teams has a flat lead/teammate structure; no nested teams)
+- Fine-grained per-agent permissions at spawn time required
+- Non-Claude Code execution environments (API-only, cloud functions, etc.)
+
+### Deployment Patterns
+
+These are the patterns where Agent Teams consistently add value over other approaches. Each maps to a specific class of problem, not a specific project.
+
+---
+
+**Pattern 1: Parallel Research with Structured Debate**
+
+*Problem class:* Synthesizing a topic where a single researcher will anchor on the first plausible framework they find and stop looking.
+
+*Why teams help:* Multiple independent investigators, each starting cold, surface different framings. The debate phase — where each investigator actively tries to find flaws in the others' conclusions — produces conclusions that survive genuine scrutiny.
+
+```text
+Create a research team on [topic]. Spawn three teammates:
+- Researcher A: focus on [angle 1] — primary sources and empirical evidence
+- Researcher B: focus on [angle 2] — practitioner experience and real-world implementation
+- Skeptic: your job is to find where Researchers A and B are wrong or oversimplifying.
+  Challenge their conclusions directly.
+
+After each researcher reports findings, have them debate the contradictions.
+Synthesize the conclusions that survive the debate.
+```
+
+*Best for:* Technical topic synthesis, market analysis, architecture decisions with competing valid approaches, pre-mortem analysis before a major decision.
+
+---
+
+**Pattern 2: Multi-Layer Technical Build**
+
+*Problem class:* A system with independent technical layers (frontend/backend, API/database, service A/service B) where each layer has its own concerns but must ultimately integrate.
+
+*Why teams help:* Sequential layer development forces a single agent to context-switch between domains, losing depth on each. Parallel ownership lets each teammate develop deep context within their layer while a shared task list with dependencies handles integration sequencing.
+
+```text
+Create a build team for [system]. Spawn teammates:
+- Frontend teammate: owns [UI layer] — components, state management, API contracts
+- Backend teammate: owns [API layer] — endpoints, business logic, data validation
+- Testing teammate: owns integration tests — starts only after frontend and backend mark
+  their tasks complete (set task dependencies accordingly)
+
+Frontend and backend teammates: communicate directly on API contract decisions.
+Testing teammate: validate that integration points actually work end-to-end.
+```
+
+*Key detail:* Set task dependencies so the testing teammate is blocked until implementation is complete. This encodes the waterfall constraint within an otherwise parallel workflow.
+
+*Best for:* Feature builds with defined layer boundaries, system migrations where each layer migrates independently, API redesigns where client and server need to coordinate.
+
+---
+
+**Pattern 3: Competing Hypotheses Investigation**
+
+*Problem class:* A bug, failure, or unexpected behavior where the root cause is genuinely unclear and sequential investigation would anchor on the first plausible explanation.
+
+*Why teams help:* Each teammate commits to a specific hypothesis before seeing others' work. This forces genuine parallel exploration. The adversarial structure — teammates are explicitly tasked with disproving each other's theories — means the surviving hypothesis has been stress-tested.
+
+```text
+[System] is exhibiting [behavior]. The root cause is unclear.
+
+Spawn 4 teammates to investigate competing hypotheses:
+- Teammate 1: hypothesis — [theory A]
+- Teammate 2: hypothesis — [theory B]
+- Teammate 3: hypothesis — [theory C]
+- Teammate 4: hypothesis — [theory D]
+
+Rules:
+1. Each teammate investigates their assigned hypothesis independently first.
+2. After initial investigation, teammates share findings and actively try to disprove
+   each other's theories using evidence.
+3. Update shared findings.md with evidence for and against each hypothesis.
+4. The hypothesis with the strongest surviving evidence after debate is the working theory.
+```
+
+*Best for:* Production incidents with unclear root cause, performance regressions where multiple components are candidates, security vulnerability investigations, behavioral drift in ML systems.
+
+---
+
+**Pattern 4: Multi-Domain Analysis**
+
+*Problem class:* A decision or proposal that requires different expert lenses applied simultaneously — not sequentially, because each lens should be applied to the same raw problem, not to the previous lens's conclusions.
+
+*Why teams help:* Sequential analysis taints later perspectives with earlier ones. If the technical review runs first and finds no issues, the security review is unconsciously anchored toward finding no issues either. Parallel domain analysis avoids this contamination.
+
+```text
+Analyze [proposal/decision/architecture] from multiple independent domains.
+Spawn teammates:
+- Technical teammate: feasibility, implementation complexity, architectural risks
+- Security teammate: attack surface, data exposure, trust boundaries
+- Operational teammate: deployment complexity, monitoring requirements, failure modes
+- Strategic teammate: alignment with system goals, opportunity cost, long-term maintenance
+
+Each teammate: review the proposal independently and produce a structured report
+(findings, risks, recommendations, confidence level).
+
+Lead: synthesize after all four complete. Flag areas where domain analyses conflict.
+```
+
+*Best for:* Architecture review boards, vendor evaluations, policy decisions with multi-stakeholder impact, pre-launch readiness checks.
+
+---
+
+**Pattern 5: Quality-Gated Pipeline**
+
+*Problem class:* A multi-phase workflow where each phase has clear completion criteria, and later phases genuinely depend on earlier phases completing correctly — not just completing.
+
+*Why teams help:* Task dependencies in the shared task list encode phase gates directly. Combined with `TaskCompleted` hooks that validate exit criteria, you get a pipeline where each handoff is programmatically verified rather than assumed.
+
+```text
+Build a [deliverable] using a quality-gated pipeline:
+- Phase 1 (Researcher teammate): gather requirements and constraints
+- Phase 2 (Designer teammate): design approach — blocked until Phase 1 complete
+- Phase 3 (Implementer teammate): build — blocked until Phase 2 approved
+- Phase 4 (Reviewer teammate): validate against original requirements — blocked until Phase 3 complete
+
+Lead: require plan approval from Designer and Implementer before they proceed.
+Only approve plans that explicitly address the constraints from Phase 1.
+```
+
+*Best for:* Structured document production (RFPs, PRDs, technical specs), code generation with requirements traceability, content pipelines with defined editorial stages.
+
+---
+
+**Pattern 6: Parallel Security Audit**
+
+*Problem class:* A codebase or system that needs security review across multiple independent attack surfaces, where each surface requires specialized focus.
+
+*Why teams help:* Security vulnerabilities don't cluster by file — they emerge from the interaction of authentication, authorization, input handling, data exposure, and dependency risk. A single reviewer scanning all surfaces tends to spend time unevenly, getting deep on whichever surface they check first. Parallel specialist reviewers cover more ground with more depth.
+
+```text
+Create a security audit team for [system]. Spawn:
+- Auth reviewer: authentication flows, session management, token handling, password policies
+- Input reviewer: injection vulnerabilities (SQL, command, XSS), input validation, output encoding
+- Authorization reviewer: access control, privilege escalation, IDOR, permission boundaries
+- Dependency reviewer: known CVEs in dependencies, outdated packages, supply chain risk
+- Data reviewer: PII handling, encryption at rest and in transit, logging practices
+
+All reviewers: produce findings with severity ratings (critical/high/medium/low)
+and specific remediation recommendations.
+Lead: synthesize findings, prioritize by severity × exploitability.
+```
+
+*Best for:* Pre-launch security review, periodic audits, post-incident security assessment, third-party code integration review.
+
+### Quality Gate Hookset
+
+A reusable hook configuration that enforces process discipline across all patterns above. Add to `settings.json`:
+
+```json
+{
+  "hooks": {
+    "TeammateIdle": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/require-output-artifact.sh"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/validate-task-completion.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+```bash
+# ~/.claude/hooks/require-output-artifact.sh
+# Require teammates to produce a written summary before going idle
+#!/bin/bash
+TEAM_NAME=$(jq -r '.team_name // empty' < /dev/stdin)
+TEAMMATE_NAME=$(jq -r '.teammate_name' < /dev/stdin)
+
+# Check if findings file exists for this teammate
+FINDINGS_FILE="/tmp/${TEAM_NAME}-${TEAMMATE_NAME}-findings.md"
+if [[ ! -f "$FINDINGS_FILE" ]]; then
+  echo "Write your findings to $FINDINGS_FILE before finishing. Include: what you found, what you tested, confidence level." >&2
+  exit 2
+fi
+exit 0
+```
+
+```bash
+# ~/.claude/hooks/validate-task-completion.sh
+# Prevent premature task completion — require evidence
+#!/bin/bash
+TASK_ID=$(jq -r '.task_id' < /dev/stdin)
+TASK_SUBJECT=$(jq -r '.task_subject' < /dev/stdin)
+
+# Tasks with "implement" in subject require test evidence
+if echo "$TASK_SUBJECT" | grep -qi "implement\|build\|create\|write"; then
+  EVIDENCE_FILE="/tmp/task-${TASK_ID}-evidence.txt"
+  if [[ ! -f "$EVIDENCE_FILE" ]]; then
+    echo "Implementation tasks require test evidence. Write test results to $EVIDENCE_FILE before completing." >&2
+    exit 2
+  fi
+fi
+exit 0
+```
+
+### Decision: This Playbook's Frameworks vs Agent Teams
+
+The patterns in this playbook (13-agent model, responsibility-based organization, self-organizing systems) describe *how to think about* multi-agent coordination. Agent Teams is a *specific implementation tool* for a subset of those patterns.
+
+**Use this playbook's frameworks when:**
+- You're designing the architecture for a production multi-agent system
+- You need the full 13-agent spectrum (communicator, evaluator, scheduler, etc.)
+- You're building for scale, restartability, or fine-grained control
+- Your workflow is recurring and worth the investment in custom orchestration
+
+**Use Agent Teams when:**
+- You want a working multi-agent workflow in one session
+- The task maps cleanly to one of the six deployment patterns above
+- 3–5 independently-owned workstreams cover your decomposition needs
+- You're exploring whether parallel agent work helps before committing to architecture
+
+They're not competitors. A production system might use the 13-agent architecture as its structural model and Agent Teams as the mechanism for running specific phases within that architecture.
+
+---
+
 ## Sources & Notes on Illustrative Examples
 
 **Core Framework & Agent Model:**

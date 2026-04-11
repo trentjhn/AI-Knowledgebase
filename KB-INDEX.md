@@ -112,7 +112,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,050+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,150+ lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -135,8 +135,26 @@ Prerequisites: Complete FOUNDATIONS first.
 | 2991–3030 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
 | 3031–3075 | Team AI Coordination: profile-based module assembly, 4 components, scaling threshold |
 | 3078–3408 | Multi-Agent Shared Context & Query Routing: frontier problem, 3 approaches (explicit/LLM-driven/pre-retrieval), real failure modes, evaluation framework |
+| **~3410–3580** | **Claude Code Agent Teams (Section 16): Native multi-agent primitive. Peer sessions vs. hub-and-spoke. Shared task list + mailbox architecture. Subagent definitions as blueprints. Quality gates via TeammateIdle/TaskCreated/TaskCompleted hooks. Connection to Section 15 shared context problem. Decision matrix vs. subagents. Key limitations.** |
 | **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
 | **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
+
+---
+
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agent-teams.md (~380 lines)
+
+**Complete reference for Claude Code Agent Teams — the native multi-agent peer coordination primitive**
+
+| Lines | Section |
+|---|---|
+| 1–35 | What it is and why it matters: peer sessions vs. hub-and-spoke, the problem it solves |
+| 36–90 | Architecture: team lead, teammates, shared task list, mailbox, storage paths |
+| 91–145 | When to use: vs. single session, vs. subagents, decision matrix by scenario |
+| 146–185 | Setup: enable flag, version requirement, display modes (in-process vs. split panes) |
+| 186–240 | Controlling the team: creating teams, assigning tasks, direct messaging, plan approval, shutdown |
+| 241–320 | Quality gates via hooks: TeammateIdle, TaskCreated, TaskCompleted — exit codes, shell examples |
+| 321–360 | Context and communication: what teammates receive, spawn prompt design, what they don't inherit |
+| 361–380 | Subagent definitions as blueprints, token costs, limitations, troubleshooting |
 
 ---
 
@@ -359,7 +377,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 |----------|----------|-----------|
 | [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
-| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery |
+| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery, Claude Code Agent Teams deployment patterns |
 | [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
 | [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
 | [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |

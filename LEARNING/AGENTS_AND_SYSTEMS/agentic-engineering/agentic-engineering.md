@@ -3572,6 +3572,82 @@ The multi-agent context problem is fundamentally a **prediction under uncertaint
 
 ---
 
+---
+
+## 16. Claude Code Agent Teams
+
+> **Source:** Anthropic Claude Code documentation (April 2026). Experimental feature.
+> **Full reference:** See `agent-teams.md` in this folder.
+
+Most multi-agent architectures — including the patterns in Sections 7–13 of this doc — assume a hub-and-spoke communication model: one orchestrator has full context, workers complete delegated tasks and report results. The orchestrator holds the intelligence; workers are execution engines.
+
+Claude Code Agent Teams inverts this assumption. Rather than spawning disposable workers that report back, it coordinates *peer sessions*: each teammate is a full Claude Code instance with its own context window, its own conversation history, and direct messaging access to all other teammates. The team lead sets direction and synthesizes findings, but it doesn't mediate every communication. Teammates talk to each other.
+
+This matters because the hub-and-spoke model creates a specific failure pattern: the orchestrator's context window becomes a bottleneck. Everything passes through one agent's reasoning, which means anchoring is endemic — once the orchestrator forms a hypothesis, subsequent information gets filtered through it. In an agent team, multiple agents explore in parallel with genuinely independent contexts, then compare findings. Contradictions surface because different agents reached different conclusions from the same evidence.
+
+### The Core Infrastructure
+
+Agent teams run on three coordination primitives:
+
+**Shared task list** (`~/.claude/tasks/{team-name}/`) — Tasks have three states (pending → in progress → completed) and can depend on each other. File locking prevents race conditions when multiple teammates try to claim the same task simultaneously. The task list is the coordination backbone; agents don't need to track what others are doing — they just look at what's available and claim it.
+
+**Mailbox (push-based messaging)** — Messages deliver automatically without polling. A teammate notifies the lead when it goes idle. Any teammate can message any other by name. Broadcast reaches all teammates simultaneously (expensive — scales token cost with team size).
+
+**Subagent definitions as blueprints** — Existing subagent definitions (tools allowlist, model, system prompt instructions) can be reused as teammate types. Define a role once; deploy it as either a disposable subagent or a peer teammate depending on the coordination pattern needed.
+
+### When Teams Solve a Different Problem than Subagents
+
+The decision is structural, not just about parallelism:
+
+| | Subagents | Agent Teams |
+|:--|:--|:--|
+| **Communication** | Results return to lead only | Teammates message each other directly |
+| **Context** | Isolated; results summarized | Isolated; findings communicated explicitly |
+| **Best for** | Parallel work where only result matters | Parallel work where peer discussion improves outcome |
+| **Token cost** | Lower | Higher (~7x in plan mode; see `agent-teams.md`) |
+
+Use subagents when you need execution in parallel. Use agent teams when you need *reasoning* in parallel — when the most valuable output is what happens when multiple independent conclusions meet.
+
+### Connection to Section 15: The Shared Context Problem
+
+Section 15 describes query routing under uncertainty as "a frontier problem — not fully solved." Agent Teams doesn't resolve the retrieval problem (each teammate still has isolated context and doesn't automatically know what other teammates know). What it provides is a communication layer so agents can push relevant findings to each other deliberately, rather than trying to retrieve context they might not know to ask for.
+
+The partial solution: a `TeammateIdle` hook can force a teammate to broadcast findings before going idle. A `TaskCompleted` hook can require a summary artifact be written to a shared file before marking work done. These patterns approximate shared context through explicit communication discipline.
+
+### Quality Gates via Hooks
+
+Three hook events are specific to Agent Teams:
+
+- **`TeammateIdle`** — fires before a teammate stops. Exit code 2 keeps the teammate working.
+- **`TaskCreated`** — fires before a task is created. Exit code 2 blocks creation.
+- **`TaskCompleted`** — fires before a task is marked done. Exit code 2 prevents completion.
+
+Together, these let you enforce a programmable definition of "done" at the task level — before code reaches review or CI.
+
+### Best Use Cases
+
+The strongest uses are tasks with **natural decomposition boundaries** where parallel work is genuinely independent, but where **cross-pollination of findings** improves the final result:
+
+- **Parallel research and synthesis** — multiple investigators on different angles, actively challenging each other's findings
+- **Multi-layer technical work** — frontend/backend/database/tests each owned by a different teammate, coupling points well-defined
+- **Debugging with competing hypotheses** — each teammate tests a different theory, actively trying to disprove the others
+- **Multi-domain analysis** — technical, legal, financial, UX perspectives applied simultaneously
+- **Security audits** — separate reviewers for different attack surfaces (injection, authentication, authorization, data exposure)
+
+### Key Limitations to Architect Around
+
+- No session resumption for in-process teammates (`/resume`/`/rewind` don't restore them)
+- Task status can lag — dependent tasks may appear blocked even when work is complete
+- One team per session; no nested teams; lead is fixed for team lifetime
+- Split-pane display requires tmux or iTerm2 (not VS Code terminal, Windows Terminal, Ghostty)
+- Permissions set at spawn time from the lead's permission mode
+
+**For the full reference** — architecture, setup, display modes, hook implementations, token cost controls, troubleshooting — see `agent-teams.md` in this folder.
+
+**For deployment patterns** — broad use cases, operational workflows, quality gate configurations — see the multi-agent-orchestration playbook.
+
+---
+
 ## References (Section 15)
 
 - **Reliability limits of multi-agent planning:** Ao, Gao, Simchi-Levi, "On the Reliability Limits of LLM-Based Multi-Agent Planning" (arXiv 2603.26993, 2026) — Establishes decision-theoretic bounds on delegation: delegated agents dominated by centralized decision-maker unless they access new external information. Information loss in communication measured via posterior divergence.
