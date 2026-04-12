@@ -107,62 +107,7 @@ Frontend (Vercel): `VITE_API_URL` env var points to backend. Backend (Render): `
 **12. Cache invalidation strategy**
 PostgreSQL persistence + cache key versioning. Prompt version bump (e.g. v5.0 → v5.1) auto-invalidates all cached summaries without data loss. `/api/admin/clear-cache` endpoint for manual purge. Admin endpoints protected by `X-Admin-Token` header.
 
-#### Technical Debt Post-Mortem
-
-> *Triggered by: "AI Technical Debt" — the video's core thesis is "speed minus discipline = compounding interest." The git log confirmed it. 84 total commits: ~15% features, ~85% post-deploy fixes. The fix commits weren't bad luck — they cluster into four predictable failure modes, each one preventable with 2 hours of upfront architecture work.*
-
-**Failure Mode 1: Infrastructure not validated before features were built**
-
-Every deployment config issue — CORS, Supabase pooler URL, render.yaml placement, REDIS_URL quote-stripping, eventlet/threading for Python 3.14 — appeared during or after production deployment. These aren't edge cases. They're expected friction points for any Vercel + Render + Supabase stack. The fix was always small. The discovery was always late.
-
-Root cause: features were built and tested on localhost before the production pipeline was validated. When production broke, it was unclear which issue caused which symptom.
-
-**Failure Mode 2: External API fragility not stress-tested in production conditions**
-
-YouTube extraction required 10+ commits to stabilize: IP block → datacenter proxy also blocked → residential proxy → cookie format issues → youtube-transcript-api v1.x breaking change → yt-dlp version pinning. None of this was resolvable on localhost. The extraction module was the highest-risk dependency in the entire system, built last and tested last.
-
-Root cause: the riskiest external dependency (YouTube's IP blocking policy, changing APIs) wasn't isolated and tested against production conditions before anything was built on top of it.
-
-**Failure Mode 3: Silent failures everywhere**
-
-Three separate commits explicitly named making errors visible: `fix: make proxy diagnostics visible and fix silent failures`, `fix: accumulate all extraction errors for proper debugging`, `chore: expose raw unhandled exceptions`. The system was failing and returning opaque error strings. Every debug cycle required re-deploying with more logging.
-
-Root cause: no upfront error handling strategy. `try/except` blocks returned generic messages or swallowed exceptions entirely. The discipline — every failure path must surface a structured, readable error — wasn't established before coding.
-
-**Failure Mode 4: Async architecture applied without thinking through the exceptions**
-
-`fix: exempt video-status polling from global rate limiter` — a global Flask-Limiter rule blocked the polling endpoint that drives the entire processing UX. 50 requests/hour was fine for summarization but killed active polling sessions. The rate limiter was applied correctly for the wrong scope.
-
-Root cause: when adding cross-cutting middleware (rate limiting, CORS, auth), no explicit audit of which endpoints need exemption. Health endpoints, polling endpoints, and webhooks almost always need to be exempt from global rules — this should be documented upfront.
-
----
-
-#### The Reusable Pre-Flight Framework
-
-Extracted from the failure modes above. Apply before writing any features on the next SaaS build.
-
-**Phase 0 — Validate the pipeline before features (2 hours)**
-- [ ] Deploy empty backend shell to Render — confirm DB connection, env vars parse correctly, build pipeline succeeds
-- [ ] Deploy empty frontend to Vercel — confirm `VITE_API_URL` resolves, CORS headers correct from production domain
-- [ ] Test the riskiest external API from production server specifically (not localhost) — if the system depends on a third-party that blocks cloud IPs or changes APIs, discover this before building on top of it
-
-**Phase 1 — Architecture decisions before coding**
-- [ ] Design async explicitly: which operations are background? which poll? what's the polling interval and retry tolerance?
-- [ ] Rate limiter exemption list: health endpoint, polling endpoints, webhooks — documented before the limiter is added
-- [ ] Error handling contract: every `try/except` must log a structured error; no swallowed exceptions; no generic "something went wrong" returns
-- [ ] Pin all breaking-risk dependencies immediately (`youtube-transcript-api`, `yt-dlp`, anything with a v1.x→v2.x history)
-
-**During build**
-- [ ] Test mobile on actual device at each major UI milestone — not only pre-deploy
-- [ ] Keep external API integration isolated in a single testable module; validate it independently before building features that depend on it
-
-**Pre-deploy checklist**
-- [ ] Rate limiter audit: confirm polling + health endpoints are exempt
-- [ ] Silent failure audit: can you diagnose any failure from logs alone, without re-deploying with more logging?
-- [ ] Production parity check: does any feature depend on environment variables, services, or behavior that differs from localhost?
-
-**The meta-lesson (from the video)**
-Strategic technical debt is fine — conscious, documented, time-bounded, with a remediation plan. Reckless technical debt is what happened here: IP blocking wasn't a surprise risk, it was a known characteristic of cloud-hosted YouTube scrapers. Treating it as an unknown is reckless. The pre-flight framework converts the known risks into upfront validation steps.
+**Lessons & pre-flight framework:** `future-reference/playbooks/building-ai-saas.md`
 
 ---
 
