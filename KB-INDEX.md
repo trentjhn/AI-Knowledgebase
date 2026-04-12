@@ -114,7 +114,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,150+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,200+ lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -125,7 +125,8 @@ Prerequisites: Complete FOUNDATIONS first.
 | 147–343 | Prompt engineering for agents: 7-level maturity, 7-section structure |
 | 344–506 | Model selection, behavior, multi-model architectures |
 | 507–670 | Context management, degradation thresholds, advanced patterns |
-| 671–841 | Tool design, selection, restrictions, scaling, MCP, tool lifecycle |
+| 671–891 | Tool design, selection, restrictions, scaling, MCP, tool lifecycle (including meta-cognitive tool arbitration & dual-channel optimization) |
+| **740–790** | **Meta-Cognitive Tool Arbitration: "blind tool invocation" pathology. Why scalar RL rewards fail. Dual-channel framework separating accuracy from efficiency. Orders-of-magnitude tool reduction while improving reasoning accuracy** |
 | **842–1746** | **AUTOMATED HARNESS OPTIMIZATION (NEW — Meta-Harness, Lee et al. 2026): Systematic discovery of model wrapping patterns via filesystem-mediated search. The harness problem (manual prompt/tool/context structure design). Why text-based optimization fails (output compression loses implementation detail). The Meta-Harness architecture with agentic proposer + execution trace analysis. Harness patterns discovered (CoT structuring, self-correction, RAG integration, tool trace management, constraint reinforcement). Empirical results (12–18% accuracy gains on retrieval tasks, 8–15% on code generation, 75% context reduction). Three-phase implementation workflow (baseline → automated search → validation & deployment). Observable signals for production monitoring (accuracy drift, token efficiency, failure pattern clustering). Failure modes & practical limits (60–75% cross-task transfer ceiling, model overfitting, instruction sensitivity, long-horizon bottleneck). Practical application to agentic systems (planning agents, tool-using agents, RAG agents, multi-turn agents).** |
 | 1747–2074 | Patterns: Plan-Build-Review, Orchestrator, ReAct, HITL, Expert Swarm, Multi-Agent, Persistent Memory |
 | **1018–1055** | **Fundamental Limits on Delegation: Information-theoretic bounds on multi-agent planning (Ao et al. 2026). Delegated agents improve outcomes only with asymmetric information. Communication bottleneck creates information loss (posterior divergence). Practical architecture guidance for when to centralize vs. distribute** |

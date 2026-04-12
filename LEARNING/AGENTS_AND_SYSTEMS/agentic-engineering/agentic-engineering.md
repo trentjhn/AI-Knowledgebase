@@ -739,6 +739,31 @@ Not every decision should run through the LLM. In production agents, the right a
 
 ---
 
+### The Meta-Cognitive Tool Arbitration Problem
+
+Designing good tools is only half the battle. The other half is designing agents that *know when not to use them*.
+
+A common pathology in agentic systems is "blind tool invocation" — the agent reflexively calls tools even when its internal knowledge is sufficient to answer the question. This looks like wasted computation on the surface, but it's actually a deeper reasoning failure: the agent lacks the meta-cognitive capability to compare internal knowledge against task requirements and recognize that external tool use is unnecessary.
+
+**Why this is hard to solve with standard RL approaches:**
+
+Standard reinforcement learning tries to address this with a scalar reward that penalizes tool invocations. But this creates an unsolvable optimization problem: an aggressive penalty suppresses essential tool use (the model becomes too conservative), while a mild penalty gets overwhelmed by variance in the accuracy reward signal during advantage normalization — rendering it ineffective at preventing overuse.
+
+**The dual-channel solution:**
+
+Rather than combining accuracy and efficiency into a single scalar objective, decouple them into two independent optimization channels:
+
+1. **Accuracy channel:** Maximizes task correctness — standard RL objective, allows any behavior that produces correct answers
+2. **Efficiency channel:** Enforces execution economy *exclusively within accurate trajectories* — only penalizes tool overuse when the answer is correct
+
+This separation means the model can't trade accuracy for efficiency (aggressive tool reduction can't hurt correctness), but it can discover minimal-tool paths within the set of correct solutions. Empirical results: this approach reduces unnecessary tool invocations by orders of magnitude while simultaneously improving reasoning accuracy.
+
+**Practical implication for your agent design:**
+
+If you observe your agents calling tools gratuitously, the problem isn't usually the tool descriptions — it's the training signal. Standard RLHF won't capture the "know when not to use tools" objective. Consider whether your reward function explicitly incentivizes efficiency *only when accuracy is maintained*. If you're training agents that interact with external systems, this distinction becomes critical: unnecessary API calls are not just wasteful, they're a failure of agent reasoning.
+
+---
+
 ### Tool Restrictions as Security Boundaries
 
 This is a critical architectural principle: treat tool access permissions like production security — **deny all by default, explicitly allowlist only what each agent needs.**
