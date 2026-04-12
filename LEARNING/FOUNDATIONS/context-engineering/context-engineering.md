@@ -220,6 +220,8 @@ Sometimes the best way to manage context is to keep separate concerns in separat
 
 The trade-off: isolation is expensive. Multi-agent architectures use up to **15× more tokens** than a single-agent approach (Anthropic Engineering, 2025) because you're running multiple context windows in parallel. You pay more, but you get cleaner reasoning in each agent.
 
+**Quantified cost-benefit:** Recent work on context isolation in concurrent multi-agent orchestration empirically validates this trade-off. When multiple agents request steering decisions while sharing a single orchestrator context, "context contamination" occurs—each agent's task state bleeds into others' steering interactions. Steering accuracy drops to 21–60% in baseline approaches. With asymmetric isolation (lightweight registries for all agents, expanded context only for the agent currently requesting decisions), accuracy recovers to 90–98.4%, achieving **3.53× context efficiency gain**. The advantage increases with agent count (N=5: +20.4 percentage points). In short: 15× token overhead buys back accuracy lost to contamination, with net efficiency gains. [2604.07911v1 — Dynamic Attentional Context Scoping, 2026]
+
 **Sandbox isolation:** For tasks involving large data objects — images, audio, video — keep those objects in a separate execution environment and only pass structured descriptions or results into the LLM's context. HuggingFace's CodeAgent does this: the LLM writes code to process an image, but the image itself never enters the LLM's context window.
 
 **State isolation:** Complex workflows use schema-based state objects (similar to a Python `dataclass` or Pydantic model) that track the full workflow state, but only expose relevant fields to the LLM at each step.

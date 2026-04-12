@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (600+ lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (630+ lines)
 
 **Context as a first-class engineering discipline**
 
@@ -44,6 +44,7 @@
 | 60–131 | 8 context components: system prompt, user input, memory, RAG, tools, tool responses, state |
 | 132–204 | 4 core strategies: Write / Select / Compress / Isolate with examples |
 | 205–289 | 4 failure modes: Poisoning / Distraction / Confusion / Clash (with empirical evidence) |
+| **219–233** | **Multi-agent isolation cost-benefit: DACS mechanism (Dynamic Attentional Context Scoping), empirical validation (90–98.4% steering accuracy, 3.53× context efficiency, 0–14% contamination vs. 28–57% baseline)** |
 | 290–406 | Custom context formats, ordering rules, long-term memory, workflow engineering |
 | 390–446 | Anti-patterns, tools, integration checklist |
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
@@ -138,6 +139,20 @@ Prerequisites: Complete FOUNDATIONS first.
 | **~3410–3580** | **Claude Code Agent Teams (Section 16): Native multi-agent primitive. Peer sessions vs. hub-and-spoke. Shared task list + mailbox architecture. Subagent definitions as blueprints. Quality gates via TeammateIdle/TaskCreated/TaskCompleted hooks. Connection to Section 15 shared context problem. Decision matrix vs. subagents. Key limitations.** |
 | **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
 | **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
+
+---
+
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/context.md (~115 lines)
+
+**Context management within agentic systems**
+
+| Lines | Section |
+|---|---|
+| 1–15 | Core mental model: context as capability, five key beliefs |
+| 16–69 | Context vs. Memory distinction, storage options (in-memory, file, SQLite, vector DB, Redis) |
+| 70–77 | Memory consistency in multi-agent systems, write conflict patterns |
+| **78–92** | **Context Contamination During Concurrent Steering: DACS mechanism (lightweight per-agent registries + asymmetric focus isolation), empirical results (90–98.4% steering accuracy, 3.53× context efficiency, 0–14% contamination vs. 28–57% baseline), N-scaling advantage (+20.4 pts at N=5)** |
+| 93–115 | Capability degradation thresholds, advanced patterns (progressive disclosure, payload model, context loading) |
 
 ---
 
@@ -378,7 +393,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 | [**magnum-opus.md**](future-reference/playbooks/magnum-opus.md) | **All projects (master workflow)** | **9-phase scaffold workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Used by `/cook` skill. Routes to KB, never contains KB content.** |
 | [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
-| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery, Claude Code Agent Teams deployment patterns |
+| [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation (DACS contamination prevention), failure recovery, Claude Code Agent Teams deployment patterns |
 | [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
 | [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
 | [building-ai-saas.md](future-reference/playbooks/building-ai-saas.md) | AI-powered SaaS products | Pre-flight framework, 4 failure modes, Phase 0–3 build sequence, patterns worth repeating |

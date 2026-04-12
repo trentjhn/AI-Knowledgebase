@@ -332,6 +332,16 @@ Debugger writes: fixes
 
 Each agent produces a clear artifact that becomes input for the next. No context explosion.
 
+### Preventing Context Contamination in Parallel Execution
+
+When invoking multiple agents in parallel (e.g., Code Reviewer + Security Reviewer + Test Generator in one message), each agent's context must remain isolated to preserve steering accuracy. The orchestrator should:
+
+1. **Keep artifact handoffs explicit** — agents communicate via files, not through accumulated context clutter.
+2. **Use lightweight registries** — maintain ≤200-token summaries of each agent's state, not full context.
+3. **Serialize steering requests** — if multiple agents request decision support (agent introspection, debugging), isolate each agent's context during steering rather than serving multiple agents' requests from shared context.
+
+This is especially critical as agent count scales: contamination effects compound with N. Empirical evidence (200-trial study at 4 decision-density levels): baseline shared-context approach achieves 0–14% wrong-agent contamination at N=3–5; isolated-context approach (with lightweight registries + per-agent focus during steering) eliminates contamination entirely, improving steering accuracy from ~40% to ~95%. [2604.07911v1 — Dynamic Attentional Context Scoping, 2026]
+
 ---
 
 ## Artifact Specification

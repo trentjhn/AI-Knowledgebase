@@ -74,6 +74,14 @@ When memory is shared across agents, write conflicts are the primary failure mod
 - **Simplest approach — one writer, many readers:** Only the orchestrator writes to shared memory; sub-agents read. No write conflicts, easy to reason about.
 - **When multiple agents must write:** Route all writes through a dedicated memory manager agent via a message queue (Redis Streams, RabbitMQ). The queue serializes writes and prevents corruption.
 
+### Context Contamination During Concurrent Steering
+
+When multiple agents request steering decisions simultaneously, they often share a single orchestrator context. Without isolation mechanisms, each agent's task state, pending outputs, and intermediate decisions "bleed" into the steering interactions of every other agent. This context contamination severely degrades steering accuracy—empirically demonstrated: baseline multi-agent approaches achieve 21–60% steering accuracy, while isolated-context systems achieve 90–98.4%.
+
+**The mechanism:** Dynamic Attentional Context Scoping (DACS) solves this with asymmetric isolation. The orchestrator maintains lightweight per-agent status summaries (≤200 tokens each) in "Registry mode." When an agent requests steering, the system switches to "Focus(a_i)" mode, isolating that agent's full context while compressing all others into their lightweight summaries. This asymmetry prevents cross-agent contamination while preserving orchestrator awareness of all agents' states.
+
+**Empirical validation:** Across 200 trials in 4 decision-density phases: wrong-agent contamination dropped from 28–57% to 0–14%, context efficiency improved 3.53×, and advantage increased with agent count (at N=5: +20.4 percentage points steering accuracy over baseline). Statistical significance: p < 0.0001. [2604.07911v1 — Dynamic Attentional Context Scoping, 2026]
+
 ---
 
 ## Capability Degradation Thresholds
