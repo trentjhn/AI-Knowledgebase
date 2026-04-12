@@ -2,7 +2,7 @@
 
 A unified reference for AI teachings, findings, experiments, and research—organized by learning path and practical use.
 
-*Last Updated: 2026-04-01*
+*Last Updated: 2026-04-12*
 
 ## Why I Built This
 
@@ -70,9 +70,12 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 
 | Section | Contents |
 |---------|----------|
-| [**Playbooks**](future-reference/playbooks/) | 7 practical guides: building agents, chatbots, RAG pipelines, cost optimization, multi-agent orchestration, autonomous loops |
-| [**Prompt Catalog**](future-reference/prompt-catalog/) | 16 reusable prompt patterns, example prompts by domain (design, analysis, research) |
-| [**Specs**](future-reference/specs/) | Project specifications: PromptArena design system & plan, Zenkai learning system spec |
+| [**`/cook` Skill**](future-reference/skills-catalog/meta/cook/) | The project scaffold generator. Runs the 9-phase magnum-opus workflow interactively and writes a complete project structure to disk. Install guide + portable SKILL.md inside. |
+| [**Magnum Opus**](future-reference/playbooks/magnum-opus.md) | The hub document for `/cook`. 9-phase workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Routes to KB; never contains KB content itself. |
+| [**Agent Catalog**](future-reference/agent-catalog/) | 22 agent role definitions across 6 categories (core, quality, design, product, AI-specialist, meta). Agents self-select roles via Sequential protocol — not pre-assigned. See [CATALOG.md](future-reference/agent-catalog/CATALOG.md) for the flat index. |
+| [**Playbooks**](future-reference/playbooks/) | 8 practical guides: magnum-opus (master workflow), building agents, chatbots, RAG pipelines, cost optimization, multi-agent orchestration, autonomous loops, AI SaaS |
+| [**Skills Catalog**](future-reference/skills-catalog/) | Pull-ready skills organized by category (workflow, design, engineering, production, meta). See [CATALOG.md](future-reference/skills-catalog/CATALOG.md) for the flat index. |
+| [**Prompt Catalog**](future-reference/prompt-catalog/) | 16 reusable prompt patterns, example prompts by domain (design, analysis, research). See [CATALOG.md](future-reference/prompt-catalog/CATALOG.md). |
 
 ---
 
@@ -87,8 +90,14 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 **I'm building systems and need production guidance:**
 → Read [LEARNING/PRODUCTION/](LEARNING/PRODUCTION/)
 
+**I want to scaffold a new project with all best practices applied:**
+→ Use the [/cook skill](future-reference/skills-catalog/meta/cook/) — runs the magnum-opus workflow and writes the full project structure to disk
+
 **I want to build something right now:**
 → Browse [FUTURE-REFERENCE/playbooks/](future-reference/playbooks/)
+
+**I need an agent for my project:**
+→ Browse [FUTURE-REFERENCE/agent-catalog/CATALOG.md](future-reference/agent-catalog/CATALOG.md)
 
 **I need prompt templates:**
 → Check [FUTURE-REFERENCE/prompt-catalog/](future-reference/prompt-catalog/)

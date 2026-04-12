@@ -18,6 +18,7 @@ Quick look at what's been built and why each matters:
 | **interview-prep** | Live | Job Search OS | 10+ concurrent applications across memory-less sessions; needed live-state CRM with company-specific context |
 | **mariana-interview** | Complete | Case Study Prep | Generic PM templates fail in industrial domains — wrong personas, wrong success metrics, missing physical constraints |
 | **security-var-agent** | Functional | Recommendation Engine | VAR workflows require market-real vendor analysis, ROI modeling, and confidence scoring; manual comparison is error-prone |
+| **Magnum Opus / /cook** | Live | Project Scaffold System | Starting any AI project requires ~40 architecture decisions before writing code — topology, context strategy, model selection, eval baseline — and without a workflow they get made implicitly or skipped entirely |
 
 ---
 
@@ -497,9 +498,64 @@ Jest coverage for service logic, recommendation scoring, ROI calculations, and c
 
 ---
 
+### 8. Magnum Opus / /cook — Project Scaffold Generator
+
+**Status:** Live (Claude Code skill, system-level)
+**Location:** `~/.claude/skills/cook/` (local) + `AI-Knowledgebase/future-reference/skills-catalog/meta/cook/` (shareable)
+**Hub document:** `AI-Knowledgebase/future-reference/playbooks/magnum-opus.md`
+
+#### The Problem
+Starting a new AI project requires making ~40 decisions before writing a line of code: topology (single agent vs. multi-agent vs. agent teams), context management strategy, model selection, tool design, eval baseline, security threat model. Without a structured workflow, these decisions get made implicitly — or not at all — and the resulting system has to be unwound and rebuilt when the gaps surface in production.
+
+#### What It Is
+A 9-phase interactive project scaffold system. Invoked with `/cook` in Claude Code, it runs through intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Output: a complete project directory with CLAUDE.md, SOUL.md, AGENTS.md, design doc, implementation plan, and pre-selected agents and skills from the KB catalog.
+
+#### Architecture
+
+```
+/cook skill (SKILL.md)             ← CLI entrypoint; triggers on "new project" / "/cook"
+    ↓ reads
+magnum-opus.md (hub document)     ← 9-phase decision workflow; routes to KB, never contains KB content
+    ↓ routes to
+KB-INDEX.md                       ← flat navigation catalog (line ranges, read times, descriptions)
+    ↓ routes to
+LEARNING/ docs                    ← agentic-engineering.md, context-engineering.md, evaluation.md, etc.
+    ↓ combined with
+agent-catalog/CATALOG.md          ← 22 agents across 6 categories
+skills-catalog/CATALOG.md         ← 34 skills across 5 categories
+prompt-catalog/CATALOG.md         ← 16 prompt patterns
+    ↓ produces
+Project scaffold on disk          ← CLAUDE.md + SOUL.md + AGENTS.md + design doc + implementation plan
+```
+
+#### Key Decisions and Why They're Elegant
+
+**1. Hub document as manual RAG**
+`magnum-opus.md` routes to KB sections by file path and line range but never copies KB content. The hub knows *where* knowledge lives; the KB docs contain the actual knowledge. When KB docs get updated, the hub doesn't need updating (unless the file path changes). This is the same principle as an index page — routing layer vs. content layer — applied to an agentic workflow.
+
+**2. Three-layer separation: workflow / knowledge / capabilities**
+The /cook skill handles workflow state (what phase are we in). The KB docs handle knowledge (what does context engineering actually mean). The CATALOG.md files handle capability listing (what agents and skills exist). No layer bleeds into another. You can update one without touching the others. This made the system significantly cheaper to maintain than a monolithic doc.
+
+**3. Three-way topology decision (not just "multi-agent")**
+Early draft collapsed all multi-agent patterns into a binary: single vs. multi. Phase 1 now forces three distinct choices: single agent / hierarchical multi-agent (orchestrator + workers) / agent teams (peer agents with shared task list and direct messaging). These have meaningfully different context budgets, coordination overhead, and cost profiles. Collapsing them produces wrong architecture decisions.
+
+**4. Prohibited Patterns with "Do not..." framing**
+Early draft had an "Anti-Patterns" section with prohibited behaviors listed as topic sentences. This creates a priming problem: naming bad behavior as a heading makes the model consider it as a candidate. Renamed to "Prohibited Patterns" with explicit "Do not..." framing throughout. The fix is about framing: prohibitions should be unambiguous, not implied.
+
+**5. SOUL.md as a functional personality file**
+Instead of embedding agent character in CLAUDE.md (which holds structural rules), SOUL.md is a separate file loaded before every session. It holds non-negotiable behavioral traits (considered output, cite sources, YAGNI, reversible actions, verify before claiming complete) and a `[PROJECT CHARACTER]` section for project-specific customization. Separating personality from rules reduces behavioral variance across sessions.
+
+**6. Catalog-first convention**
+CATALOG.md entries are written before the agent/skill/prompt file is created — inverts the natural instinct (write the thing, update the index later) and prevents stale catalogs structurally. The catalog is always authoritative because it was written first. Now codified in CLAUDE.md so future additions follow the same rule.
+
+**7. Portability via KB_ROOT**
+All KB paths in the skill are anchored to a single path at the top of SKILL.md. To install on any machine: one path substitution. The portable version in `skills-catalog/meta/cook/` uses `/path/to/your/AI-Knowledgebase` as a placeholder — anyone who clones the KB can make the skill live with a single find/replace.
+
+---
+
 ## What These Systems Demonstrate
 
-Collectively, these seven systems (plus ArXiv sourcing infrastructure) demonstrate depth across the full AI engineering stack:
+Collectively, these eight systems (plus ArXiv sourcing infrastructure) demonstrate depth across the full AI engineering stack:
 
 **Full-Stack Capability**: From production deployment (YouTube Summarizer), full-stack architecture (Zenkai), to real-time automation (edge_lab). Not just backend or frontend — end-to-end product thinking.
 
@@ -515,7 +571,9 @@ Collectively, these seven systems (plus ArXiv sourcing infrastructure) demonstra
 
 **Dual AI Portability**: Same behavioral contract across different AI tools (Claude↔Gemini), proving that agent behavior can be decoupled from implementation.
 
-These patterns are replicable and applicable to other AI systems beyond these seven primary systems.
+**Meta-Infrastructure**: Systems that build other systems — the /cook skill + magnum-opus workflow generates complete project scaffolds. A 9-phase decision workflow for every new AI project, capturing architecture decisions that would otherwise be made implicitly.
+
+These patterns are replicable and applicable to other AI systems beyond these eight primary systems.
 
 ---
 
@@ -582,3 +640,8 @@ These patterns appear across multiple systems. Worth recognizing as a personal m
 | **Modular service architecture** | security-var-agent | Services independently testable/replaceable; changes in one domain don't cascade |
 | **Confidence scoring transparency** | security-var-agent | Quantified confidence across multiple dimensions; recommendations include explicit strength assessment |
 | **Financial modeling + ROI clarity** | security-var-agent | Detailed cost modeling prevents false economies; breaks down total cost of ownership |
+| **Hub document (routing layer)** | Magnum Opus, KB-INDEX | Separates where knowledge lives from what the knowledge is — update KB docs without touching the routing layer |
+| **Catalog-first convention** | Magnum Opus (agent/skill/prompt catalogs) | Forces index accuracy before file creation — structurally prevents stale catalogs |
+| **Phase-gated workflow as a CLI skill** | /cook, website build protocol | Workflow becomes an invocable tool — same phases every time, no steps skipped under time pressure |
+| **Prohibited Patterns framing** | Magnum Opus | "Do not..." framing prevents anti-pattern priming — topic sentences that name bad behavior can surface it as a candidate |
+| **SOUL.md personality contract** | Magnum Opus scaffold output | Separates agent character from structural rules — CLAUDE.md holds constraints, SOUL.md holds values |
