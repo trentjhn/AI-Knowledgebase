@@ -2,7 +2,7 @@
 
 **Purpose:** Find a concept quickly without reading entire files. KB is organized by learning path: Foundations → Agents & Systems → Production.
 
-**Total KB:** ~9,300 lines across 13 learning docs + 7 playbooks + prompt catalog + PM context. Use this index to find exact sections.
+**Total KB:** ~9,300 lines across 13 learning docs + 8 playbooks + 22 agents + prompt catalog + PM context. Use this index to find exact sections.
 
 ---
 

@@ -50,6 +50,12 @@ definitions) and prompts (templates).
 | [error-handling-patterns](engineering/error-handling-patterns/) | Error handling needs design; silent failures occurring | Error handling contract and patterns |
 | [cloning-protocol](engineering/cloning-protocol/) | Project needs to be cloned or templated | Project cloning and setup protocol |
 
+## Meta Skills
+
+| Skill | Invoke when | What it does |
+|---|---|---|
+| [cook](meta/cook/) | Starting any new project; "new project", "let's build", "/cook" | Runs the full magnum-opus 9-phase scaffold workflow; writes complete project structure to disk |
+
 ## Production Skills
 
 | Skill | Invoke when | What it does |

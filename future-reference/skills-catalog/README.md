@@ -6,12 +6,12 @@ A pull-ready library of Claude Code skills and agent definitions. Browse, then c
 
 **Skills** — drop into `.claude/skills/<skill-name>/SKILL.md` in your project. Claude Code auto-loads them and triggers based on description matching.
 
-**Agents** — drop into `.claude/agents/<agent-name>.md` in your project. Reference them via `Agent` tool calls in your instructions.
+**Agents** — agent role definitions have moved to `future-reference/agent-catalog/`. Drop agent files into `.claude/agents/<agent-name>.md` in your project.
 
 ```bash
 # Example: add TDD workflow + code reviewer to a new project
-cp -r ~/AI-Knowledgebase/skills-catalog/engineering/tdd-workflow /your-project/.claude/skills/
-cp ~/AI-Knowledgebase/skills-catalog/agents/code-reviewer.md /your-project/.claude/agents/
+cp -r ~/AI-Knowledgebase/future-reference/skills-catalog/engineering/tdd-workflow /your-project/.claude/skills/
+cp ~/AI-Knowledgebase/future-reference/agent-catalog/core/code-reviewer.md /your-project/.claude/agents/
 ```
 
 ---
@@ -85,26 +85,12 @@ cp ~/AI-Knowledgebase/skills-catalog/agents/code-reviewer.md /your-project/.clau
 
 ---
 
-### Agents (15 definitions) — Drop into `.claude/agents/`
-*Source: ECC*
+### Agents — See `future-reference/agent-catalog/`
 
-| Agent | Model | Role |
-|---|---|---|
-| `planner.md` | opus | Creates implementation plans from requirements |
-| `architect.md` | opus | System design, architecture decisions |
-| `chief-of-staff.md` | opus | Coordinates work across multiple agents |
-| `loop-operator.md` | sonnet | Manages autonomous agent loop execution |
-| `harness-optimizer.md` | sonnet | Optimizes agent harness configuration |
-| `code-reviewer.md` | sonnet | Code review against project standards |
-| `security-reviewer.md` | sonnet | Security-focused code review |
-| `tdd-guide.md` | sonnet | Enforces TDD workflow across implementation |
-| `build-error-resolver.md` | haiku | Diagnoses and fixes build failures |
-| `performance-optimizer.md` | sonnet | Identifies and resolves performance bottlenecks |
-| `doc-updater.md` | haiku | Keeps documentation in sync with code changes |
-| `refactor-cleaner.md` | sonnet | Code cleanup and refactoring without behavior change |
-| `python-reviewer.md` | sonnet | Python-specific review (Pythonic patterns, type hints) |
-| `typescript-reviewer.md` | sonnet | TypeScript-specific review (types, generics, patterns) |
-| `go-reviewer.md` | sonnet | Go-specific review (idiomatic Go, concurrency) |
+Agent role definitions have moved to the dedicated agent catalog.
+See [`agent-catalog/CATALOG.md`](../agent-catalog/CATALOG.md) for the
+full index of 22 agents across core, quality, design, product, AI-specialist,
+and meta categories.
 
 ---
 
@@ -126,8 +112,8 @@ cp -r skills-catalog/workflow/planning .claude/skills/
 cp -r skills-catalog/engineering/tdd-workflow .claude/skills/
 cp -r skills-catalog/engineering/verification-loop .claude/skills/
 cp -r skills-catalog/design/frontend-taste .claude/skills/
-cp skills-catalog/agents/planner.md .claude/agents/
-cp skills-catalog/agents/code-reviewer.md .claude/agents/
+cp future-reference/agent-catalog/core/planner.md .claude/agents/
+cp future-reference/agent-catalog/core/code-reviewer.md .claude/agents/
 ```
 
 **API / backend project:**
@@ -137,8 +123,8 @@ cp -r skills-catalog/engineering/api-design .claude/skills/
 cp -r skills-catalog/engineering/backend-patterns .claude/skills/
 cp -r skills-catalog/engineering/security-review .claude/skills/
 cp -r skills-catalog/engineering/database-migrations .claude/skills/
-cp skills-catalog/agents/architect.md .claude/agents/
-cp skills-catalog/agents/security-reviewer.md .claude/agents/
+cp future-reference/agent-catalog/core/architect.md .claude/agents/
+cp future-reference/agent-catalog/core/security-reviewer.md .claude/agents/
 ```
 
 **Production hardening / pre-launch:**
