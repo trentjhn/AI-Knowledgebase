@@ -201,6 +201,42 @@ A comprehensive framework identifies **six classes of attacks** targeting differ
 
 ---
 
+### RAG-Specific Attack Surfaces
+
+Retrieval-Augmented Generation introduces a new category of security risks distinct from inherent LLM vulnerabilities. While traditional LLM security focuses on prompt injection and output manipulation, RAG systems have additional attack surfaces because they depend on external knowledge sources and retrieval pipelines.
+
+The critical distinction: **not all RAG vulnerabilities are LLM vulnerabilities.** A vector database poisoning attack, for example, has no parallel in single-model systems. A compromised retrieval ranking algorithm behaves like a traditional information retrieval attack, not an LLM jailbreak. Conflating these leads to applying the wrong defenses.
+
+**Four Primary Attack Surfaces:**
+
+**1. Pre-Retrieval Knowledge Corruption**
+
+The attacker compromises the external knowledge source before it reaches the retrieval system. Examples: poisoning the vector database, corrupting the source documents, injecting malicious data into knowledge bases that feed the indexing pipeline.
+
+*Defense:* Integrity verification on stored documents, access controls on the knowledge source, periodic audits of retrieved content against a trusted baseline, cryptographic signing of critical data.
+
+**2. Retrieval-Time Access Manipulation**
+
+The attacker compromises the retrieval process itself—intercepting queries, manipulating ranking algorithms, or returning misleading results from genuine documents.
+
+*Defense:* Encryption of queries in transit, access controls on retrieval indexes, monitoring for retrieval anomalies (e.g., consistently returning low-quality results), redundant ranking verification.
+
+**3. Downstream Context Exploitation**
+
+The attacker crafts documents or knowledge entries specifically designed to manipulate the LLM when those entries are retrieved. Example: embedding hidden instructions in documents that get injected into the prompt alongside user queries.
+
+*Defense:* Prompt injection detection on retrieved content before injection into the LLM, content sanitization, flagging of potentially adversarial phrasing in retrieved documents, limiting the amount of untrusted content in context.
+
+**4. Knowledge Exfiltration**
+
+The attacker uses the RAG system to extract sensitive information from the knowledge base. Example: crafting queries that retrieve private documents, using the model's responses to infer the existence or content of confidential information.
+
+*Defense:* Fine-grained access controls on documents (user A can retrieve documents in category X, user B cannot), rate limiting on retrievals, monitoring for unusual retrieval patterns, query auditing.
+
+**Key Insight:** Current RAG deployments often treat the retrieval pipeline as trusted infrastructure — "if the documents are in our vector store, they're safe." This assumption breaks when the knowledge source is externally maintained, partially user-generated, or sourced from untrusted systems. Design RAG security around the principle that *retrieval output should be treated with the same scrutiny as user input.*
+
+---
+
 ## 5. Core Security Principles
 
 ### Principle of Least Privilege

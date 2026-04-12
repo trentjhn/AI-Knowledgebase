@@ -253,7 +253,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1,200+ lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1,260+ lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -262,13 +262,13 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 1–62 | Why AI agents require different security mindset |
 | 63–145 | Governance framework for AI agents |
 | 146–289 | OWASP LLM Top 10 threat landscape |
-| 290–512 | Deep dives: key attack vectors (injection, poisoning, model theft, etc.) |
-| **NEW:** | **Agent-Specific Attack Vectors: 6-trap taxonomy (Content Injection, Semantic Manipulation, Cognitive State, Behavioral Control, Systemic, Human-in-Loop) with empirical success rates** |
-| 513–718 | Core security principles: Zero Trust, least privilege, defense in depth |
-| 719–897 | Identity & Access Management for agents |
-| 898–1045 | AI Firewall / Gateway pattern |
-| 1046–1200 | Sandboxing: execution isolation (4 tiers) |
-| 1201–1350 | Monitoring, detection, DevSecOps |
+| 290–262 | Deep dives: key attack vectors (injection, poisoning, model theft, agent-specific, RAG-specific) |
+| **201–262** | **RAG-Specific Attack Surfaces: 4 primary surfaces (pre-retrieval corruption, retrieval-time manipulation, downstream context exploitation, knowledge exfiltration) with defense strategies; distinction between RAG risks vs. inherent LLM vulnerabilities** |
+| 321–576 | Core security principles: Zero Trust, least privilege, defense in depth |
+| 577–755 | Identity & Access Management for agents |
+| 756–903 | AI Firewall / Gateway pattern |
+| 904–1058 | Sandboxing: execution isolation (4 tiers) |
+| 1059–1208 | Monitoring, detection, DevSecOps |
 | **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
 
 ---
