@@ -375,6 +375,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 
 | Playbook | Best for | Key Topics |
 |----------|----------|-----------|
+| [**magnum-opus.md**](future-reference/playbooks/magnum-opus.md) | **All projects (master workflow)** | **9-phase scaffold workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Used by `/cook` skill. Routes to KB, never contains KB content.** |
 | [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
 | [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation, failure recovery, Claude Code Agent Teams deployment patterns |
@@ -383,6 +384,27 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 | [building-ai-saas.md](future-reference/playbooks/building-ai-saas.md) | AI-powered SaaS products | Pre-flight framework, 4 failure modes, Phase 0–3 build sequence, patterns worth repeating |
 | [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |
 | [project-template.md](future-reference/playbooks/project-template.md) | New projects | General AI project template structure |
+
+---
+
+---
+
+### future-reference/agent-catalog/ (22 agents)
+
+**Role definitions for the Sequential protocol agent pool**
+
+See [agent-catalog/CATALOG.md](future-reference/agent-catalog/CATALOG.md) for the flat index (name | self-select when | what it produces).
+
+| Category | Agents |
+|---|---|
+| `core/` | architect, planner, code-reviewer, doc-updater |
+| `quality/` | security-reviewer, tdd-guide, performance-optimizer, harness-optimizer, refactor-cleaner, build-error-resolver, go-reviewer, python-reviewer, typescript-reviewer |
+| `design/` | ux-researcher, ui-designer, design-system-architect, accessibility-reviewer, product-designer |
+| `product/` | product-strategist, spec-writer, technical-writer |
+| `ai-specialist/` | context-architect, eval-designer, prompt-engineer, kb-navigator |
+| `meta/` | chief-of-staff, loop-operator |
+
+Agents self-select roles via the Sequential protocol — not pre-assigned. See `agent-catalog/README.md` for the self-selection process and `agent-catalog/SOUL-TEMPLATE.md` for the functional personality template.
 
 ---
 
