@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (630+ lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (670+ lines)
 
 **Context as a first-class engineering discipline**
 
@@ -44,9 +44,10 @@
 | 60–131 | 8 context components: system prompt, user input, memory, RAG, tools, tool responses, state |
 | 132–204 | 4 core strategies: Write / Select / Compress / Isolate with examples |
 | 205–289 | 4 failure modes: Poisoning / Distraction / Confusion / Clash (with empirical evidence) |
+| **302–340** | **Failure Mode 5: Knowledge Integration Bottleneck in RAG — resolving conflicts between parametric knowledge & retrieved documents; joint decoding solution; 12.1% accuracy gain, 16.3% hallucination reduction** |
 | **219–233** | **Multi-agent isolation cost-benefit: DACS mechanism (Dynamic Attentional Context Scoping), empirical validation (90–98.4% steering accuracy, 3.53× context efficiency, 0–14% contamination vs. 28–57% baseline)** |
-| 290–406 | Custom context formats, ordering rules, long-term memory, workflow engineering |
-| 390–446 | Anti-patterns, tools, integration checklist |
+| 341–420 | Custom context formats, ordering rules, long-term memory, workflow engineering |
+| 410–466 | Anti-patterns, tools, integration checklist |
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
 | **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
 | **NEW:** 11. | Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |

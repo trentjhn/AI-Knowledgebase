@@ -301,6 +301,28 @@ Bigger context windows don't automatically mean better performance. More informa
 
 ---
 
+### Failure Mode 5: The Knowledge Integration Bottleneck (RAG-Specific)
+
+**What it is:** When a RAG system retrieves relevant documents, the model must decide: trust the retrieved information, or rely on what it already knows? This creates a *conflict* between external knowledge and internal parametric knowledge. When unresolved, the model either ignores the retrieved evidence (using its training data instead) or produces incoherent answers that blend conflicting sources.
+
+**Why it matters in RAG:** Traditional RAG assumes that injecting retrieved chunks into the prompt is sufficient to ground the answer. But this overlooks a deeper problem: **the model has two competing sources of truth.** Its parametric knowledge (learned during training) and the retrieved documents (injected at runtime) often conflict. Without an explicit mechanism to resolve this conflict, the model falls back on whichever knowledge feels more coherent or confident — which is often the parametric knowledge it trained on.
+
+**Empirical impact:** Research shows that even with perfect retrieval (100% of relevant documents retrieved), models fail to leverage them effectively due to this integration bottleneck. Empirical work quantifies this: 12.1% accuracy improvement and 16.3% hallucination reduction when using explicit knowledge integration mechanisms vs. standard RAG prompting.
+
+**The resolution mechanism:** Rather than hoping the model will "just use" retrieved information, explicitly separate parametric reasoning from evidence integration:
+
+1. **Stage 1 (Inner Answer):** Generate a response using only the model's parametric knowledge, preserving logical coherence
+2. **Stage 2 (Refer Answer):** Generate an evidence-grounded response trained to treat parametric knowledge as negative constraints (via contrastive training)
+3. **Stage 3 (Joint Decoding):** Dynamically fuse both outputs at the token level, balancing coherence with factual accuracy
+
+**How to protect against it:**
+- For basic RAG: Use explicit grounding instructions — "Answer only using the provided documents; if the documents don't contain the answer, say 'Not found'"
+- For higher accuracy: Implement explicit evidence-citation mechanisms that force the model to cite which retrieved chunk each fact comes from
+- Validate: Test on queries where parametric knowledge contradicts retrieved evidence; verify the model uses retrieved docs, not training data
+- Monitor: Track hallucination rates on factual queries; if high despite good retrieval, knowledge integration bottleneck is the likely culprit
+
+---
+
 ### The Agent Vulnerability Problem
 
 Agents are uniquely susceptible to all four failure modes *simultaneously*. In a single agentic session, an agent might:

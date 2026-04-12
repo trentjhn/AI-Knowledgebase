@@ -160,6 +160,34 @@ The retrieved chunks are injected into the prompt alongside the user's question.
 
 ---
 
+#### Advanced: Resolving Knowledge Integration Conflicts
+
+**When to use:** Your RAG system achieves good retrieval but still produces hallucinations or ignores retrieved information. This typically means the model is defaulting to parametric knowledge when it conflicts with retrieved evidence.
+
+**The Problem:** Standard RAG assumes that injecting retrieved chunks into the prompt is enough. But models have two competing knowledge sources — training data (parametric) and documents (retrieved). When these conflict, the model often trusts its training data instead.
+
+**Solution: Explicit Integration Mechanism**
+
+**Option 1 (Low Effort): Citation Forcing**
+- Modify generation prompt: "For each fact, cite which document it came from: [fact] (Source: [chunk ID])"
+- Validation: Spot-check — does it cite? If it fabricates citations, retrieval wasn't high-quality
+- Trade-off: Simple to implement, but doesn't guarantee correct knowledge integration
+
+**Option 2 (Higher Effort): Joint Decoding / Contrastive Training**
+- Generate two responses: one using parametric knowledge (for coherence), one using only retrieved docs (for accuracy)
+- Use contrastive training to prefer evidence-grounded responses when they conflict with parametric knowledge
+- Fuse outputs at token level to balance both
+- Trade-off: 12%+ accuracy gain, 16%+ hallucination reduction, but requires fine-tuning access
+
+**Decision:** Use Option 1 for quick validation. If hallucination remains high despite good retrieval, invest in Option 2.
+
+**Validation:**
+- [ ] On 10 test queries, is retrieved evidence cited correctly?
+- [ ] On 5 queries where docs contradict model's training data, does it use docs?
+- [ ] Hallucination rate on factual QA measured against ground truth
+
+---
+
 ### Step 1.5: Commit Phase 1
 
 **Action:**
