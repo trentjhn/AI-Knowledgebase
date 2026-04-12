@@ -15,6 +15,8 @@ Personal AI knowledge library. Distilled, practitioner-depth reference docs on A
 
 When any project idea, system design, or problem is described: scan these signals and surface matching pattern(s) *before* implementation. Multiple signals can fire simultaneously — surface all matches and frame the decision explicitly. Never pick one silently.
 
+**Navigation:** Patterns below identify the right *doc*. For section-level routing within large docs (especially `agentic-engineering.md`, `evaluation.md`, `ai-security.md`), consult `KB-INDEX.md` first — it has exact line ranges and section descriptions for every file. Read the targeted section, not the full doc.
+
 **Reference format below:** Full path from KB root for direct Read access.
 
 ### Multi-Agent Architecture
