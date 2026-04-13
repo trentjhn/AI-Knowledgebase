@@ -227,6 +227,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
 | 527–543 | Anti-patterns |
 | **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
+| **NEW:** 14 (ext.) | **Collective Skill Evolution (SkillClaw, Ma et al. 2026): trajectory aggregation across users → autonomous evolver → shared repository; failure modes (domain mismatch, skill bloat, degradation); relationship to individual instincts** |
 
 ---
 

@@ -927,6 +927,43 @@ CLAUDE.md inclusion:
 - [ ] Deprecate: remove instincts that regress (confidence drops)
 - [ ] Document instinct evolution in session logs (learning history)
 
+### The Collective Evolution Extension: Beyond One User
+
+The instincts architecture above describes individual skill evolution — one user, one agent, one set of learned patterns. SkillClaw (Ma et al. 2026) proposes the natural extension: **collective evolution** across a multi-user ecosystem.
+
+The core observation is that in any deployed agent system, multiple users are independently discovering the same useful patterns. Individual instinct systems are siloed — a user in Tokyo validates a pattern that a user in Chicago independently discovers three weeks later. Collective evolution aggregates those trajectories into shared knowledge.
+
+**The mechanism:**
+
+```
+Individual (Instincts)          Collective (SkillClaw)
+
+User A → instinct (0.65)        User A trajectory ──┐
+                                User B trajectory ──┼─→ Evolver → shared skill update
+                                User C trajectory ──┘         ↓
+                                                    All users benefit
+```
+
+1. **Collect** interaction trajectories from multiple users (successful task logs)
+2. **Extract** common patterns via an autonomous evolver agent
+3. **Formalize** recurring patterns into skill definitions
+4. **Validate** by re-executing against representative tasks
+5. **Propagate** updates to the shared repository — all agents immediately benefit
+
+**The key architectural shift:** Skills become a living commons rather than static templates. New users inherit community-validated patterns from day one. Improvements discovered in one context propagate to all — without any individual user having to write or promote a new skill.
+
+**Failure modes to design against:**
+- *Domain mismatch:* Skills evolved in one context may not generalize (a coding trajectory becoming a skill that breaks writing workflows)
+- *Skill degradation:* Patterns evolved for common cases accumulate edge cases over time
+- *Repository bloat:* Without pruning, the repository grows with conflicting or overlapping skills
+- *User heterogeneity:* Diverse interaction styles make universal formalization fragile
+
+**Relationship to instincts:** These are not competing systems. Individual instincts capture single-user learning quickly; collective evolution aggregates across users. In a mature deployment, both layers operate: instincts for rapid personal capture, collective evolver for community-validated promotion.
+
+*Note: SkillClaw was "work in progress" at publication (April 2026) — specific benchmark numbers were not yet available. The architectural pattern is sound; treat empirical claims with caution until full results publish.*
+
+(Source: Ma et al. 2026, "SkillClaw: Let Skills Evolve Collectively with Agentic Evolver," arXiv:2604.08377)
+
 ---
 
 ## 15. Reliable Skill Invocation — The Activation Problem
