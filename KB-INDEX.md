@@ -2,7 +2,7 @@
 
 **Purpose:** Find a concept quickly without reading entire files. KB is organized by learning path: Foundations → Agents & Systems → Production.
 
-**Total KB:** ~9,300 lines across 13 learning docs + 8 playbooks + 22 agents + prompt catalog + PM context. Use this index to find exact sections.
+**Total KB:** ~9,300 lines across 14 learning docs + 9 playbooks + 24 agents + prompt catalog + PM context. Use this index to find exact sections.
 
 ---
 
@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (670+ lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (870+ lines)
 
 **Context as a first-class engineering discipline**
 
@@ -51,6 +51,8 @@
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
 | **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
 | **NEW:** 11. | Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |
+| **NEW:** 12. | Context Compaction — threshold guidance (5K–150K), 58.6% token reduction on sequential workflows, tool result clearing (96.3% bloat reduction), automatic summarization pattern |
+| **NEW:** 13. | Speculative Prompt Caching — 90.7% TTFT improvement (20.87s → 1.94s), parallel cache warming during user input, requirements for cache hit |
 
 ---
 
@@ -111,6 +113,25 @@ Type: Informed observer tracking a fast-moving frontier — not a practitioner h
 ## 📚 LEARNING / AGENTS & SYSTEMS — Building (Mid-Level)
 
 Prerequisites: Complete FOUNDATIONS first.
+
+---
+
+### LEARNING/AGENTS_AND_SYSTEMS/agent-sdk/agent-sdk.md (~450 lines) *(NEW)*
+
+**Claude Agent SDK implementation patterns — the how-to layer above agentic concepts**
+
+| Lines | Section |
+|---|---|
+| 1–60 | SDK vs. base API — what's different; core abstractions (query, sessions, Task tool, vaults) |
+| 61–120 | Pattern 1: Research Agent — stateless query, allowed_tools, specialization |
+| 121–200 | Pattern 2: Chief-of-Staff — Task tool delegation, context isolation, orchestrator-only rule |
+| 201–260 | Pattern 3: Parallel Subagents — model tiering (Opus orchestrates, Haiku workers), ThreadPoolExecutor, cost math |
+| 261–320 | Pattern 4: Programmatic Tool Calling (PTC) — code execution vs. round trips, filtering at code level |
+| 321–370 | Pattern 5: Semantic Tool Routing — embedding-based discovery, 90%+ context reduction, deferred loading |
+| 371–410 | Pattern 6: Evaluator-Optimizer Loop — PASS/NEEDS_IMPROVEMENT/FAIL signals, iteration caps |
+| 411–435 | Decision framework — choosing between patterns |
+| 436–460 | Cost optimization — model tiering table, context isolation, parallel execution economics |
+| 461–480 | Anti-patterns — orchestrators doing domain work, shared context, no exit conditions |
 
 ---
 
@@ -399,6 +420,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 | [cost-optimized-llm-workflows.md](future-reference/playbooks/cost-optimized-llm-workflows.md) | Cost control | Model routing (Haiku/Sonnet/Opus), budget enforcement, retry strategies |
 | [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
 | [building-ai-saas.md](future-reference/playbooks/building-ai-saas.md) | AI-powered SaaS products | Pre-flight framework, 4 failure modes, Phase 0–3 build sequence, patterns worth repeating |
+| [production-agent-patterns.md](future-reference/playbooks/production-agent-patterns.md) | Production agent deployment | HITL approval workflows (sync dev + async webhook), stateful orchestration, credential vaults, prompt versioning, event-driven integration |
 | [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |
 | [project-template.md](future-reference/playbooks/project-template.md) | New projects | General AI project template structure |
 
@@ -406,7 +428,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 
 ---
 
-### future-reference/agent-catalog/ (22 agents)
+### future-reference/agent-catalog/ (24 agents)
 
 **Role definitions for the Sequential protocol agent pool**
 

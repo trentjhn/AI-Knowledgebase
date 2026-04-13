@@ -15,6 +15,8 @@
 7. [Practical Principles](#practical-principles)
 8. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
 9. [Tools & Frameworks](#tools--frameworks)
+12. [Context Compaction — When and How to Summarize](#12-context-compaction--when-and-how-to-summarize)
+13. [Speculative Prompt Caching](#13-speculative-prompt-caching)
 
 ---
 
@@ -714,3 +716,126 @@ Iterative (3 cycles):
 The loop pays for itself through higher quality and lower total context usage. Real-world improvements depend on context complexity and orchestrator quality.
 
 ---
+
+## 12. Context Compaction — When and How to Summarize
+
+**Source:** Anthropic Claude Cookbooks — `tool_use/automatic-context-compaction.ipynb` *(2025)*
+
+Long-running agent tasks accumulate context fast. After 20+ tool calls with large results, the conversation history can balloon to hundreds of thousands of tokens — most of it no longer relevant to the current step. Context compaction is the practice of periodically summarizing accumulated history into a compact representation and replacing the original with the summary.
+
+### The Core Tradeoff
+
+Compaction is lossy by design. It trades exact recall of prior turns for token efficiency. The question is always: *what do you need to remember exactly, and what's safe to compress?*
+
+Generally safe to compress: tool call outputs (especially file reads, API responses, intermediate results), conversational back-and-forth, intermediate reasoning steps.
+
+Generally not safe to compress: the original task definition and constraints, key decisions made and their rationale, error states and recovery actions taken, structured outputs still needed downstream.
+
+A good compaction preserves the *semantic state* of the task (what do I know, what have I done, what remains) while discarding the *operational detail* (the exact content of every file read, every API response, every intermediate step).
+
+### Automatic Compaction Pattern
+
+The most reliable compaction approach is token-threshold-triggered: monitor cumulative token usage and inject a compaction request when you hit a threshold.
+
+```python
+COMPACTION_THRESHOLD = 80_000  # tokens
+
+if total_tokens_used > COMPACTION_THRESHOLD:
+    # Inject summary request
+    messages.append({
+        "role": "user",
+        "content": """Before continuing, summarize the work so far into a compact context block:
+        <summary>
+        TASK: [original goal and constraints]
+        COMPLETED: [what has been done]
+        DISCOVERED: [key facts learned]
+        PENDING: [what remains]
+        ERRORS: [failures encountered and recovery taken]
+        </summary>
+        """
+    })
+    summary = get_completion(messages)
+    # Replace full history with just the summary
+    messages = [{"role": "assistant", "content": summary}]
+```
+
+**Measured impact (from cookbook benchmarks):** A 5-ticket processing workflow using this pattern achieved 58.6% token reduction (204K → 82K tokens) without losing critical task state.
+
+### Threshold Guidance
+
+The right compaction threshold depends on task type:
+
+| Task type | Recommended threshold | Rationale |
+|---|---|---|
+| Iterative tasks with clear checkpoints | 5K–20K tokens | Frequent compaction keeps context tight |
+| Multi-phase workflows | 50K–100K tokens | Preserve context across phase boundaries |
+| Deep investigation tasks | 100K–150K tokens | Rich context needed for synthesis |
+
+**For this knowledge base specifically:** Long sessions with many file reads and tool calls benefit from compaction around 50K–80K tokens. When a session is getting slow or the model seems to be losing track of earlier context, `/compact` in Claude Code is the practical application of this pattern.
+
+### Tool Result Clearing
+
+A more surgical alternative to full compaction: clear tool call *outputs* while preserving the tool call *record*. This works when the data in tool results can be re-fetched if needed.
+
+```python
+for message in messages:
+    if message["role"] == "tool":
+        if is_refetchable(message):  # file reads, API calls
+            message["content"] = "[cleared — re-fetch if needed]"
+        # keep: decisions, errors, important state
+```
+
+**When this helps:** File read outputs are often re-fetchable. After reading 20 files to understand a codebase, keeping the record that you read them (and what you concluded) is valuable. Keeping all 20 full file contents is often not. Clearing outputs while preserving records gives you the audit trail without the token cost.
+
+**Benchmark:** In one cookbook example, file read outputs accounted for 96.3% of context bloat in a code exploration workflow. Clearing those outputs while preserving records reduced context by ~90% with minimal loss of task state.
+
+---
+
+## 13. Speculative Prompt Caching
+
+**Source:** Anthropic Claude Cookbooks — `misc/speculative_prompt_caching.ipynb` *(2025)*
+
+Prompt caching saves money by reusing cached prefixes across calls. But a standard cached call still has cold-start latency on the first call — the cache doesn't exist until the first request completes. For interactive systems where a user types a message and waits for a response, this first-call latency is the full time-to-first-token (TTFT).
+
+Speculative caching eliminates this cold-start penalty by pre-warming the cache *while the user is still typing*.
+
+### How It Works
+
+```
+User starts typing →
+                   → immediately send warming request:
+                     {messages: [system_prompt, "x"], max_tokens: 1}
+                     (single token, no meaningful computation)
+                   → cache created for system_prompt prefix
+User hits send →
+                   → real request with identical system_prompt
+                   → cache hit on prefix (0.1× cost, near-zero TTFT)
+                   → response streams immediately
+```
+
+The warming request uses a throwaway single-token message to trigger cache creation. The actual request uses the same system prompt prefix, which is now cached. Cache creation and user input happen in parallel.
+
+**Measured impact:** 90.7% TTFT improvement in cookbook benchmarks — from 20.87 seconds to 1.94 seconds for a large system prompt.
+
+### Requirements for Cache Hits
+
+For the warming request and the real request to share a cache hit, the context up to the cache breakpoint must be **byte-for-byte identical**. This means:
+- Same system prompt (no dynamic fields that vary per-user)
+- Same few-shot examples
+- Same tool definitions (if tools are part of the cacheable prefix)
+
+If your system prompt is personalized per-user (e.g., includes the user's name or preferences), you can't share a single warm cache across all users. You'd need per-user cache warming, which changes the economics.
+
+### When This Matters
+
+Speculative caching has the highest impact when:
+- System prompts are large (> 1,000 tokens) — larger prefix = bigger cold-start penalty
+- Requests are interactive (user is waiting) — TTFT directly affects perceived responsiveness
+- The same system prompt is used across many requests — high cache hit rate justifies the warming overhead
+- Your API costs are significant — cache hits are ~10× cheaper than cache misses
+
+For this knowledge base: `/compact` operations that produce large compressed contexts are good candidates for speculative warming if you're building an interactive KB-based tool.
+
+### Relationship to Standard Prompt Caching
+
+Speculative caching is an optimization *on top of* prompt caching, not a replacement. Standard prompt caching reduces cost for repeated calls with the same prefix. Speculative caching eliminates the latency penalty of the first call. Use both together for maximum benefit on interactive systems.

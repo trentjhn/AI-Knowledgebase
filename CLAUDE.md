@@ -68,6 +68,14 @@ Signals: "requirements aren't clear," "keeps getting the wrong output," "scope c
 Signals: "too slow at inference," "serving costs too high," "self-hosting," "latency matters," "high throughput," "10M+ tokens/day," "quantization"
 → `LEARNING/PRODUCTION/inference-optimization/inference-optimization.md`
 
+**AGENT SDK PATTERNS** — implementing agents with Anthropic's SDK (sessions, Task tool, subagents)
+Signals: "how do I actually build this," "spawn a subagent," "Task tool," "parallel agents," "programmatic tool calling," "semantic tool routing," "evaluator-optimizer," "chief-of-staff agent," "model tiering"
+→ `LEARNING/AGENTS_AND_SYSTEMS/agent-sdk/agent-sdk.md`
+
+**PRODUCTION AGENT PATTERNS** — deploying agents safely with real users and credentials
+Signals: "human in the loop," "approval workflow," "agent in production," "credential management," "vault," "prompt versioning," "rollback prompt," "webhook," "stateful agent," "HITL"
+→ `future-reference/playbooks/production-agent-patterns.md`
+
 ### Tooling
 **MCP** — connecting AI to external systems, tools, APIs
 Signals: "connect to [external tool]," "give the agent access to," "tool integrations," "Claude needs to call [API]," "build an MCP server," "external system access"

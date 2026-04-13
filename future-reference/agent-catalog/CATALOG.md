@@ -31,6 +31,7 @@ prior outputs. Select the role that fills the most critical gap.
 | [go-reviewer](quality/go-reviewer.md) | Go code needs idiomatic review | Go-specific review: error handling, concurrency, patterns |
 | [python-reviewer](quality/python-reviewer.md) | Python code needs idiomatic review | Python-specific review: types, patterns, Pythonic style |
 | [typescript-reviewer](quality/typescript-reviewer.md) | TypeScript code needs type safety and pattern review | TS-specific review: type correctness, safety, patterns |
+| [evaluator](quality/evaluator.md) | Output quality needs structured assessment; evaluator-optimizer loop needed; pass/fail criteria must be enforced | Structured evaluation with PASS/NEEDS_IMPROVEMENT/FAIL signal and specific improvement guidance |
 
 ## Design — First-Class (not optional for UI projects)
 
@@ -58,6 +59,7 @@ prior outputs. Select the role that fills the most critical gap.
 | [eval-designer](ai-specialist/eval-designer.md) | AI feature about to be implemented (required pre-condition); quality needs measuring | Eval spec, test set, automated eval harness, baseline |
 | [prompt-engineer](ai-specialist/prompt-engineer.md) | System prompt needs construction; outputs inconsistent; technique selection needed | System prompt, few-shot examples, test results |
 | [kb-navigator](ai-specialist/kb-navigator.md) | Task requires KB knowledge; pattern recognition fired; best practices needed | Relevant KB sections with synthesis and decision recommendation |
+| [data-analyst](ai-specialist/data-analyst.md) | Data analysis needed; code execution + tool use required; structured insights from datasets | Analysis report with findings, visualizations spec, and actionable conclusions |
 
 ## Meta — Coordination
 
