@@ -2972,6 +2972,59 @@ Treating context as a casual prose document leads to unreliable agents. Treating
 
 ---
 
+### Externalization: The Cognitive Architecture Lens
+
+> Modern agent progress is increasingly driven by reorganizing infrastructure, not upgrading model weights.
+
+This framing, from Zhou et al. 2026, offers a useful architectural lens: the history of LLM agents is a story of **externalization** — progressively moving cognitive functions that used to live inside model parameters into dedicated external systems. When you add a vector database for memory, a skill library for procedures, or a harness that enforces approval gates, you're externalizing cognition.
+
+This matters because it shifts how you diagnose agent failures. Rather than asking "does my model understand the task?" you ask: "which cognitive function is inadequately externalized?"
+
+**The three-layer evolution:**
+
+```
+Weights layer:  Knowledge, behavior, and skills are baked into model parameters.
+                Durable but static — changing them requires retraining.
+
+Context layer:  Dynamic information flows in via the context window.
+                Flexible but ephemeral — gone when the session ends.
+
+Harness layer:  Runtime infrastructure (memory stores, skill libraries, protocols,
+                orchestration) persists beyond any single model call.
+                The emerging design frontier.
+```
+
+Modern agent development operates primarily at the harness layer. Models haven't changed as fast as the infrastructure wrapping them.
+
+**The four externalization types:**
+
+| Dimension | What's Externalized | Why It Matters |
+|---|---|---|
+| **Memory** | State across time — working context, episodic experience, semantic knowledge | Without memory externalization, agents reset with every session |
+| **Skills** | Procedural expertise — reusable procedures, decision heuristics, normative constraints | Without skill externalization, behavior must be re-specified in every prompt |
+| **Protocols** | Interaction structure — agent-tool, agent-agent, agent-user contracts (MCP is the canonical example) | Without protocol externalization, each integration is bespoke |
+| **Harness** | Runtime coordination — orchestration, sandboxing, human oversight, observability, context budget management | The unifying layer; coordinates Memory, Skills, and Protocols |
+
+The Harness is architecturally distinct: it's not a fourth *type* of externalization — it's the runtime environment within which the other three operate.
+
+**Failure modes through this lens:**
+
+The externalization model reframes common agent failures as representational mismatches — a cognitive function that should be externalized still lives (poorly) in the prompt or the model:
+
+- *Stale memories:* The memory store misrepresents current state (externalized, but not maintained)
+- *Context flooding:* Memory retrieves too much (externalization without relevance filtering)
+- *Prompt bloat:* Procedural knowledge lives in the system prompt instead of a skill library (not yet externalized)
+- *Bespoke integrations:* Tool interfaces are hand-coded per agent instead of protocol-governed (not yet externalized)
+- *Unsafe skill composition:* Combining externalized skills creates boundary conditions neither skill anticipated
+
+**Relationship to the Four Pillars:**
+
+This mental model doesn't replace the Four Pillars (Prompt, Model, Context, Tool Use) — it sits above them as a *why*. The Pillars describe what you're configuring; externalization explains the architectural trend of where those configurations are moving. Tools become protocols; context becomes memory stores; prompts become skill libraries.
+
+(Source: Zhou et al. 2026, "Externalization in LLM Agents," arXiv:2604.08224)
+
+---
+
 ## 10. Agent Frameworks
 
 Four major frameworks for building agentic systems, each with a distinct philosophy:

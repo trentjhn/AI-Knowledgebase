@@ -153,6 +153,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **1018–1055** | **Fundamental Limits on Delegation: Information-theoretic bounds on multi-agent planning (Ao et al. 2026). Delegated agents improve outcomes only with asymmetric information. Communication bottleneck creates information loss (posterior divergence). Practical architecture guidance for when to centralize vs. distribute** |
 | 2075–2330 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
 | 2331–2531 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
+| **~2973–3030** | **Externalization: Cognitive Architecture Lens (Zhou et al. 2026) — Weights→Context→Harness evolution; 4-element taxonomy (Memory/Skills/Protocols/Harness); failure modes as representational mismatches; relationship to Four Pillars** |
 | 2772–2863 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
 | 2865–2935 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
 | 2936–2990 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
