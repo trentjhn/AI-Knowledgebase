@@ -64,5 +64,6 @@ definitions) and prompts (templates).
 | [strategic-compact](production/strategic-compact/) | Context is approaching limits; compaction needed | Strategic context compaction (50% threshold rule) |
 | [eval-harness](production/eval-harness/) | AI system needs automated evaluation setup | Eval harness scaffolding and framework selection |
 | [cost-aware-llm-pipeline](production/cost-aware-llm-pipeline/) | LLM costs need optimization; model routing needed | Cost optimization: Haiku/Sonnet/Opus routing |
-| [deployment-patterns](production/deployment-patterns/) | Deployment architecture needed; production setup | Deployment patterns for AI systems |
+| [deployment-patterns](production/deployment-patterns/) | Deployment architecture needed; CI/CD setup; Docker; blue-green/canary strategies | Deployment strategies, Dockerfiles, GitHub Actions pipeline, health checks, rollback commands |
+| [pre-ship](production/pre-ship/) | "Ready to ship", "deploy to production", "going live", "launch" | Pre-deploy safety gate: security + database + infrastructure + code quality + monitoring checklist. Check-in first, never auto-runs. |
 | [continuous-learning](production/continuous-learning/) | Agent needs to improve from interactions; instinct system needed | Continuous learning via micro-skills and confidence scoring |
