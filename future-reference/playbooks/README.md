@@ -172,6 +172,7 @@ Every step must reference at least one KB section.
 | **building-ai-agents.md** | Multi-step autonomous task | Research agent, workflow automation, data processing | 5+ |
 | **building-rag-pipelines.md** | Document retrieval & ranking | Search internal docs, extract structured info | 4+ |
 | **building-chatbots.md** | Real-time conversation | User interaction, multi-turn state | 4+ |
+| **building-professional-websites.md** | Marketing site / static frontend | Landing pages, portfolio sites, product marketing sites | 4+ |
 | **writing-production-prompts.md** | Single LLM call | Classification, generation, summarization | 3+ |
 
 ---

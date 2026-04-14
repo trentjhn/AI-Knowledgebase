@@ -40,7 +40,7 @@ The intake phase has one job: capture what the project actually is before anyone
 
 2. **One-sentence capture** — Ask: "Describe the project in one sentence — what problem does it solve for whom?" The sentence should be problem-focused, not solution-focused. "I want to build an AI that reads PDFs" is solution-focused. "Researchers spend 30 minutes skimming papers to decide if they're worth reading" is problem-focused. If the description is solution-focused, push back: "What problem causes you to want that solution?"
 
-3. **Run CLAUDE.md pattern recognition** — Apply the pattern rubric from CLAUDE.md to the one-sentence description. Multiple patterns can fire simultaneously. Surface all matches — don't pick one silently. If agent teams, RAG, and evaluation all fire, say so explicitly and frame the decision about which to prioritize.
+3. **Read and apply CLAUDE.md pattern recognition** — First, explicitly read `/Users/t-rawww/AI-Knowledgebase/CLAUDE.md` into context. If /cook is invoked from a project directory rather than the KB root, Claude Code will not auto-load the KB's CLAUDE.md — it must be read directly. Then apply the pattern rubric to the one-sentence description. Multiple patterns can fire simultaneously. Surface all matches — don't pick one silently. If agent teams, RAG, and evaluation all fire, say so explicitly and frame the decision about which to prioritize.
 
 4. **Route to KB-INDEX.md** — For each fired pattern, read the corresponding KB section. Use KB-INDEX.md to find exact line ranges. Read targeted sections only — never the full doc. The KB is dense; targeted reads are the only sustainable way to use it.
 
@@ -96,7 +96,13 @@ Decision heuristic: use single agent for most tasks. Use hierarchical multi-agen
 
 **Playbook selection:**
 
-Based on type and complexity, select from `future-reference/playbooks/README.md`. For AI projects, `building-ai-agents.md` is the primary playbook. For RAG, `building-rag-pipelines.md`. For products with AI features, both apply. For SaaS products, `building-ai-saas.md` adds the four failure mode pre-flight check.
+Based on type and complexity, select from `future-reference/playbooks/README.md`:
+
+- **AI/agentic projects** → `building-ai-agents.md` (primary); add `building-rag-pipelines.md` if retrieval is needed; add `building-ai-saas.md` for the four failure mode pre-flight check
+- **Marketing sites and static frontends** → `building-professional-websites.md` — this playbook includes Lighthouse performance gate, Core Web Vitals targets, responsive QA at fixed breakpoints, and OG/metadata pass; do not use the AI agent or SaaS playbooks for these projects
+- **Conversational products** → `building-chatbots.md`
+- **Single LLM call pipelines** → `writing-production-prompts.md`
+- **Hybrid projects** → apply all matching playbooks; state explicitly which takes precedence when they conflict
 
 **Gate:** Project type confirmed. Playbooks selected. Multi-agent decision made and written down with a one-sentence justification.
 
@@ -267,7 +273,9 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 │   └── plans/
 │       ├── design.md       ← all Phase 2 decisions with rationale
 │       └── implementation.md ← ordered build plan grounded in KB
-└── .sessions/[project-name]/  ← local workspace, never committed to git
+└── .sessions/
+    ├── [project-name]/     ← local workspace, never committed to git
+    └── handoffs/           ← session continuity logs, never committed; write a handoff here before ending each session; most recent non-superseded file is source of truth
 ```
 
 **For AI projects, additionally:**
@@ -278,7 +286,7 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **File-by-file rationale:**
 
-`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the reference to SOUL.md. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints.
+`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the reference to SOUL.md. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints. Required rules in every project CLAUDE.md: (1) "Read SOUL.md before anything else." (2) "At session start, check `.sessions/handoffs/` for the most recent non-superseded handoff and load it before doing anything else."
 
 `AGENTS.md` defines the mission in one sentence and the phase ordering for multi-agent work. It does NOT assign specific agents to specific tasks — that is the Sequential protocol's job. AGENTS.md gives agents the context they need to self-select appropriate roles.
 
@@ -290,6 +298,8 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **Done-gate checklist — verify before reporting scaffold complete:**
 - [ ] All required files present and non-empty
+- [ ] `.claude/agents/` contains at least one agent definition file — run `ls .claude/agents/` to confirm; directory existing is not sufficient
+- [ ] `.claude/skills/` contains at least one skill file — run `ls .claude/skills/` to confirm; directory existing is not sufficient
 - [ ] `docs/kb-references.md` has entries for every load-bearing KB section from Phase 0
 - [ ] `docs/plans/design.md` captures all Four Pillars, topology, error contract, and character design
 - [ ] `SOUL.md` reflects Phase 2 character decisions, not just the default template text
