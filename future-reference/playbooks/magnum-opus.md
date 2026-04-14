@@ -265,8 +265,8 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 ├── README.md           ← project overview, quick start, how to use the scaffold
 ├── .gitignore
 ├── .claude/
-│   ├── agents/         ← selected role definitions from agent-catalog/
-│   ├── skills/         ← selected skills from skills-catalog/
+│   ├── agents/         ← run cp for each agent selected in Phase 3; verify with ls after
+│   ├── skills/         ← run cp -r for each skill selected in Phase 3; verify with ls after
 │   └── settings.json   ← hook configurations
 ├── docs/
 │   ├── kb-references.md    ← POINTERS ONLY (file + line ranges, never content copies)
@@ -286,7 +286,7 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **File-by-file rationale:**
 
-`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the reference to SOUL.md. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints. Required rules in every project CLAUDE.md: (1) "Read SOUL.md before anything else." (2) "At session start, check `.sessions/handoffs/` for the most recent non-superseded handoff and load it before doing anything else."
+`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the reference to SOUL.md. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints. Required rules in every project CLAUDE.md: (1) "Read SOUL.md before anything else." (2) "At session start, check `.sessions/handoffs/` for the most recent non-superseded handoff and load it before doing anything else." (3) "After completing any meaningful chunk of work — a component, a page, a feature, a spec section — read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate."
 
 `AGENTS.md` defines the mission in one sentence and the phase ordering for multi-agent work. It does NOT assign specific agents to specific tasks — that is the Sequential protocol's job. AGENTS.md gives agents the context they need to self-select appropriate roles.
 
