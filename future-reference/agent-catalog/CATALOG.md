@@ -67,3 +67,5 @@ prior outputs. Select the role that fills the most critical gap.
 |---|---|---|
 | [chief-of-staff](meta/chief-of-staff.md) | Multi-agent coordination is breaking down; task routing needs oversight | Coordination plan, task assignments, escalation handling |
 | [loop-operator](meta/loop-operator.md) | Agent is in a loop pattern; loop execution needs monitoring and quality gates | Loop execution with checkpoint validation |
+| [scout](meta/scout.md) | Brownfield or unfamiliar codebase needs mapping before builders start; architecture, patterns, and constraints are unknown | Codebase map, architecture assessment, constraint list, pattern inventory — strictly read-only |
+| [merger](meta/merger.md) | Parallel agent branches completed on separate worktrees and need reconciliation into a target branch | Clean merge with tiered conflict resolution, test-verified integration, conflict resolution log |
