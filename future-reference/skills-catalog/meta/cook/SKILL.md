@@ -126,6 +126,7 @@ Write these two sections using the exact skill names confirmed in Phase 3, in th
 
 **Generation Step B — Populate AGENTS.md Role Directory:**
 Add a `## Role Directory` section to AGENTS.md. One row per agent in `.claude/agents/`. Each row: agent filename without .md extension, model tier (haiku/sonnet/opus), and a project-specific trigger condition written for this project's context — not a generic catalog description. Add this self-healing note below the table: "If `.claude/agents/` contains files not listed here, Glob the directory, read those files, and add them before proceeding."
+Add this fallback row below the note: "If no agent matches the trigger for a task, handle inline — do not force delegation."
 
 **Generation Step C — Annotate implementation.md tasks with Agent:**
 For every task in `docs/plans/implementation.md`, add `**Agent: [agent-name]**` on the line after the task description, using the Role Directory to assign. Tasks with no matching agent get: `**Agent: inline — no delegation.**` This annotation is what executing-plans reads to dispatch `.claude/agents/` definitions.
