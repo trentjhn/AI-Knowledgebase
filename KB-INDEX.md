@@ -415,7 +415,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 
 | Playbook | Best for | Key Topics |
 |----------|----------|-----------|
-| [**magnum-opus.md**](future-reference/playbooks/magnum-opus.md) | **All projects (master workflow)** | **9-phase scaffold workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Used by `/cook` skill. Routes to KB, never contains KB content.** |
+| [**magnum-opus.md**](future-reference/playbooks/magnum-opus.md) *(400 lines)* | **All projects (master workflow)** | **9-phase scaffold workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Used by `/cook` skill. Routes to KB, never contains KB content. Phase 4 expanded (2026-04-16): CLAUDE.md 3-section rationale (Session Start Protocol 7-step, Development Workflow, Required Rules); AGENTS.md Role Directory vs. Sequential Protocol Ordering distinction; 3 Generation Steps (A: CLAUDE.md sections, B: Role Directory, C: implementation.md Agent: annotations); 4 new done-gate checklist items; maintenance contract row for mid-project agent additions.** |
 | [**meta-workflow.md**](future-reference/playbooks/meta-workflow.md) | **All projects (meta-layer)** | **6 phases (ideation → spec → design → build → harden → deploy → operate), decision matrices, failure taxonomy, playbook selector** |
 | [autonomous-agent-loops.md](future-reference/playbooks/autonomous-agent-loops.md) | Choosing loop patterns | Sequential, iterative, infinite, RFC-DAG, REPL, cleanup with quality gates |
 | [multi-agent-orchestration.md](future-reference/playbooks/multi-agent-orchestration.md) | Building multi-agent systems | 13-agent model, parallel execution, context isolation (DACS contamination prevention), failure recovery, Claude Code Agent Teams deployment patterns |
@@ -467,6 +467,12 @@ See [skills-catalog/README.md](skills-catalog/README.md) for the full index, des
 | `production/` | 6 skills + reference | ECC | context-budget, strategic-compact, deployment-patterns, hooks-reference |
 | `agents/` | 15 agents | ECC | planner, architect, chief-of-staff, code-reviewer, loop-operator |
 | `meta/` | 1 skill | Skills Master | antigravity_skill_creator |
+
+**Notable skills (expanded entries):**
+
+- **`meta/cook/SKILL.md`** *(163 lines)* — `/cook` skill executor. Runs the full magnum-opus 9-phase workflow. Phase 4 expanded (2026-04-16): file list updated for CLAUDE.md (Session Start Protocol + Development Workflow + Required Rules) and AGENTS.md (Role Directory); 3 Generation Steps added (A: populate CLAUDE.md sections, B: populate AGENTS.md Role Directory, C: annotate implementation.md tasks with `**Agent:**`); done-gate extended with 4 new items covering CLAUDE.md sections, AGENTS.md Role Directory, and implementation.md annotations.
+
+- **`workflow/session-handoff/SKILL.md`** *(96 lines)* — Structured handoff document generator for session continuity. Expanded (2026-04-16): workflow extended from 5 to 7 steps — step 5 adds Glob fleet discovery (`.claude/agents/*`), step 6 adds Next Session Invocations fill from CLAUDE.md Development Workflow. Output template has 3 new required sections: **Current Phase** (workflow phase, sub-step, last verified checkpoint), **Active Agent Fleet** (Glob-discovered agents with one-line purpose), **Next Session Invocations** (ordered skill invocations from Development Workflow).
 
 ---
 
