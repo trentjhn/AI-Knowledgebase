@@ -10,17 +10,17 @@ AI engineering knowledge is scattered across 100+ sources of wildly varying dept
 
 ---
 
-## ⚡ Magnum Opus + `/cook` — The Meta Workflow
+## Magnum Opus + `/cook` — The Meta Workflow
 
 The most important thing in this repo isn't any single doc. It's the system that uses all of them together.
 
 **Magnum Opus** is a 9-phase workflow for scaffolding any new AI project from first principles. It is the decision engine — when you start a project, it traverses the KB, fires relevant patterns, asks targeted questions, and produces a complete, production-ready project structure grounded in everything captured here.
 
-**`/cook`** is the executor. It reads Magnum Opus and runs every phase interactively: domain research, architecture decisions, agent + skill selection, scaffold generation. When Cook finishes, the project is ready to build — not ready to plan.
+**`/cook`** is the executor. It reads Magnum Opus and runs every phase interactively: domain research, architecture decisions, agent + skill selection, scaffold generation. When Cook finishes, the project is ready to build.
 
 ### Why it's different
 
-Most people start a project by opening a blank file and prompting from memory. Magnum Opus starts a project by querying a curated knowledge library and grounding every decision in captured best practices. The KB isn't documentation — it's the reasoning layer.
+Most people start a project by opening a blank file and prompting from memory. Magnum Opus starts a project by querying a curated knowledge library and grounding every decision in captured best practices.
 
 What the scaffold produces isn't just files. It's a **self-describing operating environment**:
 
@@ -33,8 +33,6 @@ What the scaffold produces isn't just files. It's a **self-describing operating 
 **The cold-start problem is solved by design.** When a new session opens on a Cook-scaffolded project, it doesn't need to reconstruct context. The Session Start Protocol instructs it to: load SOUL.md → read AGENTS.md → check the latest handoff → Glob `.claude/agents/*` for fleet discovery → check git log for new agents → invoke the next skills from the handoff. Everything the session needs is already in the scaffold.
 
 **Session continuity is enforced, not hoped for.** Every Cook-generated CLAUDE.md includes a Required Rule: "Before ending any session — complete or interrupted — invoke the `session-handoff` skill. This is not optional." Handoffs capture current workflow phase, active agent fleet, and exact next invocations — so any session can resume from where the last one stopped.
-
-This is what the Twitter article on multi-agent workflows doesn't cover: orchestration as a *scaffold-time* problem, not just a runtime pattern.
 
 → **[Magnum Opus hub document](future-reference/playbooks/magnum-opus.md)** — full 9-phase workflow, rationale, done-gates, maintenance contract  
 → **[`/cook` skill](future-reference/skills-catalog/meta/cook/)** — portable executor with install guide  
