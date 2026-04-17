@@ -17,7 +17,9 @@ Use when saying "handoff", "continue later", "pass to next session", "session tr
 2. List completed, in-progress, and pending work.
 3. Note key decisions made and their reasoning.
 4. Capture any learnings from this session.
-5. Generate a resume command for the next session.
+5. Use the Glob tool with pattern `.claude/agents/*` to discover the active agent fleet. List every file found in the Active Agent Fleet output section.
+6. To fill **Next Session Invocations**: read the `## Development Workflow` section of `CLAUDE.md`, identify the current phase, and list the remaining skills in sequence. Use exact skill names (e.g., `superpowers:executing-plans`, not "execute"). If mid-task, specify the sub-step (e.g., "task 4 of 9").
+7. Generate a resume command for the next session.
 
 ## Commands
 
@@ -54,6 +56,22 @@ git branch --show-current
 ## Key Decisions Made
 - [decision 1 and why]
 - [decision 2 and why]
+
+## Current Phase
+- **Workflow phase**: [brainstorm / plan / execute / review / done]
+- **Sub-step**: [e.g., "executing-plans — task 4 of 9 complete" or "plan written, not yet executing"]
+- **Last verified checkpoint**: [last artifact confirmed correct against acceptance criteria]
+
+## Active Agent Fleet
+[Use Glob tool: `.claude/agents/*` — list every file found with one-line purpose]
+- `[agent-filename].md` — [what it does / when to use it]
+[If new files appeared since last handoff, note them here.]
+
+## Next Session Invocations
+[Read CLAUDE.md Development Workflow. Based on current phase, list skills to invoke first, in order:]
+1. [exact skill name, e.g., superpowers:executing-plans] — [one-line context, e.g., "resume from task 4, auth module"]
+2. [next skill if applicable]
+[If session is complete: "No pending invocations — project is at [phase]."]
 
 ## Learnings Captured
 - [Category] Rule (from this session)
