@@ -103,8 +103,8 @@ Gate: present a summary of all Phase 2 decisions and get explicit confirmation b
 Write all files to the specified project directory.
 
 **Required files (every project):**
-- `CLAUDE.md` — project-specific, includes: "Read SOUL.md before anything else"
-- `AGENTS.md` — mission + sequential ordering (for multi-agent or agent teams)
+- `CLAUDE.md` — project-specific; must include Session Start Protocol (7-step ordered list), Development Workflow (from Phase 3 skill selections), and Required Rules (self-review + session-handoff enforcement)
+- `AGENTS.md` — mission + Role Directory (all projects with agents) + Sequential Protocol Ordering (multi-agent only)
 - `SOUL.md` — from SOUL-TEMPLATE.md with [PROJECT CHARACTER] customized for this project
 - `README.md` — project overview, what was scaffolded, next steps
 - `.gitignore`
@@ -119,6 +119,17 @@ Write all files to the specified project directory.
 **AI projects additionally:**
 - `docs/prompts/` — system prompts designed in Phase 2, one file per prompt
 
+**After copying agents to `.claude/agents/` and skills to `.claude/skills/`, execute these three generation steps before writing any other file:**
+
+**Generation Step A — Populate CLAUDE.md Session Start Protocol and Development Workflow:**
+Write these two sections using the exact skill names confirmed in Phase 3, in the order they apply to this project. Do not use a generic template — the workflow must reflect actual Phase 3 selections. The Development Workflow section must include the "First session (implementation plan exists): skip to Execute" conditional. The Required Rules section must include the session-handoff enforcement rule ("Before ending any session — whether complete or interrupted — invoke the `session-handoff` skill. This is not optional."). Remove the old rules (1) and (2) — they are replaced by the Session Start Protocol section entirely.
+
+**Generation Step B — Populate AGENTS.md Role Directory:**
+Add a `## Role Directory` section to AGENTS.md. One row per agent in `.claude/agents/`. Each row: agent filename without .md extension, model tier (haiku/sonnet/opus), and a project-specific trigger condition written for this project's context — not a generic catalog description. Add this self-healing note below the table: "If `.claude/agents/` contains files not listed here, Glob the directory, read those files, and add them before proceeding."
+
+**Generation Step C — Annotate implementation.md tasks with Agent:**
+For every task in `docs/plans/implementation.md`, add `**Agent: [agent-name]**` on the line after the task description, using the Role Directory to assign. Tasks with no matching agent get: `**Agent: inline — no delegation.**` This annotation is what executing-plans reads to dispatch `.claude/agents/` definitions.
+
 **Done-gate — verify every item before reporting scaffold complete:**
 - [ ] All required files exist and are non-empty
 - [ ] `docs/kb-references.md` has entries for every load-bearing KB section from Phase 0
@@ -126,6 +137,10 @@ Write all files to the specified project directory.
 - [ ] `SOUL.md` [PROJECT CHARACTER] section is customized — not left as the default template text
 - [ ] Eval criteria defined in `docs/plans/design.md`
 - [ ] Security threat model started in `docs/plans/design.md`
+- [ ] `CLAUDE.md` Session Start Protocol and Development Workflow sections are populated with project-specific content — not generic template text
+- [ ] `CLAUDE.md` Required Rules section includes the session-handoff enforcement rule
+- [ ] `AGENTS.md` Role Directory section is populated with all agents in `.claude/agents/` — trigger conditions are project-specific
+- [ ] `docs/plans/implementation.md` tasks are annotated with `**Agent:**` from the Role Directory
 
 ### Phase 5: Eval + Security Baseline
 1. Write initial eval criteria to docs/plans/design.md
