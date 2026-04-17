@@ -291,7 +291,7 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 `CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the workflow protocol. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints and a complete operational context. Every Cook-generated CLAUDE.md must contain three sections:
 
-**(1) Session Start Protocol** — a numbered, ordered list every session executes before any work. Required steps, in order: (a) Read SOUL.md — load character before anything else. (b) Read AGENTS.md — load operational context and role directory. (c) Check `.sessions/handoffs/` for the most recent non-superseded handoff — read it to load phase state. (d) Glob `.claude/agents/*` — discover the actual agent fleet; the directory is authoritative and overrides any stale documentation. (e) Run `git log --oneline -5` — catch agent/config changes since last handoff (a commit like "add agent definitions" is a signal to read new files). (f) If handoff specifies "Next Session Invocations," invoke those skills via the Skill tool before proceeding; if no handoff exists, consult the Development Workflow section and start from the beginning. (g) Before invoking any skill, invoke it via the Skill tool to read its current content — do not assume.
+**(1) Session Start Protocol** — a numbered, ordered list every session executes before any work. Required steps, in order: (a) Read SOUL.md — load character before anything else. (b) Read AGENTS.md — load operational context and role directory. (c) Check `.sessions/handoffs/` for the most recent non-superseded handoff — read it to load phase state. (d) Glob `.claude/agents/*` — discover the actual agent fleet; the directory is authoritative and overrides any stale documentation. (e) Run `git log --oneline -5` — catch agent/config changes since last handoff (a commit like "add agent definitions" is a signal to read new files). (f) If handoff specifies "Next Session Invocations," invoke those skills via the Skill tool before proceeding; if no handoff exists, consult the Development Workflow section and start from the beginning. (g) Throughout this session — not just at startup — before invoking any skill, invoke it via the Skill tool to read its current content. Do not rely on memory of what a skill specifies.
 
 **(2) Development Workflow section** — the project-specific skill chain written by Cook in Phase 4 from Phase 3 selections. Must distinguish: "First session (implementation plan already exists at docs/plans/implementation.md): skip to Execute" from "Per-feature / new work: Brainstorm → Plan → Execute → Review → Commit → Handoff." Must include: "When executing-plans or subagent-driven-development dispatches work, route tasks using the Role Directory in AGENTS.md. The implementation plan's Agent: annotations are authoritative for per-task routing."
 
@@ -305,7 +305,7 @@ The **Role Directory** is a routing table for task-level dispatch. When executin
 
 Both sections belong in every project with agents in `.claude/agents/`. The Role Directory is not exclusive to multi-agent topologies — a single-session project with a code-reviewer agent still benefits from documenting when to use it. If `.claude/agents/` contains files not in the Role Directory, they must be read and added before execution begins.
 
-`SOUL.md` encodes the functional personality. It must be loaded before any work begins — hence the CLAUDE.md instruction. Character without a loading mechanism is decorative.
+`SOUL.md` encodes the functional personality. It must be loaded before any work begins — hence step (a) of the Session Start Protocol. Character without a loading mechanism is decorative.
 
 `docs/kb-references.md` is a pointer file, not a content file. It says which KB sections are load-bearing for this project and why. It never copies text from the KB. The KB is the single source of truth; references point to it.
 
@@ -322,7 +322,7 @@ Both sections belong in every project with agents in `.claude/agents/`. The Role
 - [ ] `SOUL.md` reflects Phase 2 character decisions, not just the default template text
 - [ ] Eval criteria defined in `docs/plans/design.md` before any implementation code exists
 - [ ] Security threat model started in `docs/plans/design.md`
-- [ ] `CLAUDE.md` has `## Session Start Protocol` section — the old two individual rules (1) and (2) are replaced by this section, not kept alongside it
+- [ ] `CLAUDE.md` has `## Session Start Protocol` section — do not duplicate its steps as individual rules elsewhere in the file
 - [ ] `CLAUDE.md` has `## Development Workflow` section populated from actual Phase 3 skill selections — not generic template text, specific to this project's confirmed skills
 - [ ] `AGENTS.md` has `## Role Directory` section populated with all agents in `.claude/agents/` — trigger conditions are project-specific, not generic catalog descriptions
 - [ ] `docs/plans/implementation.md` tasks are annotated with `**Agent:**` from the Role Directory
