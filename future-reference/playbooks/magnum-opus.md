@@ -262,8 +262,8 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 ```
 [project-root]/
 ├── CLAUDE.md           ← project-specific, KB-grounded operational rules
-│                           Must include: "Read SOUL.md before anything else"
-├── AGENTS.md           ← mission + Sequential protocol ordering (NOT role assignments)
+│                           Must include: Session Start Protocol + Development Workflow + Required Rules
+├── AGENTS.md           ← mission + Role Directory (all projects) + Sequential Protocol Ordering (multi-agent only)
 ├── SOUL.md             ← from SOUL-TEMPLATE.md + Phase 2 character decisions
 ├── README.md           ← project overview, quick start, how to use the scaffold
 ├── .gitignore
@@ -289,15 +289,29 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **File-by-file rationale:**
 
-`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the reference to SOUL.md. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints. Required rules in every project CLAUDE.md: (1) "Read SOUL.md before anything else." (2) "At session start, check `.sessions/handoffs/` for the most recent non-superseded handoff and load it before doing anything else." (3) "After completing any meaningful chunk of work — a component, a page, a feature, a spec section — read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate."
+`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the workflow protocol. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints and a complete operational context. Every Cook-generated CLAUDE.md must contain three sections:
 
-`AGENTS.md` defines the mission in one sentence and the phase ordering for multi-agent work. It does NOT assign specific agents to specific tasks — that is the Sequential protocol's job. AGENTS.md gives agents the context they need to self-select appropriate roles.
+**(1) Session Start Protocol** — a numbered, ordered list every session executes before any work. Required steps, in order: (a) Read SOUL.md — load character before anything else. (b) Read AGENTS.md — load operational context and role directory. (c) Check `.sessions/handoffs/` for the most recent non-superseded handoff — read it to load phase state. (d) Glob `.claude/agents/*` — discover the actual agent fleet; the directory is authoritative and overrides any stale documentation. (e) Run `git log --oneline -5` — catch agent/config changes since last handoff (a commit like "add agent definitions" is a signal to read new files). (f) If handoff specifies "Next Session Invocations," invoke those skills via the Skill tool before proceeding; if no handoff exists, consult the Development Workflow section and start from the beginning. (g) Before invoking any skill, invoke it via the Skill tool to read its current content — do not assume.
+
+**(2) Development Workflow section** — the project-specific skill chain written by Cook in Phase 4 from Phase 3 selections. Must distinguish: "First session (implementation plan already exists at docs/plans/implementation.md): skip to Execute" from "Per-feature / new work: Brainstorm → Plan → Execute → Review → Commit → Handoff." Must include: "When executing-plans or subagent-driven-development dispatches work, route tasks using the Role Directory in AGENTS.md. The implementation plan's Agent: annotations are authoritative for per-task routing."
+
+**(3) Required Rules section** — must contain: "After completing any meaningful chunk of work, read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate." AND: "Before ending any session — whether complete or interrupted — invoke the `session-handoff` skill. This is not optional."
+
+`AGENTS.md` defines the mission in one sentence, the Sequential Protocol Ordering for multi-agent work, and a Role Directory for task-level dispatch during execution. These are distinct sections with distinct purposes.
+
+The **Sequential Protocol Ordering** section describes phase sequencing — which agent category goes first, what it produces, what the next category receives. Agents self-select within each phase based on what predecessors produced. This is NOT pre-assignment of specific tasks to specific agents — that is what the Role Directory handles.
+
+The **Role Directory** is a routing table for task-level dispatch. When executing-plans spawns a subagent for a specific task, the Role Directory maps task type to agent. Populated in Phase 4 from Phase 3 selections. Each row: agent filename (without .md), model tier, project-specific trigger condition. The implementation plan's `**Agent:**` annotations take precedence over this table for individual tasks — the Role Directory is the reference and fallback.
+
+Both sections belong in every project with agents in `.claude/agents/`. The Role Directory is not exclusive to multi-agent topologies — a single-session project with a code-reviewer agent still benefits from documenting when to use it. If `.claude/agents/` contains files not in the Role Directory, they must be read and added before execution begins.
 
 `SOUL.md` encodes the functional personality. It must be loaded before any work begins — hence the CLAUDE.md instruction. Character without a loading mechanism is decorative.
 
 `docs/kb-references.md` is a pointer file, not a content file. It says which KB sections are load-bearing for this project and why. It never copies text from the KB. The KB is the single source of truth; references point to it.
 
 `docs/plans/design.md` captures every decision from Phases 2-3 with rationale. It answers: why this model tier, why this topology, why these agents, why these hooks. Without rationale, decisions look arbitrary when revisited.
+
+`docs/plans/implementation.md` must annotate every task with the agent from AGENTS.md Role Directory that should execute it. Format: `**Agent: [agent-name]**` on the line after the task description. Tasks with no matching agent are noted as "inline — no agent delegation." This annotation is what executing-plans reads to dispatch the correct `.claude/agents/` definition. Without it, subagent dispatch operates without the fleet, and the Role Directory exists only as documentation.
 
 **Done-gate checklist — verify before reporting scaffold complete:**
 - [ ] All required files present and non-empty
@@ -308,6 +322,10 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 - [ ] `SOUL.md` reflects Phase 2 character decisions, not just the default template text
 - [ ] Eval criteria defined in `docs/plans/design.md` before any implementation code exists
 - [ ] Security threat model started in `docs/plans/design.md`
+- [ ] `CLAUDE.md` has `## Session Start Protocol` section — the old two individual rules (1) and (2) are replaced by this section, not kept alongside it
+- [ ] `CLAUDE.md` has `## Development Workflow` section populated from actual Phase 3 skill selections — not generic template text, specific to this project's confirmed skills
+- [ ] `AGENTS.md` has `## Role Directory` section populated with all agents in `.claude/agents/` — trigger conditions are project-specific, not generic catalog descriptions
+- [ ] `docs/plans/implementation.md` tasks are annotated with `**Agent:**` from the Role Directory
 
 ---
 
@@ -377,5 +395,6 @@ This document stays accurate when people update the right layer for each type of
 | Workflow phase logic changes | This document + `/cook` skill |
 | Scaffold output structure changes | `/cook` skill + the design doc |
 | A phase needs to route to a new KB section | Update the phase pointer in this document |
+| Agent added to `.claude/agents/` mid-project | AGENTS.md Role Directory + re-annotate affected `docs/plans/implementation.md` tasks |
 
 The table above is duplicated in `CLAUDE.md` alongside the existing KB maintenance rules. When in doubt about which layer to update, consult the design doc at `docs/plans/2026-04-12-magnum-opus-design.md` which describes the rationale for the three-layer architecture.
