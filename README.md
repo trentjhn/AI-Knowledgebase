@@ -1,18 +1,49 @@
 # AI Knowledgebase
 
-A unified reference for AI teachings, findings, experiments, and research—organized by learning path and practical use.
+A unified reference for AI engineering — synthesized at practitioner depth, organized by learning path, and wired into a meta workflow that applies it automatically to every new project.
 
-*Last Updated: 2026-04-12*
+*Last Updated: 2026-04-16*
 
 ## Why I Built This
 
-AI engineering knowledge is scattered across 100+ sources of wildly varying depth. Most tutorials are either too shallow for practitioners or benchmark-focused (and decay fast). I built this to synthesize core concepts, frameworks, and operational playbooks at practitioner depth in a form that ages well.
+AI engineering knowledge is scattered across 100+ sources of wildly varying depth. Most tutorials are either too shallow for practitioners or benchmark-focused (and decay fast). I built this to synthesize core concepts, frameworks, and operational playbooks at practitioner depth — in a form that ages well and actively drives decisions, not just sits on a shelf.
+
+---
+
+## ⚡ Magnum Opus + `/cook` — The Meta Workflow
+
+The most important thing in this repo isn't any single doc. It's the system that uses all of them together.
+
+**Magnum Opus** is a 9-phase workflow for scaffolding any new AI project from first principles. It is the decision engine — when you start a project, it traverses the KB, fires relevant patterns, asks targeted questions, and produces a complete, production-ready project structure grounded in everything captured here.
+
+**`/cook`** is the executor. It reads Magnum Opus and runs every phase interactively: domain research, architecture decisions, agent + skill selection, scaffold generation. When Cook finishes, the project is ready to build — not ready to plan.
+
+### Why it's different
+
+Most people start a project by opening a blank file and prompting from memory. Magnum Opus starts a project by querying a curated knowledge library and grounding every decision in captured best practices. The KB isn't documentation — it's the reasoning layer.
+
+What the scaffold produces isn't just files. It's a **self-describing operating environment**:
+
+- **`CLAUDE.md`** — Session Start Protocol (7-step ordered startup sequence), Development Workflow (exact skill chain for this project type), and Required Rules including enforced session handoffs
+- **`AGENTS.md`** — Mission statement + Role Directory (task-level agent routing table, every agent mapped to a trigger condition) + Sequential Protocol Ordering for multi-agent projects
+- **`docs/plans/implementation.md`** — Every task annotated with `**Agent: [name]**` so execution-time routing is baked in, not improvised
+- **`.claude/agents/`** — Selected agent definitions from the catalog, ready to dispatch
+- **`.claude/skills/`** — Selected workflow skills, pre-wired to the project type
+
+**The cold-start problem is solved by design.** When a new session opens on a Cook-scaffolded project, it doesn't need to reconstruct context. The Session Start Protocol instructs it to: load SOUL.md → read AGENTS.md → check the latest handoff → Glob `.claude/agents/*` for fleet discovery → check git log for new agents → invoke the next skills from the handoff. Everything the session needs is already in the scaffold.
+
+**Session continuity is enforced, not hoped for.** Every Cook-generated CLAUDE.md includes a Required Rule: "Before ending any session — complete or interrupted — invoke the `session-handoff` skill. This is not optional." Handoffs capture current workflow phase, active agent fleet, and exact next invocations — so any session can resume from where the last one stopped.
+
+This is what the Twitter article on multi-agent workflows doesn't cover: orchestration as a *scaffold-time* problem, not just a runtime pattern.
+
+→ **[Magnum Opus hub document](future-reference/playbooks/magnum-opus.md)** — full 9-phase workflow, rationale, done-gates, maintenance contract  
+→ **[`/cook` skill](future-reference/skills-catalog/meta/cook/)** — portable executor with install guide  
 
 ---
 
 ## 📚 LEARNING (Core Reference Topics)
 
-Organized by **learning path**: Foundations → Building → Production. Total ~7,800 lines across 10 topics.
+Organized by **learning path**: Foundations → Building → Production. Total ~9,000 lines across 12 topics.
 
 ### [**FOUNDATIONS**](LEARNING/FOUNDATIONS/) — Start Here
 **Understand how LLMs work: prompting, context, reasoning**
@@ -30,11 +61,12 @@ Organized by **learning path**: Foundations → Building → Production. Total ~
 ### [**AGENTS & SYSTEMS**](LEARNING/AGENTS_AND_SYSTEMS/) — Build (Mid-Level)
 **Design and build AI agents and systems**
 
-~4,000 lines | ~9-10 hours | Prerequisites: complete FOUNDATIONS
+~5,000 lines | ~11-12 hours | Prerequisites: complete FOUNDATIONS
 
-- [**Agentic Engineering**](LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/) — Four Pillars, Twelve Leverage Points, 6 patterns, tool design, context management
-- [**AI System Design**](LEARNING/AGENTS_AND_SYSTEMS/ai-system-design/) — 11 design patterns, data pipelines, observability, scalability
-- [**Skills**](LEARNING/AGENTS_AND_SYSTEMS/skills/) — Agent Skills standard, testing, Instincts v2 continuous learning
+- [**Agentic Engineering**](LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/) — Four Pillars, Twelve Leverage Points, 6 patterns, tool design, context management, agent teams
+- [**Agent SDK Patterns**](LEARNING/AGENTS_AND_SYSTEMS/agent-sdk/) — 6 implementation patterns: research agent, chief-of-staff/Task tool, parallel subagents with model tiering, PTC, semantic tool routing, evaluator-optimizer loop
+- [**MCP**](LEARNING/AGENTS_AND_SYSTEMS/mcp/) — Model Context Protocol: connecting agents to external systems, tool integrations
+- [**Skills**](LEARNING/AGENTS_AND_SYSTEMS/skills/) — Agent Skills standard, testing, composability, portability
 
 **→ Next:** Move to [PRODUCTION](LEARNING/PRODUCTION/)
 
@@ -49,6 +81,7 @@ Organized by **learning path**: Foundations → Building → Production. Total ~
 - [**AI Security**](LEARNING/PRODUCTION/ai-security/) — OWASP Top 10, Zero Trust, sandboxing, agent configuration security
 - [**Specification Clarity**](LEARNING/PRODUCTION/specification-clarity/) — 7-property framework, BDD acceptance criteria
 - [**Fine-tuning**](LEARNING/PRODUCTION/fine-tuning/) — LoRA/QLoRA, RLHF vs DPO, data requirements, costs
+- [**Inference Optimization**](LEARNING/PRODUCTION/inference-optimization/) — Latency, throughput, cost at production scale
 
 **→ Next:** Use [FUTURE-REFERENCE playbooks](future-reference/playbooks/) for practical application
 
@@ -70,11 +103,11 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 
 | Section | Contents |
 |---------|----------|
-| [**`/cook` Skill**](future-reference/skills-catalog/meta/cook/) | The project scaffold generator. Runs the 9-phase magnum-opus workflow interactively and writes a complete project structure to disk. Install guide + portable SKILL.md inside. |
-| [**Magnum Opus**](future-reference/playbooks/magnum-opus.md) | The hub document for `/cook`. 9-phase workflow: intake → domain research → classification → spec + pre-flight → harness design → methodology → capability selection → scaffold output → eval baseline. Routes to KB; never contains KB content itself. |
-| [**Agent Catalog**](future-reference/agent-catalog/) | 22 agent role definitions across 6 categories (core, quality, design, product, AI-specialist, meta). Agents self-select roles via Sequential protocol — not pre-assigned. See [CATALOG.md](future-reference/agent-catalog/CATALOG.md) for the flat index. |
-| [**Playbooks**](future-reference/playbooks/) | 8 practical guides: magnum-opus (master workflow), building agents, chatbots, RAG pipelines, cost optimization, multi-agent orchestration, autonomous loops, AI SaaS |
-| [**Skills Catalog**](future-reference/skills-catalog/) | Pull-ready skills organized by category (workflow, design, engineering, production, meta). See [CATALOG.md](future-reference/skills-catalog/CATALOG.md) for the flat index. |
+| [**Magnum Opus**](future-reference/playbooks/magnum-opus.md) | The meta workflow hub. 9-phase project scaffolding: intake → domain research → classification → spec → harness design → methodology → capability selection → scaffold output → eval baseline. Routes to KB; never contains KB content itself. |
+| [**`/cook` Skill**](future-reference/skills-catalog/meta/cook/) | The Magnum Opus executor. Runs all 9 phases interactively and writes a complete, session-continuity-ready project structure to disk. Portable — install guide inside. |
+| [**Agent Catalog**](future-reference/agent-catalog/) | 24 agent role definitions across 6 categories (core, quality, design, product, AI-specialist, meta). Agents self-select roles via Sequential protocol. See [CATALOG.md](future-reference/agent-catalog/CATALOG.md). |
+| [**Playbooks**](future-reference/playbooks/) | 9 practical guides: magnum-opus, production agent patterns, building agents, chatbots, RAG pipelines, cost optimization, multi-agent orchestration, autonomous loops, AI SaaS |
+| [**Skills Catalog**](future-reference/skills-catalog/) | Pull-ready skills organized by category (workflow, design, engineering, production, meta). See [CATALOG.md](future-reference/skills-catalog/CATALOG.md). |
 | [**Prompt Catalog**](future-reference/prompt-catalog/) | 16 reusable prompt patterns, example prompts by domain (design, analysis, research). See [CATALOG.md](future-reference/prompt-catalog/CATALOG.md). |
 
 ---
@@ -91,10 +124,10 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 → Read [LEARNING/PRODUCTION/](LEARNING/PRODUCTION/)
 
 **I want to scaffold a new project with all best practices applied:**
-→ Use the [/cook skill](future-reference/skills-catalog/meta/cook/) — runs the magnum-opus workflow and writes the full project structure to disk
+→ Use the [/cook skill](future-reference/skills-catalog/meta/cook/) — runs Magnum Opus and writes the full project structure to disk
 
-**I want to build something right now:**
-→ Browse [FUTURE-REFERENCE/playbooks/](future-reference/playbooks/)
+**I want to deploy agents safely in production with real users:**
+→ Read [FUTURE-REFERENCE/playbooks/production-agent-patterns.md](future-reference/playbooks/production-agent-patterns.md)
 
 **I need an agent for my project:**
 → Browse [FUTURE-REFERENCE/agent-catalog/CATALOG.md](future-reference/agent-catalog/CATALOG.md)
@@ -112,11 +145,8 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 | Phase | Content | Time | Outcome |
 |-------|---------|------|---------|
 | **Phase 1** | [LEARNING/FOUNDATIONS/](LEARNING/FOUNDATIONS/) | 5 hours | Understand LLM prompting, context, reasoning |
-| **Phase 2** | [LEARNING/AGENTS_AND_SYSTEMS/](LEARNING/AGENTS_AND_SYSTEMS/) | 9-10 hours | Build functioning AI agents and systems |
+| **Phase 2** | [LEARNING/AGENTS_AND_SYSTEMS/](LEARNING/AGENTS_AND_SYSTEMS/) | 11-12 hours | Build functioning AI agents and systems |
 | **Phase 3** | [LEARNING/PRODUCTION/](LEARNING/PRODUCTION/) | 8-9 hours | Ship production systems: measurable, secure, reliable |
-| **Ongoing** | [FUTURE-REFERENCE/](future-reference/) | As needed | Apply knowledge to real projects |
+| **Ongoing** | [FUTURE-REFERENCE/](future-reference/) | As needed | Apply knowledge to real projects via Magnum Opus + Cook |
 
-**Total learning time:** ~22-24 hours (recommend 2-3 hours/week over 8-12 weeks)
-
----
-
+**Total learning time:** ~24-26 hours (recommend 2-3 hours/week over 8-12 weeks)
