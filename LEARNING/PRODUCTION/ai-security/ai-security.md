@@ -939,3 +939,188 @@ Recommended `~/.claude/settings.json` hook stack:
 | `browser` (full access) | ⚠️ Risk | Can navigate to malicious sites |
 
 ---
+
+## 13. HTTP Client Secret Hygiene
+
+Source of incident: parking-lead-gen-agent (2026-04-18). Google Places and Hunter.io API keys were leaking through `requests.HTTPError.__str__()` into stderr, log files, and crash reports every time the API returned a non-2xx status or the network blipped. Two leaks in one codebase against two different providers, both caused by the same library-level mechanism. This section is the canonical reference for how to write authenticated HTTP clients that do not leak secrets through exception paths.
+
+### The Threat Model
+
+The `requests` library stores the full request URL on every exception it raises. When your code uses `r.raise_for_status()`, the default `HTTPError` message is formatted as:
+
+```
+404 Client Error: Not Found for url: https://api.example.com/v1/endpoint?api_key=sk-REAL-KEY
+```
+
+`ConnectionError` and `Timeout` both stringify with the URL embedded in a `urllib3`-style message (`Max retries exceeded with url: ...`). When application code does `logger.warning(f"... {e}")`, `repr(e)`, or allows the exception to propagate unhandled, that string — key and all — lands in:
+
+- Log files (production and development)
+- Stderr, via Python's default uncaught-exception printer
+- Crash reports and error-tracking services (Sentry, Honeybadger, etc.)
+- Traceback output that the user sees in their terminal
+
+**Query-parameter authentication is the magnifier.** APIs that accept the key as a URL query parameter (Hunter.io, Google Maps/Places legacy endpoints, SendGrid v2, many smaller SaaS APIs) round-trip the secret through every exception stringification path. Header-based authentication (`Authorization: Bearer ...`) keeps the key out of the URL and therefore out of the default exception message.
+
+**Three runtime paths an unhandled key reaches.** First, `str(e)` inside a log f-string. Second, Python's default `sys.excepthook` walks `__cause__` and prints `str(cause)` for each — so `raise NewError(...) from e` where `e` is a leaky `HTTPError` reintroduces the URL even though the new exception's message is clean. Third, the root `HTTPError` itself propagating unhandled prints its stock message including the URL.
+
+### The Four-Point Checklist
+
+Run through this for every HTTP client call that uses a secret. If the answer to any question is "I don't know," assume the worst and add the defense.
+
+**1. Never interpolate the exception object into a log message.**
+
+```python
+# WRONG — `{e}` calls str(e) which includes the URL with ?api_key=...
+except requests.ConnectionError as e:
+    logger.warning(f"Hunter connection error for {domain}: {e}")
+
+# RIGHT — log only the exception class name and sanitized context.
+except requests.ConnectionError:
+    logger.warning(f"Hunter connection error for {domain}")
+except Exception as e:
+    logger.warning(
+        f"Hunter request failed for {domain} ({type(e).__name__})"
+    )
+```
+
+Any `{e}`, `{err}`, `{exc}`, `repr(e)`, or `str(e)` inside a `except requests.*` block is a candidate leak. Audit the entire codebase with `grep -rn -E "except requests\..*:" .` and cross-reference against f-string interpolations.
+
+**2. Re-raise `HTTPError` with a scrubbed message, and use `from None`.**
+
+```python
+# WRONG — `raise_for_status()` propagates the stock message with the URL.
+# Even `except ...: raise` keeps __cause__, and the traceback printer
+# walks __cause__ and prints str(cause) — leaking the URL.
+r.raise_for_status()
+
+# RIGHT — catch, inspect status, re-raise scrubbed, suppress cause.
+try:
+    r.raise_for_status()
+except requests.HTTPError as e:
+    status = getattr(getattr(e, "response", None), "status_code", None)
+    if status == 401:
+        raise requests.HTTPError(
+            f"API 401 Unauthorized for {domain}"
+        ) from None  # `from None` suppresses __cause__ printing
+    if status in (429, 402):
+        raise ExternalAPIExhausted(f"API {status}") from None
+    logger.warning(f"API HTTP {status} for {domain}")
+    return None
+```
+
+Use `from None`, not `from e`. `from e` preserves the cause chain for debugging, but Python's default uncaught-exception handler walks `__cause__` and prints `str(cause)` — which includes the leaky URL. Unless the project has a custom `sys.excepthook` that scrubs cause output, `from None` is the correct default.
+
+**3. Prefer header auth over query-param auth when the API supports it.**
+
+Keep the secret off the URL. Header-based authentication does not round-trip through urllib3's exception messages. If an API offers both, always choose headers.
+
+**4. Write a regression test that asserts the secret does not appear.**
+
+A test that mocks a leaky exception and asserts the secret is absent from both the log capture and the raised exception's `str()` is the only way to prove the defense survives a refactor. This test is cheap and catches the single most likely regression.
+
+```python
+def test_client_does_not_leak_api_key_on_connection_error(caplog):
+    secret_key = "API_KEY_FAKE_DO_NOT_LEAK"
+    leaky_exc = requests.ConnectionError(
+        f"Max retries exceeded with url: /v1/x?api_key={secret_key} (...)"
+    )
+    with patch("mymod.requests.get", side_effect=leaky_exc):
+        with caplog.at_level("WARNING", logger="mymod"):
+            client_call("bizarre-input", api_key=secret_key)
+    assert secret_key not in "\n".join(r.message for r in caplog.records)
+
+
+def test_client_raises_sanitized_httperror_on_401():
+    secret_key = "API_KEY_FAKE_401_PATH"
+    fake_resp = MagicMock()
+    fake_resp.status_code = 401
+    fake_resp.raise_for_status.side_effect = requests.HTTPError(
+        f"401 Client Error: Unauthorized for url: /v1/x?api_key={secret_key}",
+        response=fake_resp,
+    )
+    with patch("mymod.requests.get", return_value=fake_resp):
+        with pytest.raises(requests.HTTPError) as excinfo:
+            client_call("input", api_key=secret_key)
+    assert secret_key not in str(excinfo.value)
+    assert excinfo.value.__cause__ is None, (
+        "from None must suppress __cause__ or the traceback printer leaks it"
+    )
+```
+
+### Canonical Safe HTTP Client Skeleton
+
+```python
+import logging
+import requests
+
+logger = logging.getLogger(__name__)
+
+
+class ExternalAPIError(Exception):
+    """Caller-visible failure. Never carries the URL."""
+
+
+def call_authenticated_api(domain: str, api_key: str) -> dict | None:
+    if not api_key or not domain:
+        return None
+    try:
+        r = requests.get(
+            "https://api.example.com/v1/endpoint",
+            params={"domain": domain, "api_key": api_key},
+            timeout=10,
+        )
+        r.raise_for_status()
+    except requests.HTTPError as e:
+        resp = getattr(e, "response", None)
+        status = getattr(resp, "status_code", None)
+        if status == 401:
+            raise ExternalAPIError(
+                f"API 401 Unauthorized for {domain}"
+            ) from None
+        if status in (429, 402):
+            logger.warning(
+                f"API {status} for {domain}: backing off for this run"
+            )
+            raise ExternalAPIError(f"API {status} for {domain}") from None
+        logger.warning(f"API HTTP {status} for {domain}")
+        return None
+    except requests.Timeout:
+        logger.warning(f"API timeout for {domain}")
+        return None
+    except requests.ConnectionError:
+        # DO NOT include {e}: ConnectionError.__str__() embeds the URL
+        # with ?api_key=<real key> — leaks the secret to logs.
+        logger.warning(f"API connection error for {domain}")
+        return None
+    except Exception as e:
+        logger.warning(
+            f"API request failed for {domain} ({type(e).__name__})"
+        )
+        return None
+    try:
+        return r.json()
+    except ValueError:
+        logger.warning(f"API response parse failed for {domain} (ValueError)")
+        return None
+```
+
+### Audit Commands
+
+```bash
+# Exception-object interpolations inside except blocks:
+grep -rn --include="*.py" -E "except requests\..*:" .
+grep -rn --include="*.py" -E "\{(e|err|exc|exception)\}" .
+
+# `from e` on requests exceptions — candidates for `from None`:
+grep -rn --include="*.py" -E "raise .* from e$" .
+
+# Bare `raise_for_status()` without a try — stock message escapes:
+grep -rn --include="*.py" "raise_for_status" .
+
+# Query-param auth patterns — candidates for header-auth migration:
+grep -rn --include="*.py" -E "params=.*(api_key|api-key|apikey|access_token|key)" .
+```
+
+Related invocable skill: `future-reference/skills-catalog/production/http-client-hygiene/SKILL.md` — same checklist, invocable per-session when writing new HTTP client code. Magnum Opus Phase 5 references this section as a mandatory touchpoint for every scaffolded project.
+
+---
