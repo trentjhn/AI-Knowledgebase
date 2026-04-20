@@ -66,15 +66,21 @@ def extract_sections(html_content: str) -> str:
     from bs4 import BeautifulSoup
     soup = BeautifulSoup(html_content, 'html.parser')
     extracted = []
+    consumed = set()
 
     for section in soup.find_all(['section', 'div'], recursive=True):
-        heading = section.find(['h1', 'h2', 'h3'])
+        if id(section) in consumed:
+            continue
+        heading = section.find(['h1', 'h2', 'h3'], recursive=False) or \
+                  section.find(['h1', 'h2', 'h3'])
         if not heading:
             continue
         heading_text = heading.get_text().lower().strip()
         heading_clean = re.sub(r'^\d+\.?\s*', '', heading_text)
         if any(kw in heading_clean for kw in TARGET_SECTIONS):
             extracted.append(section.get_text(separator=' ', strip=True))
+            for descendant in section.find_all(True):
+                consumed.add(id(descendant))
 
     return '\n\n'.join(extracted) if extracted else ''
 
@@ -96,5 +102,5 @@ def fetch_paper_html(arxiv_id: str) -> tuple[str, bool]:
             if sections:
                 return sections, True
         return '', False
-    except Exception:
+    except requests.exceptions.RequestException:
         return '', False

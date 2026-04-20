@@ -90,3 +90,22 @@ def test_extract_sections_finds_ablation():
     from arxiv_deep_dive import extract_sections
     result = extract_sections(SAMPLE_HTML)
     assert '47.9%' in result
+
+
+def test_extract_sections_no_duplication():
+    from arxiv_deep_dive import extract_sections
+    nested_html = """
+    <html><body>
+    <section id="S3">
+      <h2>3 Experiments</h2>
+      <p>Top-level results: 69.4%.</p>
+      <section id="S3.1">
+        <h3>3.1 Ablation</h3>
+        <p>Without cold start: 47.9%.</p>
+      </section>
+    </section>
+    </body></html>
+    """
+    result = extract_sections(nested_html)
+    # "47.9%" should appear exactly once (from parent section, not duplicated by child)
+    assert result.count('47.9%') == 1
