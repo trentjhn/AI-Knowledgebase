@@ -32,18 +32,26 @@ def insert_at_anchor(content: str, anchor: str, new_text: str) -> tuple[str, boo
     Returns: (modified_content, success)
     """
     pattern = re.compile(
-        rf'^(##{{1,3}})\s+{re.escape(anchor)}\s*$',
+        rf'^(#{{2,5}})\s+{re.escape(anchor)}\s*$',
         re.MULTILINE
     )
     match = pattern.search(content)
     if not match:
         return content, False
 
+    all_matches = pattern.findall(content)
+    if len(all_matches) > 1:
+        import sys
+        print(
+            f"  Warning: anchor '{anchor}' matches {len(all_matches)} headings — inserting after first match.",
+            file=sys.stderr
+        )
+
     heading_level = len(match.group(1))
     after_heading = match.end()
 
     next_heading_pattern = re.compile(
-        rf'^#{{1,{heading_level}}}\s',
+        rf'^#{{2,{heading_level}}}\s',
         re.MULTILINE
     )
     next_match = next_heading_pattern.search(content, after_heading + 1)
@@ -53,6 +61,9 @@ def insert_at_anchor(content: str, anchor: str, new_text: str) -> tuple[str, boo
     else:
         insert_pos = len(content)
 
-    separator = '\n\n---\n\n'
-    modified = content[:insert_pos] + separator + new_text.strip() + '\n' + content[insert_pos:]
+    prefix = content[:insert_pos].rstrip('\n')
+    suffix = content[insert_pos:]
+    modified = prefix + '\n\n---\n\n' + new_text.strip() + '\n'
+    if suffix:
+        modified += suffix
     return modified, True

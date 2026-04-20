@@ -69,3 +69,31 @@ def test_insert_at_anchor_end_of_file():
     assert success is True
     assert "## Appended\n\nContent." in result
     assert result.index("## Appended") > result.index("## Last Section")
+
+def test_insert_at_anchor_level4_heading():
+    from arxiv_integrate import insert_at_anchor
+    content = "# Doc\n\n## Section\n\n#### Deep Heading\n\nDeep content.\n\n## Next\n\nNext content."
+    result, success = insert_at_anchor(content, "Deep Heading", "#### Inserted\n\nNew deep content.")
+    assert success is True
+    assert "Inserted" in result
+    deep_pos = result.index("Deep Heading")
+    inserted_pos = result.index("Inserted")
+    assert inserted_pos > deep_pos
+
+def test_insert_at_anchor_no_triple_newline_at_eof():
+    from arxiv_integrate import insert_at_anchor
+    content = "# Doc\n\n## Last Section\n\nSome content.\n"
+    result, success = insert_at_anchor(content, "Last Section", "## Appended\n\nContent.")
+    assert success is True
+    assert '\n\n\n' not in result  # No triple newlines
+
+def test_insert_at_anchor_duplicate_heading_uses_first():
+    from arxiv_integrate import insert_at_anchor
+    content = "# Doc\n\n## Examples\n\nFirst examples.\n\n## Other\n\nMiddle.\n\n## Examples\n\nSecond examples.\n"
+    result, success = insert_at_anchor(content, "Examples", "## New\n\nContent.")
+    assert success is True
+    # Insertion should happen after FIRST "Examples", before "Other"
+    first_examples = result.index("First examples")
+    new_pos = result.index("New")
+    other_pos = result.index("Other")
+    assert first_examples < new_pos < other_pos
