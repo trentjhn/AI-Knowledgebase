@@ -56,7 +56,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (268+ lines)
+### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (467 lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
 
@@ -65,9 +65,9 @@
 | 19–67 | What reasoning models are, when to use vs. standard models |
 | 68–130 | Design patterns: planning layer, LLM-as-judge, agentic RAG |
 | 131–197 | Prompting rules: no manual CoT, thinking effort tiers (low/medium/high) |
-| 198–256 | Limitations, failure modes, when NOT to use reasoning |
-| 257–268 | Decision workflow + key takeaways |
-| **NEW:** | **Function-Calling CoT Budget Constraints: Non-monotonic relationship between CoT tokens and tool-use accuracy; practical implications for agentic reasoning** |
+| 198–322 | Special Case: Function-Calling CoT Budget Constraints — non-monotonic relationship between CoT tokens and tool-use accuracy; templated FR-CoT achieves 0% hallucination |
+| **323–388** | **Adaptive Reasoning Positioning (Think-Anywhere, Jiang et al. 2026): Third axis of reasoning config — *where* to think, not just whether/how much. High-entropy position detection; +9.3% over baseline with fewer tokens than GRPO; 22–23 inline tokens per invocation; AIME 2024 17.3% vs. 5.3% base. Deployment watch: training-required, not yet an API param.** |
+| 389–467 | Limitations, failure modes, decision workflow, key takeaways |
 
 ---
 

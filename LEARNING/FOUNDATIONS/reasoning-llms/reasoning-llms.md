@@ -1,6 +1,6 @@
 # Reasoning LLMs
 
-**Sources:** Prompting Guide — Reasoning LLMs *(2025)*, Brief Is Better: Non-Monotonic Chain-of-Thought Budget Effects in Function-Calling Language Agents *(2026)*
+**Sources:** Prompting Guide — Reasoning LLMs *(2025)*, Brief Is Better: Non-Monotonic Chain-of-Thought Budget Effects in Function-Calling Language Agents *(2026)*, Think Anywhere in Code Generation — Jiang et al. *(2026, arXiv:2603.29957)*
 
 ---
 
@@ -319,6 +319,43 @@ This contradicts the intuition from reasoning-model research that "more thinking
 3. **Separate orchestration from reasoning.** If your agent needs deep reasoning, route it upstream (let a standard model with a reasoning-class model review the plan). Don't embed extended thinking in the function-calling loop itself.
 
 4. **Test your specific model.** This finding comes from a smaller model (1.5B parameters). Frontier models (Claude 3.7 Sonnet, GPT-4o, Gemini 2.5) may handle extended reasoning in function-calling better. Run your own tests before assuming it applies universally.
+
+---
+
+## Adaptive Reasoning Positioning: Thinking at the Right Moment
+
+The function-calling paradox above establishes that *more reasoning isn't always better*. A 2026 paper (Jiang et al., arXiv:2603.29957) goes further: it asks not just *how much* to think, but *where during generation* to invoke reasoning at all.
+
+Traditional reasoning models front-load their thinking. The model generates a full hidden reasoning chain before writing a single output token. This works well when the problem's full complexity is apparent upfront — mathematical proofs, architectural decisions, constraint analysis. Code generation behaves differently. Complexity emerges *during* writing — you often don't know at line 1 of a function that line 47 will require careful edge-case handling.
+
+**The Think-Anywhere mechanism:** The model inserts `<thinkanywhere>` blocks mid-generation at points of highest token entropy — positions where the model is most uncertain about what comes next. Rather than one large upfront reasoning block, thinking is distributed across the generation trace at exactly the moments it's needed.
+
+Two technical findings validate this:
+
+*Where models invoke thinking (entropy analysis):* Researchers measured token entropy over 10 tokens following each `<thinkanywhere>` invocation. The differentials were "predominantly positive" — confirming the model genuinely places reasoning at higher-uncertainty positions, not randomly. The top invocation sites: assignment statements (most frequent), return statements, conditional blocks.
+
+*Training:* Two-stage. First, Gemini 2.5 Flash generates ~5,000 synthetic examples of Think-Anywhere patterns (cold-start). Then GRPO reinforcement learning refines placement using a hierarchical reward: structure (correct `<think>` + at least one `<thinkanywhere>`) + correctness (passing test cases), weighted α=0.1 for structure.
+
+**Benchmark results (Qwen2.5-Coder-7B-Instruct):**
+
+| Method | LeetCode | LiveCodeBench | HumanEval | MBPP | Average |
+|---|---|---|---|---|---|
+| Base Model | 50.6 | 34.3 | 88.4 | 70.7 | 61.0 |
+| GRPO | 67.3 | 36.0 | 88.6 | 81.7 | 68.4 |
+| **Think-Anywhere** | **69.4** | **37.2** | **91.5** | **82.9** | **70.3** |
+
++9.3% absolute over baseline; +1.9% over GRPO. The method also generalizes outside code — on AIME 2024 mathematical reasoning, Think-Anywhere achieves 17.3% pass@1 vs. 5.3% base, suggesting the high-entropy positioning principle extends across domains.
+
+**The key efficiency finding:** Think-Anywhere uses *fewer total tokens* than GRPO while outperforming it — each inline block adds only 22–23 tokens on average. By placing reasoning precisely at uncertain positions, it avoids the waste of applying thinking to code segments that don't need it.
+
+**Ablation results (LeetCode pass@1):** Cold start alone: 47.9% (−21.5 pts vs. full). RLVR alone: 63.4% (−6.0 pts). Both are essential — cold start teaches *that* adaptive thinking is possible; RL teaches *when* to invoke it.
+
+**The design principle for builders:** This introduces a third axis for reasoning model configuration:
+1. **Whether to reason** — reasoning model vs. standard (Section 2)
+2. **How much to think** — budget_tokens: Low / Medium / High (Section 6)
+3. **Where to think** — upfront (current API default) vs. adaptive at high-entropy positions
+
+> **Deployment status as of early 2026:** Think-Anywhere requires training — it's not an API parameter. It's a research finding to watch. When adaptive positioning becomes available in API-accessible models, the budget_tokens guidance in Section 6 will need a "position" dimension. The efficiency finding (precision > volume) is the durable takeaway.
 
 ---
 
