@@ -165,24 +165,38 @@ Paper Content:
             system=ANALYSIS_SYSTEM_PROMPT,
             messages=[{'role': 'user', 'content': user_message}]
         )
-        result = json.loads(response.content[0].text.strip())
+        text = response.content[0].text.strip()
+        if text.startswith('```'):
+            text = re.sub(r'^```(?:json)?\s*\n?|\n?```\s*$', '', text, flags=re.MULTILINE).strip()
+        result = json.loads(text)
         result['paper_id'] = paper['id']
         result['title'] = paper['title']
         result['html_available'] = html_available
         if not html_available:
-            result['quality_gate']['confidence'] = min(
-                result['quality_gate']['confidence'], 0.60
-            )
+            qg = result.setdefault('quality_gate', {})
+            qg['confidence'] = min(qg.get('confidence', 0.60), 0.60)
         return result
-    except Exception as e:
-        print(f"  Analysis failed for {paper['id']}: {e}", file=sys.stderr)
+    except _anthropic.AuthenticationError as e:
+        raise  # Config bug — should fail the whole job
+    except _anthropic.APIError as e:
+        print(f"  API error for {paper['id']}: {e}", file=sys.stderr)
         return {
             'paper_id': paper['id'],
             'title': paper['title'],
             'html_available': html_available,
             'quality_gate': {'confidence': 0.0, 'is_mechanism': False,
                              'generalizes': False, 'fills_gap': False},
-            'error': str(e)
+            'error': f"api_error: {e}"
+        }
+    except (json.JSONDecodeError, KeyError, TypeError) as e:
+        print(f"  Parse error for {paper['id']}: {e}", file=sys.stderr)
+        return {
+            'paper_id': paper['id'],
+            'title': paper['title'],
+            'html_available': html_available,
+            'quality_gate': {'confidence': 0.0, 'is_mechanism': False,
+                             'generalizes': False, 'fills_gap': False},
+            'error': f"parse_error: {e}"
         }
 
 
@@ -192,7 +206,6 @@ def run_deep_dive(digest_path: Path) -> Path:
     import json
     import time
     from concurrent.futures import ThreadPoolExecutor, as_completed
-    from datetime import datetime
 
     content = digest_path.read_text()
     papers = parse_digest(content)
@@ -221,7 +234,7 @@ def run_deep_dive(digest_path: Path) -> Path:
                 print(f"  ✗ {paper['id']} — {e}", file=sys.stderr)
             time.sleep(0.5)
 
-    date_str = datetime.now().strftime('%Y-%m-%d')
+    date_str = digest_path.stem  # e.g. '2026-04-17' from '2026-04-17.md'
     output_path = REPO_ROOT / 'raw' / 'arxiv-proposals' / f'{date_str}.json'
     output_path.write_text(json.dumps(proposals, indent=2))
     print(f"Proposals written to {output_path}", file=sys.stderr)
