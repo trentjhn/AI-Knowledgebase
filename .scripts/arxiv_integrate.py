@@ -274,6 +274,5 @@ def run_integration(proposals_path: Path, digest_path: Path):
             proposals_only.append({**proposal, 'reason': result['reason']})
         else:
             errors.append({**proposal, 'error': result['reason']})
-            proposals_only.append({**proposal, 'reason': result['reason']})
 
     return integrated, proposals_only, filtered, errors
