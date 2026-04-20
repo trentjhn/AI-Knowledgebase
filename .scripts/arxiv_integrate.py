@@ -151,3 +151,129 @@ def git_commit(files: list[str], message: str):
             ['git', 'commit', '-m', message],
             cwd=REPO_ROOT, check=True
         )
+
+
+def integrate_playbook(proposal: dict, digest_path: Path) -> bool:
+    """Write playbook update if warranted. Returns success bool."""
+    routing = proposal.get('playbook_routing', {})
+    if not routing.get('applies') or not routing.get('playbook_file'):
+        return False
+
+    playbook_path = REPO_ROOT / routing['playbook_file']
+    if not playbook_path.exists():
+        print(f"  Playbook not found: {routing['playbook_file']}", file=sys.stderr)
+        return False
+
+    content = playbook_path.read_text()
+    draft = proposal.get('draft_playbook_text', '')
+    if not draft:
+        return False
+
+    anchor = routing.get('section_anchor', '')
+    modified, success = insert_at_anchor(content, anchor, draft)
+    if success:
+        playbook_path.write_text(modified)
+    return success
+
+
+def integrate_paper(proposal: dict, digest_path: Path) -> dict:
+    """
+    Integrate one paper into KB. Returns result dict with status and files_modified.
+    Always re-reads KB file from disk before writing.
+    """
+    result = {
+        'paper_id': proposal['paper_id'],
+        'title': proposal['title'],
+        'status': 'skipped',
+        'files_modified': [],
+        'reason': ''
+    }
+
+    confidence = proposal.get('quality_gate', {}).get('confidence', 0)
+    html_available = proposal.get('html_available', False)
+
+    if confidence < CONFIDENCE_THRESHOLD or not html_available:
+        result['reason'] = f'confidence {confidence:.2f} or no HTML'
+        return result
+
+    kb_file_rel = proposal.get('kb_routing', {}).get('primary_file', '')
+    anchor = proposal.get('kb_routing', {}).get('section_anchor', '')
+    draft_text = proposal.get('draft_kb_text', '')
+
+    if not (kb_file_rel and anchor and draft_text):
+        result['status'] = 'error'
+        result['reason'] = 'missing routing fields'
+        return result
+
+    kb_path = REPO_ROOT / kb_file_rel
+    if not kb_path.exists():
+        result['status'] = 'error'
+        result['reason'] = f'KB file not found: {kb_file_rel}'
+        return result
+
+    # Re-read fresh (critical — previous papers may have modified this file)
+    content = kb_path.read_text()
+    modified, success = insert_at_anchor(content, anchor, draft_text)
+
+    if not success:
+        result['status'] = 'anchor_not_found'
+        result['reason'] = f'anchor not found: "{anchor}"'
+        return result
+
+    kb_path.write_text(modified)
+    result['files_modified'].append(kb_file_rel)
+
+    # Update KB-INDEX
+    update_kb_index(kb_file_rel, proposal['paper_id'], proposal.get('key_findings', ''))
+    result['files_modified'].append('KB-INDEX.md')
+
+    # Playbook routing
+    playbook_updated = integrate_playbook(proposal, digest_path)
+    if playbook_updated:
+        result['files_modified'].append(proposal['playbook_routing']['playbook_file'])
+
+    # Mark digest
+    mark_digest_integrated(proposal['paper_id'], kb_file_rel, digest_path)
+    result['files_modified'].append(str(digest_path.relative_to(REPO_ROOT)))
+
+    # Per-paper commit
+    kb_short = Path(kb_file_rel).stem
+    commit_msg = (
+        f"docs({kb_short}): {proposal.get('key_findings','')[:80]} "
+        f"[{proposal['paper_id']}]\n\n"
+        f"{proposal.get('highlights_blurb', '')}"
+    )
+    git_commit([str(REPO_ROOT / f) for f in result['files_modified']], commit_msg)
+
+    result['status'] = 'integrated'
+    return result
+
+
+def run_integration(proposals_path: Path, digest_path: Path):
+    """
+    Main orchestration: read proposals, group by KB file, integrate sequentially.
+    """
+    proposals = json.loads(proposals_path.read_text())
+
+    # Sort by primary KB file so same-file edits are sequential
+    proposals.sort(key=lambda p: p.get('kb_routing', {}).get('primary_file', ''))
+
+    integrated, proposals_only, filtered, errors = [], [], [], []
+
+    for proposal in proposals:
+        conf = proposal.get('quality_gate', {}).get('confidence', 0)
+        if conf < 0.60:
+            filtered.append(proposal)
+            continue
+
+        result = integrate_paper(proposal, digest_path)
+
+        if result['status'] == 'integrated':
+            integrated.append({**proposal, **result})
+        elif result['status'] == 'skipped':
+            proposals_only.append({**proposal, 'reason': result['reason']})
+        else:
+            errors.append({**proposal, 'error': result['reason']})
+            proposals_only.append({**proposal, 'reason': result['reason']})
+
+    return integrated, proposals_only, filtered, errors
