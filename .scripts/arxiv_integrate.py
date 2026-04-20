@@ -67,3 +67,69 @@ def insert_at_anchor(content: str, anchor: str, new_text: str) -> tuple[str, boo
     if suffix:
         modified += suffix
     return modified, True
+
+
+def update_kb_index(kb_file_rel: str, paper_id: str, key_findings: str):
+    """
+    Re-read KB-INDEX, find the entry for kb_file_rel, append a new line
+    noting the new content. Uses rough line count from actual file.
+    """
+    kb_index_path = REPO_ROOT / 'KB-INDEX.md'
+    kb_file_path = REPO_ROOT / kb_file_rel
+
+    content = kb_index_path.read_text()
+    actual_lines = len(kb_file_path.read_text().splitlines())
+
+    # Find file entry in KB-INDEX
+    file_short = Path(kb_file_rel).name
+    # Update line count in the header line for this file
+    content = re.sub(
+        rf'({re.escape(file_short)}\s*\()[\d+]+(\s*lines)',
+        rf'\g<1>{actual_lines}\2',
+        content
+    )
+
+    # Append new entry bullet under the file's table
+    new_entry = f'| **NEW:** | **{key_findings[:120]}** (arXiv:{paper_id}) |'
+
+    # Find the table for this file and append before the next --- separator
+    file_section_pattern = re.compile(
+        rf'###\s+{re.escape(kb_file_rel)}.*?\n(.*?)(?=\n---|\Z)',
+        re.DOTALL
+    )
+    m = file_section_pattern.search(content)
+    if m:
+        insert_pos = m.end(1)
+        content = content[:insert_pos] + '\n' + new_entry + content[insert_pos:]
+
+    kb_index_path.write_text(content)
+
+
+def mark_digest_integrated(paper_id: str, kb_file_rel: str, digest_path: Path):
+    """Append ✅ integrated marker to the paper's Link line in the digest."""
+    content = digest_path.read_text()
+    date_str = datetime.now().strftime('%Y-%m-%d')
+    kb_short = Path(kb_file_rel).name
+
+    # Find the Link line for this paper and append marker
+    updated = re.sub(
+        rf'(\*\*Link:\*\*\s+\[{re.escape(paper_id)}\].*?)$',
+        rf'\1  ✅ {date_str} Integrated → {kb_short}',
+        content,
+        flags=re.MULTILINE
+    )
+    digest_path.write_text(updated)
+
+
+def git_commit(files: list[str], message: str):
+    """Stage and commit specific files."""
+    subprocess.run(['git', 'add'] + files, cwd=REPO_ROOT, check=True)
+    result = subprocess.run(
+        ['git', 'diff', '--cached', '--quiet'],
+        cwd=REPO_ROOT
+    )
+    if result.returncode != 0:  # There are staged changes
+        subprocess.run(
+            ['git', 'commit', '-m', message],
+            cwd=REPO_ROOT, check=True
+        )
