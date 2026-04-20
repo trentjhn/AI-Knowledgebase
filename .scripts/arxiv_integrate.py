@@ -276,7 +276,7 @@ def run_integration(proposals_path: Path, digest_path: Path):
 
         if result['status'] == 'integrated':
             integrated.append({**proposal, **result})
-        elif result['status'] == 'skipped':
+        elif result['status'] in ('skipped', 'anchor_not_found'):
             proposals_only.append({**proposal, 'reason': result['reason']})
         else:
             errors.append({**proposal, 'error': result['reason']})
@@ -362,6 +362,7 @@ def write_weekly_summary(
             lines.append(f"- [{p['paper_id']}] {p['title']}: {p.get('error','unknown')}")
 
     summary_path = REPO_ROOT / 'raw' / 'arxiv-weekly-summary' / f'{date_str}.md'
+    summary_path.parent.mkdir(parents=True, exist_ok=True)
     summary_path.write_text('\n'.join(lines))
     print(f"Summary written to {summary_path}", file=sys.stderr)
     return summary_path

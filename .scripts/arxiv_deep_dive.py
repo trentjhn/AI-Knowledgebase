@@ -236,6 +236,7 @@ def run_deep_dive(digest_path: Path) -> Path:
 
     date_str = digest_path.stem  # e.g. '2026-04-17' from '2026-04-17.md'
     output_path = REPO_ROOT / 'raw' / 'arxiv-proposals' / f'{date_str}.json'
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(proposals, indent=2))
     print(f"Proposals written to {output_path}", file=sys.stderr)
     return output_path
