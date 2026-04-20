@@ -69,10 +69,11 @@ def insert_at_anchor(content: str, anchor: str, new_text: str) -> tuple[str, boo
     return modified, True
 
 
-def update_kb_index(kb_file_rel: str, paper_id: str, key_findings: str):
+def update_kb_index(kb_file_rel: str, paper_id: str, key_findings: str) -> bool:
     """
     Re-read KB-INDEX, find the entry for kb_file_rel, append a new line
     noting the new content. Uses rough line count from actual file.
+    Returns True if the entry was found and updated, False otherwise.
     """
     kb_index_path = REPO_ROOT / 'KB-INDEX.md'
     kb_file_path = REPO_ROOT / kb_file_rel
@@ -83,8 +84,9 @@ def update_kb_index(kb_file_rel: str, paper_id: str, key_findings: str):
     # Find file entry in KB-INDEX
     file_short = Path(kb_file_rel).name
     # Update line count in the header line for this file
+    # Matches both plain digits (467) and comma-formatted (1,260+)
     content = re.sub(
-        rf'({re.escape(file_short)}\s*\()[\d+]+(\s*lines)',
+        rf'({re.escape(file_short)}\s*\()[\d,]+\+?(\s*lines)',
         rf'\g<1>{actual_lines}\2',
         content
     )
@@ -93,23 +95,35 @@ def update_kb_index(kb_file_rel: str, paper_id: str, key_findings: str):
     new_entry = f'| **NEW:** | **{key_findings[:120]}** (arXiv:{paper_id}) |'
 
     # Find the table for this file and append before the next --- separator
+    # Use #{2,5} to match all heading depths KB-INDEX uses (##, ###, ####, #####)
     file_section_pattern = re.compile(
-        rf'###\s+{re.escape(kb_file_rel)}.*?\n(.*?)(?=\n---|\Z)',
+        rf'#{{2,5}}\s+{re.escape(kb_file_rel)}.*?\n(.*?)(?=\n---|\Z)',
         re.DOTALL
     )
     m = file_section_pattern.search(content)
     if m:
         insert_pos = m.end(1)
         content = content[:insert_pos] + '\n' + new_entry + content[insert_pos:]
+        kb_index_path.write_text(content)
+        return True
 
-    kb_index_path.write_text(content)
+    print(f"  Warning: KB-INDEX entry not found for {kb_file_rel}", file=sys.stderr)
+    return False
 
 
-def mark_digest_integrated(paper_id: str, kb_file_rel: str, digest_path: Path):
-    """Append ✅ integrated marker to the paper's Link line in the digest."""
+def mark_digest_integrated(paper_id: str, kb_file_rel: str, digest_path: Path) -> bool:
+    """Append ✅ integrated marker to the paper's Link line in the digest.
+    Returns True if the marker was applied (or already present), False if the
+    Link line was not found.
+    """
     content = digest_path.read_text()
     date_str = datetime.now().strftime('%Y-%m-%d')
     kb_short = Path(kb_file_rel).name
+
+    # Idempotency guard — skip if this paper is already marked
+    already_marked = re.search(rf'\[{re.escape(paper_id)}\].*?✅', content)
+    if already_marked:
+        return True
 
     # Find the Link line for this paper and append marker
     updated = re.sub(
@@ -118,7 +132,11 @@ def mark_digest_integrated(paper_id: str, kb_file_rel: str, digest_path: Path):
         content,
         flags=re.MULTILINE
     )
+    if updated == content:
+        print(f"  Warning: Link line for {paper_id} not found in digest", file=sys.stderr)
+        return False
     digest_path.write_text(updated)
+    return True
 
 
 def git_commit(files: list[str], message: str):

@@ -97,3 +97,112 @@ def test_insert_at_anchor_duplicate_heading_uses_first():
     new_pos = result.index("New")
     other_pos = result.index("Other")
     assert first_examples < new_pos < other_pos
+
+
+# ---------------------------------------------------------------------------
+# Regression tests for update_kb_index and mark_digest_integrated
+# ---------------------------------------------------------------------------
+
+import tempfile, os as _os
+
+
+def test_update_kb_index_simple_line_count(tmp_path):
+    """update_kb_index updates simple line counts like (467 lines)."""
+    import arxiv_integrate as _ai
+    old_root = _ai.REPO_ROOT
+    _ai.REPO_ROOT = tmp_path
+    try:
+        # Create a fake KB file with 10 lines
+        kb_dir = tmp_path / 'LEARNING' / 'FOUNDATIONS' / 'reasoning-llms'
+        kb_dir.mkdir(parents=True)
+        kb_file = kb_dir / 'reasoning-llms.md'
+        kb_file.write_text('\n' * 9 + 'last line')  # 10 lines
+
+        # Create a fake KB-INDEX with simple line count
+        kb_index = tmp_path / 'KB-INDEX.md'
+        kb_index.write_text(
+            '### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (467 lines)\n\n'
+            '| Lines | Content |\n|---|---|\n| 1-50 | Intro |\n\n---\n'
+        )
+
+        result = _ai.update_kb_index(
+            'LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md',
+            '2603.29957v1',
+            'Test finding'
+        )
+        assert result is True
+        updated = kb_index.read_text()
+        assert '10 lines' in updated
+        assert 'arXiv:2603.29957v1' in updated
+    finally:
+        _ai.REPO_ROOT = old_root
+
+
+def test_update_kb_index_comma_line_count(tmp_path):
+    """update_kb_index updates comma-formatted line counts like (1,260+ lines)."""
+    import arxiv_integrate as _ai
+    old_root = _ai.REPO_ROOT
+    _ai.REPO_ROOT = tmp_path
+    try:
+        kb_dir = tmp_path / 'LEARNING' / 'PRODUCTION' / 'ai-security'
+        kb_dir.mkdir(parents=True)
+        kb_file = kb_dir / 'ai-security.md'
+        kb_file.write_text('\n' * 1299 + 'last')  # 1300 lines
+
+        kb_index = tmp_path / 'KB-INDEX.md'
+        kb_index.write_text(
+            '### LEARNING/PRODUCTION/ai-security/ai-security.md (1,260+ lines)\n\n'
+            '| Lines | Content |\n|---|---|\n| 1-50 | Intro |\n\n---\n'
+        )
+
+        result = _ai.update_kb_index(
+            'LEARNING/PRODUCTION/ai-security/ai-security.md',
+            '2604.00001v1',
+            'Security finding'
+        )
+        assert result is True
+        updated = kb_index.read_text()
+        assert '1300 lines' in updated
+    finally:
+        _ai.REPO_ROOT = old_root
+
+
+def test_mark_digest_integrated_appends_marker(tmp_path):
+    """mark_digest_integrated appends ✅ marker to the correct Link line."""
+    import arxiv_integrate as _ai
+    from pathlib import Path
+
+    digest = tmp_path / '2026-04-17.md'
+    digest.write_text(
+        '1. **Some Paper**\n'
+        '   - **Link:** [2604.15224v1](https://arxiv.org/abs/2604.15224v1)\n'
+        '   - **ArXiv Topics:** cs.AI\n'
+    )
+    result = _ai.mark_digest_integrated(
+        '2604.15224v1',
+        'LEARNING/PRODUCTION/evaluation/evaluation.md',
+        digest
+    )
+    assert result is True
+    content = digest.read_text()
+    assert '✅' in content
+    assert 'evaluation.md' in content
+
+
+def test_mark_digest_integrated_idempotent(tmp_path):
+    """mark_digest_integrated does not double-append if already marked."""
+    import arxiv_integrate as _ai
+
+    digest = tmp_path / '2026-04-17.md'
+    digest.write_text(
+        '1. **Some Paper**\n'
+        '   - **Link:** [2604.15224v1](https://arxiv.org/abs/2604.15224v1)  ✅ 2026-04-17 Integrated → evaluation.md\n'
+    )
+    result = _ai.mark_digest_integrated(
+        '2604.15224v1',
+        'LEARNING/PRODUCTION/evaluation/evaluation.md',
+        digest
+    )
+    assert result is True
+    content = digest.read_text()
+    assert content.count('✅') == 1  # Not doubled
