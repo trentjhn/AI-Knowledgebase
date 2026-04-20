@@ -97,10 +97,8 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests anthropic
+        run: pip install requests
 
       - name: Run KB integration
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python .scripts/arxiv_integrate.py
         # Per-paper commits + push happen inside the script
