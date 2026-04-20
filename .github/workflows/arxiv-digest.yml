@@ -1,19 +1,19 @@
-name: ArXiv Weekly Digest
+name: ArXiv Weekly Digest + KB Integration
 
 on:
   schedule:
-    # Run every Friday at 8:00 AM UTC
-    - cron: '0 8 * * 5'
-
-  # Allow manual triggering
+    - cron: '0 8 * * 5'   # Friday 8:00am UTC
   workflow_dispatch:
+
+concurrency:
+  group: arxiv-integration
+  cancel-in-progress: false
 
 jobs:
   generate-digest:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,14 +27,12 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: |
-          pip install requests anthropic
+        run: pip install requests anthropic
 
       - name: Run ArXiv scraper
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: |
-          python .scripts/arxiv-scraper.py
+        run: python .scripts/arxiv-scraper.py
 
       - name: Configure Git
         run: |
@@ -43,5 +41,66 @@ jobs:
 
       - name: Commit and push digest
         run: |
-          git add raw/arxiv-papers/ || true
+          git add raw/arxiv-papers/
           git diff --cached --quiet || (git commit -m "docs: add ArXiv weekly digest (Claude-scored KB relevance)" && git push origin main)
+
+  deep-dive-analysis:
+    needs: generate-digest
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests anthropic beautifulsoup4
+
+      - name: Run deep-dive analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python .scripts/arxiv_deep_dive.py
+
+      - name: Configure Git
+        run: |
+          git config user.email "arxiv-bot@github.com"
+          git config user.name "ArXiv Bot"
+
+      - name: Commit proposals JSON
+        run: |
+          git add raw/arxiv-proposals/
+          git diff --cached --quiet || (git commit -m "docs(arxiv): add deep-dive proposals $(date +%Y-%m-%d)" && git push origin main)
+
+  kb-integration:
+    needs: deep-dive-analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests anthropic
+
+      - name: Run KB integration
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python .scripts/arxiv_integrate.py
+        # Per-paper commits + push happen inside the script
