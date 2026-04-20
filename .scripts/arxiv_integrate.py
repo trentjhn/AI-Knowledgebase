@@ -223,9 +223,27 @@ def integrate_paper(proposal: dict, digest_path: Path) -> dict:
     kb_path.write_text(modified)
     result['files_modified'].append(kb_file_rel)
 
-    # Update KB-INDEX
+    # Update KB-INDEX (primary)
     update_kb_index(kb_file_rel, proposal['paper_id'], proposal.get('key_findings', ''))
     result['files_modified'].append('KB-INDEX.md')
+
+    # Secondary KB file (non-fatal if it fails)
+    secondary_file = proposal.get('kb_routing', {}).get('secondary_file')
+    secondary_anchor = proposal.get('kb_routing', {}).get('secondary_section_anchor', '')
+    secondary_draft = proposal.get('draft_kb_text_secondary', '')
+    if secondary_file and secondary_draft and secondary_anchor:
+        sec_path = REPO_ROOT / secondary_file
+        if sec_path.exists():
+            sec_content = sec_path.read_text()
+            sec_modified, sec_success = insert_at_anchor(sec_content, secondary_anchor, secondary_draft)
+            if sec_success:
+                sec_path.write_text(sec_modified)
+                update_kb_index(secondary_file, proposal['paper_id'], proposal.get('key_findings', ''))
+                result['files_modified'].append(secondary_file)
+            else:
+                print(f"  Secondary anchor not found for {proposal['paper_id']}: '{secondary_anchor}'", file=sys.stderr)
+        else:
+            print(f"  Secondary KB file not found: {secondary_file}", file=sys.stderr)
 
     # Playbook routing
     playbook_updated = integrate_playbook(proposal, digest_path)
@@ -309,6 +327,11 @@ def write_weekly_summary(
             f"**Where it lives:** `{p.get('kb_routing',{}).get('primary_file','')}` "
             f"→ after section: \"{p.get('kb_routing',{}).get('section_anchor','')}\"",
         ]
+        if p.get('kb_routing', {}).get('secondary_file'):
+            lines.append(
+                f"**Also integrated:** `{p['kb_routing']['secondary_file']}` "
+                f"→ after section: \"{p['kb_routing'].get('secondary_section_anchor','')}\""
+            )
         if p.get('playbook_routing', {}).get('applies'):
             lines.append(
                 f"**Playbook updated:** `{p['playbook_routing']['playbook_file']}`"

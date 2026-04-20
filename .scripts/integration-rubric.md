@@ -94,7 +94,8 @@ Return ONLY valid JSON matching this schema exactly:
   "kb_routing": {
     "primary_file": "string (relative path from repo root)",
     "section_anchor": "string (exact section heading text from KB file)",
-    "secondary_file": null or "string"
+    "secondary_file": null or "string",
+    "secondary_section_anchor": null or "string (exact section heading text from secondary KB file)"
   },
   "playbook_routing": {
     "applies": boolean,
@@ -104,6 +105,7 @@ Return ONLY valid JSON matching this schema exactly:
   "magnum_opus_flag": null or "string",
   "key_findings": "string (2-3 sentences, empirical numbers where available)",
   "draft_kb_text": "string (full prose, KB writing standards: plain English first, define jargon, narrative before bullets, concrete examples)",
+  "draft_kb_text_secondary": null or "string (same writing standards, for the secondary KB file if applicable)",
   "draft_playbook_text": null or "string",
   "highlights_blurb": "string (2 sentences — what it found and why a practitioner should care)"
 }

@@ -158,7 +158,7 @@ HTML Available: {html_available}
 Paper Content:
 {paper_content[:40000]}"""
 
-    try:
+    def _call_api():
         response = client.messages.create(
             model='claude-sonnet-4-6',
             max_tokens=4000,
@@ -168,26 +168,35 @@ Paper Content:
         text = response.content[0].text.strip()
         if text.startswith('```'):
             text = re.sub(r'^```(?:json)?\s*\n?|\n?```\s*$', '', text, flags=re.MULTILINE).strip()
-        result = json.loads(text)
-        result['paper_id'] = paper['id']
-        result['title'] = paper['title']
-        result['html_available'] = html_available
+        r = json.loads(text)
+        r['paper_id'] = paper['id']
+        r['title'] = paper['title']
+        r['html_available'] = html_available
         if not html_available:
-            qg = result.setdefault('quality_gate', {})
+            qg = r.setdefault('quality_gate', {})
             qg['confidence'] = min(qg.get('confidence', 0.60), 0.60)
-        return result
-    except _anthropic.AuthenticationError as e:
+        return r
+
+    try:
+        return _call_api()
+    except _anthropic.AuthenticationError:
         raise  # Config bug — should fail the whole job
     except _anthropic.APIError as e:
-        print(f"  API error for {paper['id']}: {e}", file=sys.stderr)
-        return {
-            'paper_id': paper['id'],
-            'title': paper['title'],
-            'html_available': html_available,
-            'quality_gate': {'confidence': 0.0, 'is_mechanism': False,
-                             'generalizes': False, 'fills_gap': False},
-            'error': f"api_error: {e}"
-        }
+        import time
+        print(f"  API error for {paper['id']} (retrying): {e}", file=sys.stderr)
+        time.sleep(5)
+        try:
+            return _call_api()
+        except _anthropic.APIError as e2:
+            print(f"  API error for {paper['id']} (giving up): {e2}", file=sys.stderr)
+            return {
+                'paper_id': paper['id'],
+                'title': paper['title'],
+                'html_available': html_available,
+                'quality_gate': {'confidence': 0.0, 'is_mechanism': False,
+                                 'generalizes': False, 'fills_gap': False},
+                'error': f"api_error: {e2}"
+            }
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         print(f"  Parse error for {paper['id']}: {e}", file=sys.stderr)
         return {
