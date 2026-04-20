@@ -276,3 +276,129 @@ def run_integration(proposals_path: Path, digest_path: Path):
             errors.append({**proposal, 'error': result['reason']})
 
     return integrated, proposals_only, filtered, errors
+
+
+def write_weekly_summary(
+    integrated: list,
+    proposals_only: list,
+    filtered: list,
+    errors: list,
+    date_str: str
+) -> Path:
+    """Write human-readable weekly summary markdown."""
+    lines = [
+        f"# KB Weekly Integration Summary — {date_str}",
+        "",
+        f"## What was added ({len(integrated)} integrated | "
+        f"{len(proposals_only)} proposals only | {len(filtered)} filtered)",
+        "",
+    ]
+
+    for p in integrated:
+        kb_short = Path(p.get('kb_routing', {}).get('primary_file', '')).name
+        lines += [
+            f"### {p['title']} [{p['paper_id']}] → {kb_short}",
+            f"**Why it matters:** {p.get('highlights_blurb', '')}",
+            f"**Key findings:** {p.get('key_findings', '')}",
+            f"**Where it lives:** `{p.get('kb_routing',{}).get('primary_file','')}` "
+            f"→ after section: \"{p.get('kb_routing',{}).get('section_anchor','')}\"",
+        ]
+        if p.get('playbook_routing', {}).get('applies'):
+            lines.append(
+                f"**Playbook updated:** `{p['playbook_routing']['playbook_file']}`"
+            )
+        lines.append("")
+
+    if proposals_only:
+        lines += ["---", "", "## Proposals only (your review needed)", ""]
+        for p in proposals_only:
+            conf = p.get('quality_gate', {}).get('confidence', 0)
+            lines.append(
+                f"- **[{p['paper_id']}] {p['title']}** — "
+                f"confidence {conf:.2f}. {p.get('reason','')}. "
+                f"Review: `raw/arxiv-proposals/`"
+            )
+        lines.append("")
+
+    if filtered:
+        lines += ["---", "", "## Filtered post deep-dive", ""]
+        for p in filtered:
+            conf = p.get('quality_gate', {}).get('confidence', 0)
+            lines.append(
+                f"- **[{p['paper_id']}] {p['title']}** — "
+                f"confidence {conf:.2f} (below 0.60). No KB integration."
+            )
+        lines.append("")
+
+    magnum_flags = [
+        p for p in integrated + proposals_only
+        if p.get('magnum_opus_flag')
+    ]
+    if magnum_flags:
+        lines += ["---", "", "## Magnum Opus flags (your action needed)", ""]
+        for p in magnum_flags:
+            lines.append(f"- **{p['title']}:** {p['magnum_opus_flag']}")
+        lines.append("")
+
+    playbook_updates = [p for p in integrated if p.get('playbook_routing', {}).get('applies')]
+    if playbook_updates:
+        lines += ["---", "", "## Playbook updates made", ""]
+        for p in playbook_updates:
+            lines.append(
+                f"- `{p['playbook_routing']['playbook_file']}`: "
+                f"added content from {p['paper_id']}"
+            )
+        lines.append("")
+
+    if errors:
+        lines += ["---", "", "## Errors (check logs)", ""]
+        for p in errors:
+            lines.append(f"- [{p['paper_id']}] {p['title']}: {p.get('error','unknown')}")
+
+    summary_path = REPO_ROOT / 'raw' / 'arxiv-weekly-summary' / f'{date_str}.md'
+    summary_path.write_text('\n'.join(lines))
+    print(f"Summary written to {summary_path}", file=sys.stderr)
+    return summary_path
+
+
+if __name__ == '__main__':
+    # Find latest proposals JSON
+    proposals_dir = REPO_ROOT / 'raw' / 'arxiv-proposals'
+    proposal_files = sorted(proposals_dir.glob('*.json'), reverse=True)
+    if not proposal_files:
+        print("No proposals JSON found. Run arxiv-deep-dive.py first.", file=sys.stderr)
+        sys.exit(1)
+    proposals_path = proposal_files[0]
+
+    # Find matching digest (same date or latest)
+    date_str = proposals_path.stem  # YYYY-MM-DD
+    digest_path = REPO_ROOT / 'raw' / 'arxiv-papers' / f'{date_str}.md'
+    if not digest_path.exists():
+        digests = sorted((REPO_ROOT / 'raw' / 'arxiv-papers').glob('*.md'), reverse=True)
+        digest_path = digests[0] if digests else None
+    if not digest_path:
+        print("No digest file found.", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Integrating from: {proposals_path.name}", file=sys.stderr)
+    print(f"Using digest: {digest_path.name}", file=sys.stderr)
+
+    # Configure git identity for CI
+    subprocess.run(['git', 'config', 'user.email', 'arxiv-bot@github.com'], cwd=REPO_ROOT)
+    subprocess.run(['git', 'config', 'user.name', 'ArXiv Bot'], cwd=REPO_ROOT)
+
+    integrated, proposals_only, filtered, errors = run_integration(proposals_path, digest_path)
+
+    summary_path = write_weekly_summary(integrated, proposals_only, filtered, errors, date_str)
+
+    # Final commit: summary
+    git_commit(
+        [str(summary_path)],
+        f"docs(arxiv): weekly integration summary {date_str} "
+        f"({len(integrated)} integrated, {len(proposals_only)} proposals)"
+    )
+
+    # Push all commits
+    subprocess.run(['git', 'push', 'origin', 'main'], cwd=REPO_ROOT, check=True)
+
+    print(f"Done. {len(integrated)} papers integrated.", file=sys.stderr)
