@@ -11,7 +11,6 @@ from pathlib import Path
 
 
 REPO_ROOT = Path(__file__).parent.parent
-ARXIV_HTML_BASE = "https://arxiv.org/html"
 MAX_WORKERS = 5
 
 
@@ -53,3 +52,49 @@ def find_latest_digest() -> Path:
     if not digests:
         raise FileNotFoundError("No digest files found in raw/arxiv-papers/")
     return digests[0]
+
+
+TARGET_SECTIONS = {
+    'abstract', 'introduction', 'method', 'methodology',
+    'approach', 'experiment', 'result', 'ablation',
+    'analysis', 'conclusion', 'limitation', 'discussion'
+}
+
+
+def extract_sections(html_content: str) -> str:
+    """Extract key sections from arXiv HTML. Returns concatenated text."""
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html_content, 'html.parser')
+    extracted = []
+
+    for section in soup.find_all(['section', 'div'], recursive=True):
+        heading = section.find(['h1', 'h2', 'h3'])
+        if not heading:
+            continue
+        heading_text = heading.get_text().lower().strip()
+        heading_clean = re.sub(r'^\d+\.?\s*', '', heading_text)
+        if any(kw in heading_clean for kw in TARGET_SECTIONS):
+            extracted.append(section.get_text(separator=' ', strip=True))
+
+    return '\n\n'.join(extracted) if extracted else ''
+
+
+def fetch_paper_html(arxiv_id: str) -> tuple[str, bool]:
+    """
+    Fetch full paper HTML from arxiv.org/html/{id}.
+    Returns (content, html_available).
+    Falls back to empty string if unavailable.
+    """
+    import requests
+    ARXIV_HTML_BASE = "https://arxiv.org/html"
+    base_id = re.sub(r'v\d+$', '', arxiv_id)
+    url = f"{ARXIV_HTML_BASE}/{base_id}"
+    try:
+        resp = requests.get(url, timeout=20)
+        if resp.status_code == 200:
+            sections = extract_sections(resp.text)
+            if sections:
+                return sections, True
+        return '', False
+    except Exception:
+        return '', False

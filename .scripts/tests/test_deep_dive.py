@@ -61,3 +61,32 @@ def test_parse_digest_skips_malformed_entry():
     assert len(papers) == 1
     assert papers[0]['id'] == '9999.0000v1'
     assert papers[0]['title'] == 'Good Paper'
+
+
+SAMPLE_HTML = """
+<html><body>
+<section id="S1"><h2>1 Introduction</h2><p>This paper presents a novel approach.</p></section>
+<section id="S2"><h2>2 Method</h2><p>We use GRPO with alpha=0.1.</p></section>
+<section id="S3"><h2>3 Experiments</h2><p>Results on LeetCode: 69.4%.</p></section>
+<section id="S4"><h2>4 Ablation</h2><p>Without cold start: 47.9%.</p></section>
+<section id="S5"><h2>5 Conclusion</h2><p>Think-Anywhere achieves SOTA.</p></section>
+</body></html>
+"""
+
+
+def test_extract_sections_finds_method():
+    from arxiv_deep_dive import extract_sections
+    result = extract_sections(SAMPLE_HTML)
+    assert 'GRPO' in result
+
+
+def test_extract_sections_finds_results():
+    from arxiv_deep_dive import extract_sections
+    result = extract_sections(SAMPLE_HTML)
+    assert '69.4%' in result
+
+
+def test_extract_sections_finds_ablation():
+    from arxiv_deep_dive import extract_sections
+    result = extract_sections(SAMPLE_HTML)
+    assert '47.9%' in result
