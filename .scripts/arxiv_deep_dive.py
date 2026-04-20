@@ -104,3 +104,132 @@ def fetch_paper_html(arxiv_id: str) -> tuple[str, bool]:
         return '', False
     except requests.exceptions.RequestException:
         return '', False
+
+
+ANALYSIS_SYSTEM_PROMPT = """You are an expert research analyst for a practitioner-depth AI knowledge base.
+Your task: analyze a research paper and produce a structured integration proposal.
+
+You will receive:
+1. The KB integration rubric (routing rules, quality gate, output format)
+2. The current KB-INDEX (what sections exist and what they cover)
+3. The paper content (key sections: methods, results, ablation, conclusion)
+
+Follow the rubric exactly. Return ONLY valid JSON — no markdown fences, no explanation.
+The draft_kb_text must follow KB writing standards: plain English first, define jargon on first use,
+narrative prose before bullets, concrete examples with real numbers, no placeholder text."""
+
+
+def load_rubric_and_index() -> tuple[str, str]:
+    rubric = (REPO_ROOT / '.scripts' / 'integration-rubric.md').read_text()
+    kb_index = (REPO_ROOT / 'KB-INDEX.md').read_text()
+    return rubric, kb_index
+
+
+def analyze_paper(paper: dict, rubric: str, kb_index: str) -> dict:
+    """
+    Fetch paper HTML and call Claude API to produce a structured proposal.
+    Returns proposal dict matching the proposals JSON schema.
+    """
+    import os
+    import json
+    import sys
+    import anthropic as _anthropic
+
+    paper_content, html_available = fetch_paper_html(paper['id'])
+
+    if not html_available:
+        paper_content = f"Abstract: {paper['abstract']}"
+
+    client = _anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+
+    user_message = f"""INTEGRATION RUBRIC:
+{rubric}
+
+KB-INDEX (current KB structure):
+{kb_index}
+
+PAPER TO ANALYZE:
+Title: {paper['title']}
+ArXiv ID: {paper['id']}
+Published: {paper['published']}
+KB Topics (pre-scored): {', '.join(paper['kb_topics'])}
+HTML Available: {html_available}
+
+Paper Content:
+{paper_content[:40000]}"""
+
+    try:
+        response = client.messages.create(
+            model='claude-sonnet-4-6',
+            max_tokens=4000,
+            system=ANALYSIS_SYSTEM_PROMPT,
+            messages=[{'role': 'user', 'content': user_message}]
+        )
+        result = json.loads(response.content[0].text.strip())
+        result['paper_id'] = paper['id']
+        result['title'] = paper['title']
+        result['html_available'] = html_available
+        if not html_available:
+            result['quality_gate']['confidence'] = min(
+                result['quality_gate']['confidence'], 0.60
+            )
+        return result
+    except Exception as e:
+        print(f"  Analysis failed for {paper['id']}: {e}", file=sys.stderr)
+        return {
+            'paper_id': paper['id'],
+            'title': paper['title'],
+            'html_available': html_available,
+            'quality_gate': {'confidence': 0.0, 'is_mechanism': False,
+                             'generalizes': False, 'fills_gap': False},
+            'error': str(e)
+        }
+
+
+def run_deep_dive(digest_path: Path) -> Path:
+    """Main orchestration: parse digest → parallel analysis → write proposals JSON."""
+    import sys
+    import json
+    import time
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from datetime import datetime
+
+    content = digest_path.read_text()
+    papers = parse_digest(content)
+
+    if not papers:
+        print("No papers found in digest.", file=sys.stderr)
+        sys.exit(0)
+
+    print(f"Analyzing {len(papers)} papers...", file=sys.stderr)
+    rubric, kb_index = load_rubric_and_index()
+
+    proposals = []
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {
+            executor.submit(analyze_paper, paper, rubric, kb_index): paper
+            for paper in papers
+        }
+        for future in as_completed(futures):
+            paper = futures[future]
+            try:
+                proposal = future.result()
+                proposals.append(proposal)
+                conf = proposal.get('quality_gate', {}).get('confidence', 0)
+                print(f"  ✓ {paper['id']} — confidence: {conf:.2f}", file=sys.stderr)
+            except Exception as e:
+                print(f"  ✗ {paper['id']} — {e}", file=sys.stderr)
+            time.sleep(0.5)
+
+    date_str = datetime.now().strftime('%Y-%m-%d')
+    output_path = REPO_ROOT / 'raw' / 'arxiv-proposals' / f'{date_str}.json'
+    output_path.write_text(json.dumps(proposals, indent=2))
+    print(f"Proposals written to {output_path}", file=sys.stderr)
+    return output_path
+
+
+if __name__ == '__main__':
+    import sys
+    digest = find_latest_digest()
+    print(f"Processing digest: {digest.name}", file=sys.stderr)
+    run_deep_dive(digest)
