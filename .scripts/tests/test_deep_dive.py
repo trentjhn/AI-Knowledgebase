@@ -40,3 +40,24 @@ def test_parse_digest_second_paper():
     assert papers[1]['id'] == '2604.15224v1'
     assert 'Evaluation' in papers[1]['kb_topics']
     assert 'AI Security' in papers[1]['kb_topics']
+
+def test_parse_digest_skips_malformed_entry():
+    from arxiv_deep_dive import parse_digest
+    malformed = """# ArXiv Digest
+**KB-Relevant Papers: 2**
+
+1. **Broken Paper**
+   - **Published:** 2026-04-01
+   - **KB Topics:** Evaluation
+   - **Abstract:** Missing the link field.
+
+2. **Good Paper**
+   - **Published:** 2026-04-02
+   - **KB Topics:** Reasoning LLMs
+   - **Abstract:** Has all fields.
+   - **Link:** [9999.0000v1](https://arxiv.org/abs/9999.0000v1)
+"""
+    papers = parse_digest(malformed)
+    assert len(papers) == 1
+    assert papers[0]['id'] == '9999.0000v1'
+    assert papers[0]['title'] == 'Good Paper'
