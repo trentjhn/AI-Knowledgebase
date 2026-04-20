@@ -2,7 +2,10 @@
 
 Used by the automated deep-dive pipeline. Distilled from kb-paper-integration skill.
 
-## Quality Gate (run first — if any fail, confidence ≤ 0.60)
+## Quality Gate (run first)
+
+Each gate sets its own confidence ceiling when it fails. Use the lowest ceiling that applies.
+If all gates pass, set confidence based on novelty: 0.80–0.90 for strong mechanism, 0.90–0.95 for gap-filling or contradiction.
 
 1. **Is this a mechanism, not an application?**
    - MECHANISM: generalizable pattern, insight into why something works/fails
@@ -16,7 +19,10 @@ Used by the automated deep-dive pipeline. Distilled from kb-paper-integration sk
 3. **Does it fill a gap or contradict existing KB content?**
    - Read KB-INDEX to see what the target section already covers
    - Duplicates existing content without new insight → confidence ≤ 0.55
-   - Fills gap or contradicts existing assumption → high value
+   - Fills gap (topic not yet covered) → high value
+   - Contradicts existing assumption (e.g., paper shows CoT doesn't help in domain X, while KB states CoT helps generally) → high value
+
+**No-match fallback:** If the paper doesn't fit any routing row below, set confidence ≤ 0.50 and leave kb_routing.primary_file as an empty string. The integration script will move it to proposals-only.
 
 ## KB Section Routing (primary destination)
 
