@@ -243,7 +243,13 @@ def integrate_paper(proposal: dict, digest_path: Path) -> dict:
         f"[{proposal['paper_id']}]\n\n"
         f"{proposal.get('highlights_blurb', '')}"
     )
-    git_commit([str(REPO_ROOT / f) for f in result['files_modified']], commit_msg)
+    try:
+        git_commit([str(REPO_ROOT / f) for f in result['files_modified']], commit_msg)
+    except subprocess.CalledProcessError as e:
+        print(f"  Warning: git commit failed for {proposal['paper_id']}: {e}", file=sys.stderr)
+        result['status'] = 'error'
+        result['reason'] = f'git_commit_failed: {e}'
+        return result
 
     result['status'] = 'integrated'
     return result
@@ -397,6 +403,9 @@ if __name__ == '__main__':
         f"docs(arxiv): weekly integration summary {date_str} "
         f"({len(integrated)} integrated, {len(proposals_only)} proposals)"
     )
+
+    # Rebase on latest remote before pushing all per-paper commits
+    subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=REPO_ROOT, check=True)
 
     # Push all commits
     subprocess.run(['git', 'push', 'origin', 'main'], cwd=REPO_ROOT, check=True)
