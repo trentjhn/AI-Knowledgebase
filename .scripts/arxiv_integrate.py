@@ -169,7 +169,11 @@ def integrate_playbook(proposal: dict, digest_path: Path) -> bool:
     if not draft:
         return False
 
-    anchor = routing.get('section_anchor', '')
+    anchor = routing.get('section_anchor') or ''
+    if not anchor:
+        print(f"  Playbook anchor missing for {proposal['paper_id']}, skipping playbook", file=sys.stderr)
+        return False
+
     modified, success = insert_at_anchor(content, anchor, draft)
     if success:
         playbook_path.write_text(modified)
@@ -189,6 +193,13 @@ def integrate_paper(proposal: dict, digest_path: Path) -> dict:
         'reason': ''
     }
 
+    # Idempotency — skip if already marked integrated in the digest
+    digest_content = digest_path.read_text()
+    if re.search(rf'\[{re.escape(proposal["paper_id"])}\].*?✅', digest_content):
+        result['status'] = 'already_integrated'
+        result['reason'] = 'already integrated'
+        return result
+
     confidence = proposal.get('quality_gate', {}).get('confidence', 0)
     html_available = proposal.get('html_available', False)
 
@@ -201,8 +212,13 @@ def integrate_paper(proposal: dict, digest_path: Path) -> dict:
     draft_text = proposal.get('draft_kb_text', '')
 
     if not (kb_file_rel and anchor and draft_text):
-        result['status'] = 'error'
-        result['reason'] = 'missing routing fields'
+        if proposal.get('draft_error'):
+            # Triage passed but draft generation failed — human can write the draft
+            result['status'] = 'skipped'
+            result['reason'] = f"draft generation failed: {proposal['draft_error']}"
+        else:
+            result['status'] = 'error'
+            result['reason'] = 'missing routing fields'
         return result
 
     kb_path = REPO_ROOT / kb_file_rel
@@ -318,7 +334,9 @@ def run_integration(proposals_path: Path, digest_path: Path):
 
         result = integrate_paper(proposal, digest_path)
 
-        if result['status'] == 'integrated':
+        if result['status'] == 'already_integrated':
+            pass  # already committed in a previous run — silent skip
+        elif result['status'] == 'integrated':
             integrated.append({**proposal, **result})
         elif result['status'] in ('skipped', 'anchor_not_found'):
             proposals_only.append({**proposal, 'reason': result['reason']})

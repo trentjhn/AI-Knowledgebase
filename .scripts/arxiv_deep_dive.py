@@ -172,7 +172,14 @@ def _parse_json_response(text: str) -> dict:
     text = text.strip()
     if text.startswith('```'):
         text = re.sub(r'^```(?:json)?\s*\n?|\n?```\s*$', '', text, flags=re.MULTILINE).strip()
-    return json.loads(text)
+    # Strip trailing commas before closing braces/brackets
+    text = re.sub(r',\s*([}\]])', r'\1', text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        # Fix invalid escape sequences (lone backslashes not part of valid JSON escapes)
+        text = re.sub(r'\\(?!["\\/bfnrtu0-9])', r'\\\\', text)
+        return json.loads(text)
 
 
 TRIAGE_SYSTEM_PROMPT = """You are an expert research analyst for a practitioner-depth AI knowledge base.
@@ -233,7 +240,7 @@ Paper Content:
 
     response = client.chat.completions.create(
         model='gemini-3-flash-preview',
-        max_tokens=2048,
+        max_tokens=4096,
         messages=[
             {'role': 'system', 'content': TRIAGE_SYSTEM_PROMPT},
             {'role': 'user', 'content': user_message}

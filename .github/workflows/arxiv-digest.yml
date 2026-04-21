@@ -62,7 +62,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests openai beautifulsoup4
+        run: pip install openai beautifulsoup4
 
       - name: Run deep-dive analysis
         env:
