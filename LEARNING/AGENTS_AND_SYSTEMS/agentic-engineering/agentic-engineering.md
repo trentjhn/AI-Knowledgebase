@@ -3025,6 +3025,13 @@ This mental model doesn't replace the Four Pillars (Prompt, Model, Context, Tool
 
 ---
 
+---
+
+Production data from Claude Code quantifies the dominance of the harness layer over model weights: 98.4% of the agent's codebase is deterministic infrastructure (permission gates, tool routing, and recovery logic), while only 1.6% is dedicated to decision logic. This ratio confirms that production-grade reliability is not achieved by constraining the model’s reasoning via prompting, but by surrounding a stateless completion endpoint with a massive, deterministic operational harness. 
+
+Claude Code externalizes safety through a graduated architecture of seven permission modes, ranging from 'plan' (user approves all steps) to 'bypassPermissions' (minimal prompts). This design creates a safety-autonomy gradient where the system assumes a deny-first posture for every tool invocation. However, architectural analysis reveals a critical 'pre-trust' failure mode: hooks and Model Context Protocol (MCP) servers often execute during project initialization before the user interactive trust dialog is presented. Practitioners must ensure that safety logic is active during this initialization window, as defense-in-depth often fails when the independence assumption between safety layers is violated by shared performance constraints (e.g., skipping per-command checks to avoid UI latency).
+
+While Claude Code operates as a tool-specific harness focused on per-action safety, multi-channel gateways like OpenClaw prioritize perimeter-level identity and access control. This highlights a fundamental design tension: harnesses place the trust boundary between the model and the execution environment, while gateways place it at the network perimeter.
 ## 10. Agent Frameworks
 
 Four major frameworks for building agentic systems, each with a distinct philosophy:

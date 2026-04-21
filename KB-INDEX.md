@@ -136,7 +136,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **NEW:** | **Corpus2Skill (C2S) converts a document corpus into a navigable hierarchy of LLM-summarized 'skills,' allowing agents to ** (arXiv:2604.14572v1) |
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,200+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3743 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -165,6 +165,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **1805–1890** | **Long-Horizon Planning Under Compounding Consequences: Scratchpad usage as context persistence, adversarial reasoning gap (47% failure rate), modeling compound effects. Practical deployment strategies for multi-month tasks** |
 | **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
 
+| **NEW:** | **The study reveals that 98.4% of production agent code (Claude Code) consists of the operational harness (deterministic i** (arXiv:2604.14228v1) |
 ---
 
 ### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/context.md (~115 lines)
