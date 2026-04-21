@@ -316,7 +316,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (586 lines)
+### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (597 lines)
 
 **Fine-tuning as a strategy—when to use, methods, costs, failure modes**
 
@@ -329,6 +329,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 513–556 | PEFT/LoRA (10,000× fewer params), QLoRA (quantization tricks) |
 | 557–650 | Data requirements, synthetic data, Alpaca problem |
 
+| **NEW:** | **Instruction-tuned LLMs suffer from 'constraint-induced response collapse,' where trivial lexical constraints (e.g., bann** (arXiv:2604.13006v1) |
 ---
 
 ### LEARNING/PRODUCTION/rl-alignment/rl-alignment.md (~550 lines)

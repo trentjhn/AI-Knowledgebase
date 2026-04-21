@@ -151,6 +151,13 @@ One pattern worth understanding: there is a meaningful difference between instru
 
 ---
 
+---
+
+While instruction tuning transforms models into helpful assistants, it introduces a specific structural fragility known as **constraint-induced response collapse**. When a user applies even trivial lexical constraints—such as forbidding commas, semicolons, or high-frequency words like "the"—instruction-tuned models often switch to a minimalist strategy, producing responses that are 14–48% less comprehensive than their unconstrained versions.
+
+This collapse is not a failure of linguistic capability, but a **planning failure** encoded in the model's internal representations. In models like Llama-3.1-8B-Instruct and Qwen-2.5-7B-Instruct, linear probes can predict the significantly shorter response length from the hidden states at the middle layers (roughly 50% depth) before a single output token is generated, with an $R^2$ between 0.51 and 0.93. This suggests that the instruction-tuning process couples "helpfulness" to a narrow set of learned surface-form templates. When a constraint disrupts these templates, the model defaults to a primitive, non-comprehensive response mode. 
+
+Notably, this behavior is entirely absent in base models. In tests, base models showed no systematic length or quality drop under the same constraints, and their internal representations provided no predictive power ($R^2 < 0$) for response length. This confirms that response collapse is a side effect of the alignment process itself rather than an inherent limitation of Large Language Models. To mitigate this in production, practitioners can use a **two-pass 'generate-then-rewrite' protocol**. By allowing the model to generate a response freely first and then asking it to rewrite that response under the specified constraints, systems can recover 59–96% of the lost comprehensiveness.
 ## 6. Alignment: RLHF and DPO
 
 Instruction tuning teaches a model how to respond to requests. Alignment fine-tuning teaches it which responses are better than others. This distinction is critical. A model that can follow instructions can still produce harmful content, confidently state falsehoods, write manipulative text, or be unhelpful in subtle ways. Alignment training is designed to instill preferences — a sense of what good, safe, and honest output looks like.
