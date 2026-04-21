@@ -307,6 +307,22 @@ def tool_search(query: str, top_k: int = 5) -> list[ToolDefinition]:
 
 ---
 
+---
+
+### Variation: Active Navigation (Corpus2Skill)
+
+An evolution of semantic routing is **Active Navigation**, where the agent doesn't just search for a tool or passage but actively explores a pre-compiled hierarchy of knowledge. While standard RAG treats the LLM as a passive consumer of retrieved chunks, the **Corpus2Skill (C2S)** framework transforms a document corpus into a navigable directory of LLM-summarized "skills."
+
+**How it works:**
+At compile-time, the corpus is clustered and distilled into a tree structure. Internal nodes are stored as markdown files (`SKILL.md` or `INDEX.md`) containing thematic summaries of their children. At query-time, the agent uses file-system tools to browse this tree, starting at the root and descending into specific branches based on the summaries.
+
+**Key findings for practitioners:**
+*   **Hierarchy Depth:** Optimal performance occurs with a "narrow and deep" structure. A branching ratio of $p=5$ (five items per index) provides the finest topic separation, reducing the risk of the agent choosing the wrong top-level branch.
+*   **Cross-Branch Reasoning:** Unlike flat retrieval, this allows agents to perform cross-branch exploration. For example, a query about "changing currency for a course" might lead an agent to visit a *Billing* skill to find site-wide settings and then a *LMS* skill to verify app-specific overrides, synthesizing a complete answer that vector search often misses.
+*   **Scaling with Compact Mode:** To avoid hitting file-limit constraints in large corpora, use a "compact mode" where the lowest-level index files are merged into their parents. This can reduce total file count by 80% while providing the agent with a denser view of document candidates in a single tool call.
+
+**Performance Tradeoffs:**
+C2S removes the need for a vector database at query-time but increases input token costs due to the agent reading multiple summary files. In benchmarks on the WixQA dataset, this approach achieved a 27% improvement in Token F1 (0.460) and significantly higher factuality (0.729) compared to standard dense RAG. It is recommended for high-value, complex support or compliance queries where the cost of 50k+ input tokens is justified by the need for accuracy.
 ## 8. Pattern 6: Evaluator-Optimizer Loop
 
 **What it is:** Two agents in a feedback loop — a generator that produces output and an evaluator that assesses quality and provides structured improvement guidance. The loop runs until the evaluator signals PASS or a max iteration count is reached.

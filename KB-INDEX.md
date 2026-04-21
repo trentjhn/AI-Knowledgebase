@@ -133,6 +133,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 436–460 | Cost optimization — model tiering table, context isolation, parallel execution economics |
 | 461–480 | Anti-patterns — orchestrators doing domain work, shared context, no exit conditions |
 
+| **NEW:** | **Corpus2Skill (C2S) converts a document corpus into a navigable hierarchy of LLM-summarized 'skills,' allowing agents to ** (arXiv:2604.14572v1) |
 ---
 
 ### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (4,200+ lines)
