@@ -260,7 +260,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/evaluation/evaluation.md (1260 lines)
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1263 lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -281,6 +281,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
+| **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 ---
 
 ### LEARNING/PRODUCTION/ai-security/ai-security.md (1,260+ lines)
@@ -351,6 +352,7 @@ Prerequisites: fine-tuning.md, evaluation.md
 | 721–800 | Reward hacking + alignment tax: concrete examples (verbosity, sycophancy, formatting), mitigations, managing the tax |
 | 801–end | Practical stack for builders: base model alignment comparison table, fine-tuning safety risks, evaluation signals, technique decision framework |
 
+| **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 ---
 
 ### LEARNING/PRODUCTION/inference-optimization/inference-optimization.md (~500 lines)

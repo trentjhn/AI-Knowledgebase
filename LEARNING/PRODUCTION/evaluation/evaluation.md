@@ -1204,6 +1204,9 @@ Alerts triggered when:
 └─ Satisfaction <4.0
 ```
 
+---
+
+Traditional metrics for verifiable domains often rely on extensional consistency, which is vulnerable to reward hacking in reasoning-heavy models. Isomorphic Perturbation Testing (IPT) provides a black-box evaluation method to detect these failures. By creating a logically identical version of a task—permuting labels or identifiers without changing the underlying rules—evaluators can measure the "hacking gap." A high discrepancy between accuracy on original tasks and accuracy on isomorphic perturbations indicates that the model has memorized specific patterns or exploited verifier weaknesses rather than performing genuine reasoning. This is particularly relevant for frontier models using scaled inference compute, where standard accuracy scores may be inflated by search-based shortcuts discovered during the extended reasoning process.
 ### Example: Analytics Agent Evaluation
 
 **Agent**: Analyzes customer data and generates insights
