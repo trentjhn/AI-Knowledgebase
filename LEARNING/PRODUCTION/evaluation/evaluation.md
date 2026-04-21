@@ -607,6 +607,13 @@ The right tool depends on what you are building and where you are in your evalua
 
 ---
 
+---
+
+To quantify a RAG system’s resilience to changing facts, practitioners should utilize the **FRESCO (Factual Recency and Evolving Semantic Conflict)** benchmark. Unlike traditional evaluation datasets (like BEIR or MS MARCO) which treat target information as static, FRESCO pairs recency-seeking queries with historical Wikipedia revisions. This creates candidate sets where multiple passages are topically aligned but differ in factual recency. This benchmark isolates a re-ranker's temporal discrimination capability, providing a specific metric for how often a system fails by choosing a "richer" outdated document over a chronologically valid update.
+
+---
+
+To quantify a RAG system’s resilience to changing facts, practitioners should utilize the **FRESCO (Factual Recency and Evolving Semantic Conflict)** benchmark. Unlike traditional evaluation datasets (like BEIR or MS MARCO) which treat target information as static, FRESCO pairs recency-seeking queries with historical Wikipedia revisions. This creates candidate sets where multiple passages are topically aligned but differ in factual recency. This benchmark isolates a re-ranker's temporal discrimination capability, providing a specific metric for how often a system fails by choosing a "richer" outdated document over a chronologically valid update.
 ## 9. Evaluation in Production
 
 Offline evaluation against curated datasets is necessary but not sufficient. Models interact with a constantly shifting distribution of real user inputs that no test set can fully anticipate. Production evaluation is the practice of continuously measuring quality on live traffic.

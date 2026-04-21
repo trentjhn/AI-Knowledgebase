@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (870+ lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (856 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -54,6 +54,8 @@
 | **NEW:** 12. | Context Compaction — threshold guidance (5K–150K), 58.6% token reduction on sequential workflows, tool result clearing (96.3% bloat reduction), automatic summarization pattern |
 | **NEW:** 13. | Speculative Prompt Caching — 90.7% TTFT improvement (20.87s → 1.94s), parallel cache warming during user input, requirements for cache hit |
 
+| **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
+| **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (467 lines)
@@ -258,7 +260,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/evaluation/evaluation.md (1,050+ lines)
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1260 lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -277,6 +279,8 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** 15. | Eval-Driven Development (EDD): evals BEFORE implementation, cost-benefit analysis (pays for itself on 2nd similar feature) |
 | **NEW:** 16. | **External Metrics Anchoring**: Replace LLM self-assessment with domain-specific numerical criteria (empirical fit, prediction accuracy, parsimony) for discovery and generation tasks |
 
+| **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
+| **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 ---
 
 ### LEARNING/PRODUCTION/ai-security/ai-security.md (1,260+ lines)

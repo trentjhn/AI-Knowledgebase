@@ -325,6 +325,21 @@ Bigger context windows don't automatically mean better performance. More informa
 
 ---
 
+---
+
+Beyond the conflict between internal training data and external retrieval, a secondary bottleneck occurs within the retrieved set itself: **Evolving Semantic Conflict (ESC)**. This occurs when a RAG system retrieves multiple documents that are all topically relevant but factually contradictory because the underlying information has changed over time (e.g., an older vLLM version 0.5 release note vs. a newer version 0.6 update). 
+
+Research using the FRESCO benchmark reveals that standard re-rankers exhibit a documented **semantic bias**. They systematically prioritize older, contextually "dense" documents over newer, factually correct updates that may be shorter or "sparser" in their descriptions. In these scenarios, traditional semantic similarity is a necessary but insufficient metric for relevance, as the model defaults to the most linguistically rich source rather than the most recent one.
+
+Resolving this integration failure requires "temporal discrimination"—the ability to weigh recency alongside topicality. This can be achieved through Pareto-optimized instructions that explicitly direct the model to treat document timestamps as primary relevance signals. This shift is measurable at the architectural level: optimized instructions increase the model's **Temporal Attention Ratio** (the internal attention directed toward document timestamps) from approximately 31.7% to 33.4%. This redirection of internal focus can improve Mean Average Precision (MAP) by up to 27% on evolving knowledge tasks without degrading performance on static, non-evolving queries.
+
+---
+
+Beyond the conflict between internal training data and external retrieval, a secondary bottleneck occurs within the retrieved set itself: **Evolving Semantic Conflict (ESC)**. This occurs when a RAG system retrieves multiple documents that are all topically relevant but factually contradictory because the underlying information has changed over time (e.g., an older vLLM version 0.5 release note vs. a newer version 0.6 update). 
+
+Research using the FRESCO benchmark reveals that standard re-rankers exhibit a documented **semantic bias**. They systematically prioritize older, contextually "dense" documents over newer, factually correct updates that may be shorter or "sparser" in their descriptions. In these scenarios, traditional semantic similarity is a necessary but insufficient metric for relevance, as the model defaults to the most linguistically rich source rather than the most recent one.
+
+Resolving this integration failure requires "temporal discrimination"—the ability to weigh recency alongside topicality. This can be achieved through Pareto-optimized instructions that explicitly direct the model to treat document timestamps as primary relevance signals. This shift is measurable at the architectural level: optimized instructions increase the model's **Temporal Attention Ratio** (the internal attention directed toward document timestamps) from approximately 31.7% to 33.4%. This redirection of internal focus can improve Mean Average Precision (MAP) by up to 27% on evolving knowledge tasks without degrading performance on static, non-evolving queries.
 ### The Agent Vulnerability Problem
 
 Agents are uniquely susceptible to all four failure modes *simultaneously*. In a single agentic session, an agent might:
