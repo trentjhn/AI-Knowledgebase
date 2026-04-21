@@ -62,11 +62,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests anthropic beautifulsoup4
+        run: pip install requests openai beautifulsoup4
 
       - name: Run deep-dive analysis
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         run: python .scripts/arxiv_deep_dive.py
 
       - name: Configure Git

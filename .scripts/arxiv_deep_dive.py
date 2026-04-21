@@ -127,20 +127,23 @@ def load_rubric_and_index() -> tuple[str, str]:
 
 def analyze_paper(paper: dict, rubric: str, kb_index: str) -> dict:
     """
-    Fetch paper HTML and call Claude API to produce a structured proposal.
+    Fetch paper HTML and call Gemini 3 Flash API to produce a structured proposal.
     Returns proposal dict matching the proposals JSON schema.
     """
     import os
     import json
     import sys
-    import anthropic as _anthropic
+    import openai as _openai
 
     paper_content, html_available = fetch_paper_html(paper['id'])
 
     if not html_available:
         paper_content = f"Abstract: {paper['abstract']}"
 
-    client = _anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+    client = _openai.OpenAI(
+        api_key=os.getenv('GOOGLE_API_KEY'),
+        base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+    )
 
     user_message = f"""INTEGRATION RUBRIC:
 {rubric}
@@ -159,13 +162,15 @@ Paper Content:
 {paper_content[:40000]}"""
 
     def _call_api():
-        response = client.messages.create(
-            model='claude-sonnet-4-6',
+        response = client.chat.completions.create(
+            model='gemini-3-flash-preview',
             max_tokens=4000,
-            system=ANALYSIS_SYSTEM_PROMPT,
-            messages=[{'role': 'user', 'content': user_message}]
+            messages=[
+                {'role': 'system', 'content': ANALYSIS_SYSTEM_PROMPT},
+                {'role': 'user', 'content': user_message}
+            ]
         )
-        text = response.content[0].text.strip()
+        text = response.choices[0].message.content.strip()
         if text.startswith('```'):
             text = re.sub(r'^```(?:json)?\s*\n?|\n?```\s*$', '', text, flags=re.MULTILINE).strip()
         r = json.loads(text)
@@ -179,15 +184,15 @@ Paper Content:
 
     try:
         return _call_api()
-    except _anthropic.AuthenticationError:
+    except _openai.AuthenticationError:
         raise  # Config bug — should fail the whole job
-    except _anthropic.APIError as e:
+    except _openai.APIError as e:
         import time
         print(f"  API error for {paper['id']} (retrying): {e}", file=sys.stderr)
         time.sleep(5)
         try:
             return _call_api()
-        except _anthropic.APIError as e2:
+        except _openai.APIError as e2:
             print(f"  API error for {paper['id']} (giving up): {e2}", file=sys.stderr)
             return {
                 'paper_id': paper['id'],
