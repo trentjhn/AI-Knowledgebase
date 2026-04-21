@@ -273,14 +273,31 @@ def integrate_paper(proposal: dict, digest_path: Path) -> dict:
     return result
 
 
+def detect_anchor_collisions(proposals: list) -> set[tuple]:
+    """Return (primary_file, anchor) pairs where 2+ high-confidence papers target the same anchor."""
+    from collections import Counter
+    counter = Counter()
+    for p in proposals:
+        conf = p.get('quality_gate', {}).get('confidence', 0)
+        if conf < CONFIDENCE_THRESHOLD:
+            continue
+        routing = p.get('kb_routing', {})
+        key = (routing.get('primary_file', ''), routing.get('section_anchor', ''))
+        if key[0] and key[1]:
+            counter[key] += 1
+    return {k for k, v in counter.items() if v >= 2}
+
+
 def run_integration(proposals_path: Path, digest_path: Path):
     """
-    Main orchestration: read proposals, group by KB file, integrate sequentially.
+    Main orchestration: read proposals, detect collisions, integrate sequentially.
     """
     proposals = json.loads(proposals_path.read_text())
-
-    # Sort by primary KB file so same-file edits are sequential
     proposals.sort(key=lambda p: p.get('kb_routing', {}).get('primary_file', ''))
+
+    collisions = detect_anchor_collisions(proposals)
+    if collisions:
+        print(f"  Anchor collisions detected: {len(collisions)} anchor(s) targeted by 2+ papers — routing to proposals-only", file=sys.stderr)
 
     integrated, proposals_only, filtered, errors = [], [], [], []
 
@@ -288,6 +305,15 @@ def run_integration(proposals_path: Path, digest_path: Path):
         conf = proposal.get('quality_gate', {}).get('confidence', 0)
         if conf < 0.60:
             filtered.append(proposal)
+            continue
+
+        routing = proposal.get('kb_routing', {})
+        key = (routing.get('primary_file', ''), routing.get('section_anchor', ''))
+        if key in collisions:
+            proposals_only.append({
+                **proposal,
+                'reason': f'anchor collision: multiple papers target "{key[1]}" — requires human synthesis'
+            })
             continue
 
         result = integrate_paper(proposal, digest_path)
@@ -383,6 +409,32 @@ def write_weekly_summary(
         lines += ["---", "", "## Errors (check logs)", ""]
         for p in errors:
             lines.append(f"- [{p['paper_id']}] {p['title']}: {p.get('error','unknown')}")
+
+    # Surface anchor corrections for human review — fuzzy matches may be wrong
+    corrected = [
+        p for p in integrated + proposals_only
+        if p.get('kb_routing', {}).get('anchor_corrected')
+    ]
+    if corrected:
+        lines += ["---", "", "## Anchor corrections (verify these placements)", ""]
+        lines.append("*Fuzzy-matched anchors — confirm the section placement is correct.*")
+        lines.append("")
+        for p in corrected:
+            routing = p.get('kb_routing', {})
+            lines.append(
+                f"- **[{p['paper_id']}] {p['title']}**: "
+                f"`\"{routing.get('anchor_original', '?')}\"` → `\"{routing.get('section_anchor', '?')}\"`"
+            )
+        lines.append("")
+
+    # Confidence reasoning — surfaces gate 3 scoring for audit
+    lines += ["---", "", "## Confidence reasoning", ""]
+    for p in integrated + proposals_only:
+        conf = p.get('quality_gate', {}).get('confidence', 0)
+        reasoning = p.get('quality_gate', {}).get('reasoning', '')
+        if reasoning:
+            lines.append(f"- **{p['paper_id']}** (conf {conf:.2f}): {reasoning}")
+    lines.append("")
 
     summary_path = REPO_ROOT / 'raw' / 'arxiv-weekly-summary' / f'{date_str}.md'
     summary_path.parent.mkdir(parents=True, exist_ok=True)

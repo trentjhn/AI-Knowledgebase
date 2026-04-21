@@ -2,27 +2,69 @@
 
 Used by the automated deep-dive pipeline. Distilled from kb-paper-integration skill.
 
-## Quality Gate (run first)
+## TRIAGE — Quality Gate and Routing (Call 1)
 
-Each gate sets its own confidence ceiling when it fails. Use the lowest ceiling that applies.
-If all gates pass, set confidence based on novelty: 0.80–0.90 for strong mechanism, 0.90–0.95 for gap-filling or contradiction.
+Run these gates in order. Each sets a confidence ceiling. Use the lowest ceiling that applies.
 
 1. **Is this a mechanism, not an application?**
-   - MECHANISM: generalizable pattern, insight into why something works/fails
+   - MECHANISM: generalizable pattern, insight into WHY something works or fails across systems
    - APPLICATION: domain-specific deployment, infrastructure tuning, benchmark chasing
    - If application with no extractable mechanism: confidence ≤ 0.50, skip integration
 
 2. **Does it generalize?**
-   - Would this pattern apply to other agents/prompts/systems beyond the paper's domain?
+   - Would this pattern apply to other agents/prompts/systems beyond this paper's specific domain?
    - Yes → proceed. No → confidence ≤ 0.55
 
 3. **Does it fill a gap or contradict existing KB content?**
-   - Read KB-INDEX to see what the target section already covers
-   - Duplicates existing content without new insight → confidence ≤ 0.55
-   - Fills gap (topic not yet covered) → high value
-   - Contradicts existing assumption (e.g., paper shows CoT doesn't help in domain X, while KB states CoT helps generally) → high value
+   - Carefully read what the KB-INDEX says the target section already covers.
+   - **Confirmatory** (agrees with, extends, or confirms what the KB already says): confidence ≤ 0.72
+   - **Gap-filling** (topic genuinely not covered in KB): confidence ≥ 0.85
+   - **Contradictory** (overturns or challenges a specific KB assumption): confidence ≥ 0.88
+   - Mentions the topic without new insight: confidence ≤ 0.55
 
-**No-match fallback:** If the paper doesn't fit any routing row below, set confidence ≤ 0.50 and leave kb_routing.primary_file as an empty string. The integration script will move it to proposals-only.
+4. **Deployment relevance — would this change how a practitioner builds or deploys AI this week?**
+   - "Would an engineer or PM building an AI agent, RAG pipeline, or evaluation system make a different decision after reading this?"
+   - YES — directly changes prompting strategy, agent design, evaluation approach, or deployment pattern: add +0.03 to confidence (subject to ceiling)
+   - NO — primarily of academic interest, no near-term action: no change; if high novelty but low deployment relevance, cap confidence at 0.82
+
+**Scoring discipline:** Most papers are confirmatory (gate 3). Force yourself to honestly check KB-INDEX before scoring. If you are not sure whether a topic is covered, treat it as confirmatory (≤ 0.72). Reserve ≥ 0.85 strictly for papers where you can name a specific KB gap or assumption this paper changes.
+
+**All gates pass:** 0.80–0.88 for strong mechanism with deployment relevance; 0.88–0.95 for genuine gap-filling or contradiction with direct practitioner implications.
+
+**No-match fallback:** If the paper doesn't fit any routing row below, set confidence ≤ 0.50 and leave kb_routing.primary_file as an empty string.
+
+## Triage Output Schema (Call 1 — no draft text)
+
+Return ONLY valid JSON:
+```
+{
+  "paper_id": "string",
+  "title": "string",
+  "html_available": boolean,
+  "quality_gate": {
+    "is_mechanism": boolean,
+    "generalizes": boolean,
+    "fills_gap": boolean,
+    "deployment_relevant": boolean,
+    "confidence": float,
+    "reasoning": "string (1-2 sentences: which gate drove the score and why)"
+  },
+  "kb_routing": {
+    "primary_file": "string (relative path from repo root)",
+    "section_anchor": "string (exact section heading text from KB file)",
+    "secondary_file": null or "string",
+    "secondary_section_anchor": null or "string"
+  },
+  "playbook_routing": {
+    "applies": boolean,
+    "playbook_file": null or "string",
+    "section_anchor": null or "string"
+  },
+  "magnum_opus_flag": null or "string",
+  "key_findings": "string (2-3 sentences, empirical numbers where available)",
+  "highlights_blurb": "string (2 sentences — what it found and why a practitioner should care)"
+}
+```
 
 ## KB Section Routing (primary destination)
 
@@ -54,12 +96,12 @@ Only add a secondary section if:
 
 ## Section Anchor Format
 
-The `section_anchor` field must be an EXACT QUOTE of a section heading from the target KB file — the text that appears after `## ` or `### ` in that file. Examples:
+The `section_anchor` field must be an EXACT QUOTE of a section heading from the target KB file — the text after `## ` or `### `. Examples:
 - "Special Case: Function-Calling Agents and the Reasoning Paradox"
-- "LLM-as-Judge: Using AI to Evaluate AI"
+- "LLM-as-a-Judge"
 - "Reward Hacking and the Alignment Tax"
 
-Use KB-INDEX section descriptions to identify the right heading. The integration script searches for this heading literally in the file.
+Use KB-INDEX section descriptions to identify which heading is relevant, then quote the heading text exactly as it appears in the file.
 
 ## Playbook Routing
 
@@ -78,34 +120,27 @@ Relevant playbooks:
 
 Flag for magnum-opus update if the paper introduces a pattern that should inform project-level decisions (not just KB reference). Phrase as: "Phase N ([phase name]) — [one sentence on what should be added/updated]"
 
-## Output Format
+## DRAFT — KB Text Generation (Call 2)
 
-Return ONLY valid JSON matching this schema exactly:
+Called only for papers with confidence ≥ 0.75. You will receive:
+- The triage result (routing, key_findings, highlights_blurb)
+- The existing content of the target KB section (what's already there)
+- The paper content
+
+Your job: write draft_kb_text that adds genuinely new insight without restating what's already in the section.
+
+KB writing standards:
+- Plain English first, define jargon on first use
+- Narrative prose before bullets or tables
+- Concrete examples with real numbers from the paper
+- No placeholder text, no hedge phrases ("this suggests that...")
+- 200–500 words for primary, 100–200 for secondary
+
+Draft output schema (Call 2):
+```
 {
-  "paper_id": "string",
-  "title": "string",
-  "html_available": boolean,
-  "quality_gate": {
-    "is_mechanism": boolean,
-    "generalizes": boolean,
-    "fills_gap": boolean,
-    "confidence": float
-  },
-  "kb_routing": {
-    "primary_file": "string (relative path from repo root)",
-    "section_anchor": "string (exact section heading text from KB file)",
-    "secondary_file": null or "string",
-    "secondary_section_anchor": null or "string (exact section heading text from secondary KB file)"
-  },
-  "playbook_routing": {
-    "applies": boolean,
-    "playbook_file": null or "string",
-    "section_anchor": null or "string"
-  },
-  "magnum_opus_flag": null or "string",
-  "key_findings": "string (2-3 sentences, empirical numbers where available)",
-  "draft_kb_text": "string (full prose, KB writing standards: plain English first, define jargon, narrative before bullets, concrete examples)",
-  "draft_kb_text_secondary": null or "string (same writing standards, for the secondary KB file if applicable)",
-  "draft_playbook_text": null or "string",
-  "highlights_blurb": "string (2 sentences — what it found and why a practitioner should care)"
+  "draft_kb_text": "string",
+  "draft_kb_text_secondary": null or "string",
+  "draft_playbook_text": null or "string"
 }
+```

@@ -116,7 +116,11 @@ Signals: "connect to [external tool]," "give the agent access to," "tool integra
 
 **Output:** ~4-6 quality papers per week in `raw/arxiv-papers/`
 
-**Integration:** Review digest when available, manually integrate interesting papers into KB docs by adding them to the sources list and synthesizing findings into the appropriate topic doc.
+**Integration pipeline output:**
+- `raw/arxiv-proposals/YYYY-MM-DD.json` — structured proposals from deep-dive analysis
+- `raw/arxiv-weekly-summary/YYYY-MM-DD.md` — **start here each Monday** — human-readable summary of what was integrated, what needs review, anchor corrections, and Magnum Opus flags
+- High-confidence papers (≥0.80 confidence + HTML available) are auto-integrated with per-paper commits
+- Lower-confidence papers land in proposals JSON for manual review via `kb-paper-integration` skill
 
 **Configuration:** Adjustable thresholds in `.scripts/arxiv-scraper.py`:
 - `CITATION_THRESHOLD = 1` (line 57) — minimum citations to include
