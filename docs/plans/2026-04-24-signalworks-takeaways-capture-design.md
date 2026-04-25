@@ -63,7 +63,7 @@ Top-level `takeaways/` folder in the SignalWorks operational hub. One file per e
 
 **Why durable:** `signal-works-internal` is the operational hub Trent and Jahleel use across all engagements forever. When a per-engagement code repo (`brett-gove-intell`) goes inactive, the takeaways survive in the hub.
 
-### Component 2 — `signal-works-internal/process/consulting-playbook.md` (curated methodology)
+### Component 2 — `AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` (curated methodology)
 
 The SignalWorks-specific scaffolding playbook. Lives next to `case-study-template.md` (the existing process/methodology home). Read by `/cook` Phase 1 when classification matches "SignalWorks consulting engagement."
 
@@ -122,7 +122,7 @@ Edit the existing user-level skill to add a new step in its workflow:
 
 Two patches to `/cook`:
 
-**Patch A — Phase 1 routing addition.** Add classification "SignalWorks consulting engagement" to Phase 1. When matched, route to `signal-works-internal/process/consulting-playbook.md` (alongside any other matching playbooks like `building-ai-agents.md`). Same one-line addition pattern as existing routing.
+**Patch A — Phase 1 routing addition.** Add classification "SignalWorks consulting engagement" to Phase 1. When matched, route to `AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` (alongside any other matching playbooks like `building-ai-agents.md`). Same one-line addition pattern as existing routing.
 
 **Patch B — Phase 2 skill deployment + CLAUDE.md mandate baking.** Phase 2 (Harness Design) gains two responsibilities:
 - **Skill deployment fix:** consult the project classification → deploy classification-appropriate skills into `{new-project}/.claude/skills/` (e.g., a Type B engagement with UI components gets `frontend-design`, `web-design-patterns`, `shadcn-ui`, `frontend-taste`; a Type A engagement gets `eval-harness`, `cost-aware-llm-pipeline`, etc.). The deployment is a copy from `~/.claude/skills/{skill-name}/` into `{new-project}/.claude/skills/{skill-name}/`.
@@ -175,7 +175,7 @@ After Brett engagement wraps, the per-project file becomes a frozen historical a
 
 1. Create `signal-works-internal/takeaways/` folder.
 2. Copy `brett-gove-intell/docs/workflow-notes/session-takeaways.md` content into `signal-works-internal/takeaways/brett-roberts-la-metro.md` as day-1 seed.
-3. Write `signal-works-internal/process/consulting-playbook.md` with the 15 seeded sections + Type A/B branching.
+3. Write `AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` with the 15 seeded sections + Type A/B branching.
 4. Write `signal-works-internal/process/client-engagement-CLAUDE-template.md` extracted from `brett-gove-intell/CLAUDE.md`.
 5. Edit `~/.claude/skills/session-handoff/SKILL.md` to add the SignalWorks detection + extraction + auto-commit logic.
 6. Patch `~/.claude/skills/cook/SKILL.md` Phase 1 (routing) and Phase 2 (skill deployment + CLAUDE.md baking).

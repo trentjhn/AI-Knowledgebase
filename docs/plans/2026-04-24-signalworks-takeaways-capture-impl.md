@@ -118,7 +118,7 @@ git push
 9. **Required Rules** (always includes: "Before ending any session — whether complete or interrupted — invoke the `session-handoff` skill. This is not optional.")
 10. **Authority Block** (placeholder template: "Decide autonomously: ... | Pause for {operator}: ...")
 11. When to Ask Before Acting (placeholder list)
-12. Reference to `signal-works-internal/process/consulting-playbook.md`
+12. Reference to `AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md`
 
 Each placeholder section must include `[FILL AT ENGAGEMENT KICKOFF: ...]` markers so `/cook` Phase 2 knows to fill them.
 
@@ -145,7 +145,7 @@ git push
 ### Task 4: Write consulting-playbook.md universal sections (1-12 of 15)
 
 **Files:**
-- Create: `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md`
+- Create: `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md`
 - Source patterns: `signal-works-internal/takeaways/brett-roberts-la-metro.md` (the day-1 seed file from Task 2)
 
 **Step 1:** Write the playbook with this structure (universal sections — apply to both Type A and Type B engagements):
@@ -213,7 +213,7 @@ git push
 **Step 2: Verify**
 
 ```bash
-grep -c "^## Section" /Users/t-rawww/signal-works-internal/process/consulting-playbook.md
+grep -c "^## Section" /Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md
 ```
 
 Expected: 15.
@@ -233,7 +233,7 @@ git push
 ### Task 5: Add Type A specifics to consulting-playbook.md
 
 **Files:**
-- Modify: `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md` (append after Section 15)
+- Modify: `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` (append after Section 15)
 
 **Step 1:** Append Section 16:
 
@@ -263,7 +263,7 @@ When the AI workflow/automation IS the product, apply these in addition to unive
 **Step 2: Verify**
 
 ```bash
-grep -c "^### 16\." /Users/t-rawww/signal-works-internal/process/consulting-playbook.md
+grep -c "^### 16\." /Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md
 ```
 
 Expected: 5.
@@ -283,7 +283,7 @@ git push
 ### Task 6: Add Type B specifics to consulting-playbook.md
 
 **Files:**
-- Modify: `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md` (append after Section 16)
+- Modify: `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` (append after Section 16)
 
 **Step 1:** Append Section 17:
 
@@ -313,7 +313,7 @@ When AI coding agents help build a non-AI deliverable (marketing site, data pipe
 **Step 2: Verify**
 
 ```bash
-grep -c "^### 17\." /Users/t-rawww/signal-works-internal/process/consulting-playbook.md
+grep -c "^### 17\." /Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md
 ```
 
 Expected: 5.
@@ -450,13 +450,13 @@ git push
 
 ```markdown
 4. "Is this a SignalWorks consulting engagement (paid client work for an external client)? yes/no"
-   If yes: route to `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md` IN ADDITION to any other matching playbooks.
+   If yes: route to `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` IN ADDITION to any other matching playbooks.
 ```
 
 Update the routing list to include:
 
 ```markdown
-- SignalWorks client engagement → `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md` (read first, applies on top of type-specific playbooks)
+- SignalWorks client engagement → `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` (read first, applies on top of type-specific playbooks)
 ```
 
 Update the report line:
@@ -582,7 +582,7 @@ rm -rf /tmp/sw-cook-test-project
 ```markdown
 ## SignalWorks Workflow Capture System (built 2026-04-24)
 - `/Users/t-rawww/signal-works-internal/takeaways/{slug}.md` — per-engagement raw takeaways auto-appended by extended session-handoff
-- `/Users/t-rawww/signal-works-internal/process/consulting-playbook.md` — 17 sections (universal + Type A + Type B), seeded from brett-roberts-la-metro
+- `/Users/t-rawww/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` — 17 sections (universal + Type A + Type B), seeded from brett-roberts-la-metro
 - `/Users/t-rawww/signal-works-internal/process/client-engagement-CLAUDE-template.md` — baked into new SignalWorks projects by /cook
 - `~/.claude/skills/session-handoff/SKILL.md` — extended with SignalWorks Takeaways Extension section
 - `~/.claude/skills/cook/SKILL.md` — Phase 1 routing + Phase 2.5 skill deployment + Phase 2.6 CLAUDE.md baking
@@ -657,7 +657,7 @@ git push
 
 1. End a session in `brett-gove-intell` (manually or via `session-handoff` skill invocation) → takeaways auto-appear in BOTH `brett-gove-intell/docs/workflow-notes/session-takeaways.md` AND `signal-works-internal/takeaways/brett-roberts-la-metro.md` → auto-commit + push succeeds.
 2. Run `/cook` in a new sandbox directory, classify as SignalWorks engagement → resulting project has CLAUDE.md with mandate + target line, and `.claude/skills/` with classification-appropriate skills.
-3. `signal-works-internal/process/consulting-playbook.md` exists with 17 sections (15 universal + Type A + Type B); each seeded section has a provenance tag.
+3. `AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` exists with 17 sections (15 universal + Type A + Type B); each seeded section has a provenance tag.
 4. Non-SignalWorks projects (e.g., personal experiments) are unaffected by extended session-handoff (detection step short-circuits cleanly).
 
 ## Risks & mitigations during execution

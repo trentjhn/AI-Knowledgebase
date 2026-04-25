@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (856 lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (898 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -47,6 +47,9 @@
 | **302–340** | **Failure Mode 5: Knowledge Integration Bottleneck in RAG — resolving conflicts between parametric knowledge & retrieved documents; joint decoding solution; 12.1% accuracy gain, 16.3% hallucination reduction** |
 | **219–233** | **Multi-agent isolation cost-benefit: DACS mechanism (Dynamic Attentional Context Scoping), empirical validation (90–98.4% steering accuracy, 3.53× context efficiency, 0–14% contamination vs. 28–57% baseline)** |
 | 341–420 | Custom context formats, ordering rules, long-term memory, workflow engineering |
+| **441–456** | **Why Flat Vector Retrieval Breaks on Multi-Hop Queries: relational queries (Alice/Atlas/PostgreSQL example) fail cosine similarity because connecting facts lack shared vocabulary with the query; normal shape of organizational knowledge** |
+| **457–470** | **The Three Storage Paradigms: relational (provenance) + vector (semantics) + graph (relationships) as complementary, not competing; decision rule keyed on query shape, not storage technology** |
+| **471–482** | **Memory Consolidation: episodic → semantic distillation as the piece most production memory systems skip; why logging events isn't the same as remembering them** |
 | 410–466 | Anti-patterns, tools, integration checklist |
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
 | **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
@@ -138,7 +141,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **NEW:** | **Corpus2Skill (C2S) converts a document corpus into a navigable hierarchy of LLM-summarized 'skills,' allowing agents to ** (arXiv:2604.14572v1) |
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3743 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3777 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -157,6 +160,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | 2075–2330 | Practices: debugging, cost, production, evaluation, intent engineering, spec engineering |
 | 2331–2531 | Mental models: Pit of Success, Specs as Source Code, Topologies, Context as Code |
 | **~2973–3030** | **Externalization: Cognitive Architecture Lens (Zhou et al. 2026) — Weights→Context→Harness evolution; 4-element taxonomy (Memory/Skills/Protocols/Harness); failure modes as representational mismatches; relationship to Four Pillars** |
+| **3028–3058** | **Resource-Level Protocols (Zhang et al. 2026, "Autogenesis" 2604.15034): MCP/A2A are tool-*calling* protocols, not tool-*lifecycle* protocols. Core principle: decouple *what* evolves (resources) from *how* evolution occurs (propose→assess→commit→rollback pipeline). Extends Externalization taxonomy with a lifecycle axis. Open questions: protocol-vs-platform boundary, human-vs-agent in the assess loop (assessor-gaming), concurrent resource evolution.** |
 | 2772–2863 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
 | 2865–2935 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
 | 2936–2990 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
@@ -184,7 +188,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agent-teams.md (~380 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agent-teams.md (~527 lines)
 
 **Complete reference for Claude Code Agent Teams — the native multi-agent peer coordination primitive**
 
@@ -197,7 +201,8 @@ Prerequisites: Complete FOUNDATIONS first.
 | 186–240 | Controlling the team: creating teams, assigning tasks, direct messaging, plan approval, shutdown |
 | 241–320 | Quality gates via hooks: TeammateIdle, TaskCreated, TaskCompleted — exit codes, shell examples |
 | 321–360 | Context and communication: what teammates receive, spawn prompt design, what they don't inherit |
-| 361–380 | Subagent definitions as blueprints, token costs, limitations, troubleshooting |
+| 361–434 | Subagent definitions as blueprints, token costs, limitations, troubleshooting |
+| **436–516** | **Multi-Agent Patterns That Actually Work in Production (2026 Cognition update): writes-stay-single-threaded principle; clean-context review loops (2 bugs/PR, 58% severe, context-rot + forced reasoning-backward explanation); capability routing ("Smart Friend") — works frontier-to-frontier, open training problem for weak-primary-to-strong-secondary; map-reduce-and-manage beats unstructured swarm; decision matrix refinement; three open problems (escalation, cross-agent discovery, context transfer)** |
 
 ---
 
@@ -394,7 +399,7 @@ Prerequisites: fine-tuning.md, evaluation.md
 
 ---
 
-### future-reference/playbooks/ (11 playbooks)
+### future-reference/playbooks/ (12 playbooks)
 
 **Practical, ready-to-use guides for building AI systems**
 
@@ -432,6 +437,7 @@ See [playbooks/README.md](future-reference/playbooks/README.md) for the complete
 | [building-professional-websites.md](future-reference/playbooks/building-professional-websites.md) | Website builds | Professional website architecture and patterns |
 | [building-ai-saas.md](future-reference/playbooks/building-ai-saas.md) | AI-powered SaaS products | Pre-flight framework, 4 failure modes, Phase 0–3 build sequence, patterns worth repeating |
 | [production-agent-patterns.md](future-reference/playbooks/production-agent-patterns.md) | Production agent deployment | HITL approval workflows (sync dev + async webhook), stateful orchestration, credential vaults, prompt versioning, event-driven integration |
+| [**signalworks-consulting.md**](future-reference/playbooks/signalworks-consulting.md) *(613 lines)* | **SignalWorks AI consulting engagements** | **17 sections (15 universal + Type A AI-deliverable specifics + Type B AI-accelerated-build specifics). Methodology for client work: engagement discovery, Type A vs Type B classification, authority block setup, source-of-truth doc spine, CLAUDE.md mandate, tier-based shipping with commit checkpoints, multi-agent audit discipline with self-critique, triage cohort rule (re-run vs no-re-run), baseline-before-change, decision log format, handoff chain discipline, invariants tied to tests, pre-delivery client-ready sweep, brand voice (canonical at signal-works-internal/CLAUDE.md), engagement closure. Type A specifics: eval framework setup, hallucination prevention architecture, model selection, prompt rigor, AI security pre-flight. Type B specifics: design/UX rigor, front-end skill deployment, responsive QA, performance, verification loop. Anti-patterns library (A1-A16) at end. Day-1 seed from brett-roberts-la-metro engagement (2026-04). Read by `/cook` Phase 1 when project classified as SignalWorks engagement.** |
 | [project-example-support-classifier.md](future-reference/playbooks/project-example-support-classifier.md) | Worked example | End-to-end support ticket classifier build |
 | [project-template.md](future-reference/playbooks/project-template.md) | New projects | General AI project template structure |
 
