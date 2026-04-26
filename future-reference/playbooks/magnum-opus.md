@@ -8,6 +8,29 @@
 
 ---
 
+## Three Questions That Must Be Answerable Without Running Code
+
+Before any phase below produces output, the operator (and `/cook`) must be able to answer three diagnostic questions for the system being built:
+
+1. **Where does state live?** (Who owns the truth? Database / files / external service / in-memory / multiple distributed locations.)
+2. **Where does feedback live?** (How do we know the system is working? Logs / metrics / alerts / dashboards / user feedback / silent until broken.)
+3. **What breaks if I delete this?** (For every non-trivial component: blast radius. Everything fails / one feature degrades / silent wrong-answer / data corruption.)
+
+**Why these come first:** per Peter Naur's 1985 paper "Programming as Theory Building," the program is the *mental model* of how pieces connect; the code is its shadow. AI generates the shadow on demand, but the theory must be deliberately built. These three questions surface the architectural facts that prevent the system from collapsing under its own complexity. Without them, AI-built systems become incoherent monoliths where state lives everywhere, feedback lives nowhere, and the impact of deleting anything is unknown — the failure mode from the video summary `7zCsfe57tpU`'s 7,000-line single-file horror story.
+
+**Where these questions get asked:**
+- **Phase 0 (Intake)** — at the very first capture of the project description, before any design work.
+- **Phase 1.5 (Spec + Pre-flight)** — included in the 7-property spec framework; spec is incomplete if these aren't answerable.
+- **Phase 4 (Scaffold Output)** — `docs/plans/design.md` includes mandatory sections "State Architecture", "Feedback Architecture", "Deletion Blast Radius."
+- **Phase 5 (Eval + Security Baseline)** — re-asked because eval and security both depend on knowing where state and feedback live.
+- **At every audit sweep** — code-correctness audit prompt flags if the answers can't be derived from current docs/code.
+
+**The jagged frontier:** AI is sharp in some areas and surprisingly dull in others, often within the same session. Some decisions belong with the operator regardless of authority — novel-domain architecture, security-critical algorithm choice, state machine design, irreversible production operations, cross-system contracts, anything where probabilistic behavior could compound into wrong-answer-at-scale. These don't go in autonomous-decision lists; they go in pause-for-operator with explicit reasoning.
+
+**Treat the doc spine as theory-building, not bureaucracy.** When the theory lives in `docs/plans/design.md` + `decision-log.md` + `invariants.md` + handoff chain, any operator (or fresh Claude session) can pick up cold. When it lives only in someone's head, the project dies if that person leaves.
+
+---
+
 ## How This Document Works
 
 This hub sits between two things: the workflow (what to do and in what order) and the knowledge (what the best practices actually are). It is deliberately a routing document — it contains no KB content itself. When it says "see context-engineering.md lines 132-204," that's where the actual knowledge lives. The hub stays lean so it can be read in full without overhead.

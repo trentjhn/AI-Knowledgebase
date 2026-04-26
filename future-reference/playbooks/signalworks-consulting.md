@@ -40,6 +40,26 @@ The first hour with a new client determines whether the rest of the engagement i
 
 ---
 
+## Section 1.5: Three Questions That Must Be Answerable Without Running Code
+
+Per Peter Naur's 1985 paper "Programming as Theory Building" (revisited in modern systems-thinking discourse): the *program* is the mental model in the operator's head; the *code* is its shadow. AI generates the shadow on demand, but the theory must be deliberately built. These three questions surface the theory before code is written:
+
+1. **Where does state live?** (Who owns the truth in the system? Database / files / external service / in-memory cache / multiple distributed locations?)
+2. **Where does feedback live?** (How do we know the system is working? Logs / metrics / alerts / dashboards / user feedback / silent until broken?)
+3. **What breaks if I delete this?** (For every non-trivial component: blast radius. Everything fails / one feature degrades / silent wrong-answer / data corruption?)
+
+**When to ask these questions:**
+- **At engagement kickoff** (Phase 0.6 discovery in `/cook`) — forces architectural answers BEFORE code.
+- **At every tier-ship gate** (Section 6 below) — re-asked for each tier's surface area.
+- **In every code-correctness audit sweep** — agents flag if the answers can't be derived from current docs/code.
+- **Before deleting or refactoring any component** — operator can answer "what breaks?" without running tests.
+
+**Why this matters for SignalWorks engagements specifically:** client work has higher reversibility cost than personal experiments. A wrong-answer-at-scale is expensive in client trust. These three questions surface the architectural facts that make blast radius bounded and recovery possible.
+
+**Provenance:** Naur 1985 + video summary `7zCsfe57tpU` on systems thinking, integrated 2026-04-25.
+
+---
+
 ## Section 2: Type Classification — Type A vs Type B
 
 Before any architecture work, classify the engagement. The classification routes which sub-sections apply (Part 2 vs Part 3 of this playbook).
@@ -102,6 +122,21 @@ The authority block converts fuzzy "use good judgment" into an explicit checklis
 **Reversibility test for autonomous decisions:**
 > "Is this reversible? Is it crossing a locked decision? If no + no → proceed."
 
+### Jagged Frontier — what NOT to delegate (even within autonomous authority)
+
+Per the "jagged frontier" concept from Harvard researchers (re-surfaced in systems-thinking discourse): AI is sharp in some areas and surprisingly dull in others, often within the same session. Authority to decide ≠ capability to decide well. Some decisions belong with the operator regardless of authority block, because the LLM lacks the holistic reasoning to make them safely:
+
+- **Novel-domain architectural decisions** — when there are no priors in training data to draw from, LLM extrapolation is brittle.
+- **Security-critical algorithm choices** — probabilistic output is unsafe when a single wrong choice opens an attack surface (crypto primitives, auth flows, access control logic).
+- **State machine design** — correctness requires holistic invariant reasoning across all transitions; LLMs reason locally and miss invariants.
+- **Irreversible operations on production systems** — financial transactions, deletions, schema migrations, public-facing announcements. Probabilistic acceptable elsewhere; not here.
+- **Cross-system contracts where the LLM hasn't seen the full picture** — API design, data format definitions, versioning schemes. The contract has to fit a system the LLM doesn't fully see.
+- **Anything where probabilistic behavior could compound into wrong-answer-at-scale** — financial calcs, medical recommendations, legal interpretations.
+
+**Treatment:** these don't go in the autonomous authority list. They go in the pause-for-operator list with explicit reasoning ("Claude lacks holistic invariant reasoning for state machine correctness"). Operator may still consult Claude for input — just doesn't delegate the decision.
+
+**Provenance:** Naur framing + jagged frontier (Harvard) + video summary `7zCsfe57tpU`, integrated 2026-04-25.
+
 **Refinement during engagement.** When Claude encounters an edge case, the answer might be:
 - (a) Add it to "decide autonomously" with rationale → log to decision log
 - (b) Add it to "pause for {operator}" → log + edit CLAUDE.md
@@ -114,6 +149,8 @@ Authority block is a living document. Edit it when reality demands. Never drift 
 ---
 
 ## Section 4: Source-of-Truth Doc Spine
+
+**These docs are not bureaucracy. They are the *theory of the system*** — the program in the operator's head, made explicit and shareable. Per Peter Naur's 1985 paper "Programming as Theory Building," the program is the mental model of how pieces connect; the code is merely its shadow. AI-era engagements require the theory to be explicit and shared, not implicit and trapped in one person's memory. When the theory lives in the doc spine, any operator (or fresh Claude session) can pick up cold. When it lives only in someone's head, the engagement dies if that person leaves.
 
 Every SignalWorks engagement maintains the same six-doc spine. Do not deviate. New operators expect this layout.
 
@@ -368,6 +405,34 @@ Per-project CLAUDE.md inherits the rule by reference: "See `signal-works-interna
 
 ---
 
+## Section 14.5: AI Decision Points + Verification Mechanisms
+
+**The deterministic-vs-probabilistic distinction matters.** Compilers are deterministic — same input → same output. LLMs are probabilistic translators — same input may produce different outputs, may introduce subtle vulnerabilities, may hallucinate facts. This is an architectural fact about the system, not a curiosity.
+
+**Mandate:** every place AI output drives runtime behavior in a SignalWorks engagement gets documented in `docs/plans/design.md` under a section "AI Decision Points + Verification Mechanisms." Format per entry:
+
+- **Decision point:** what AI is deciding (e.g., "summarize source documents into display_text", "classify support ticket urgency", "generate code suggestion")
+- **Verification mechanism:** how we know the output is acceptable
+  - eval framework with regression gate
+  - grounding check (substring match against source)
+  - human approval before action
+  - deterministic post-process (e.g., regex extract from AI output)
+  - automated regression test against labeled set
+  - none — accepted as best-effort (rare; document why)
+- **Failure mode:** what happens if AI is wrong
+  - silent wrong-answer
+  - degraded UX
+  - hard error
+  - data corruption
+  - irreversible client-facing damage
+- **Reversibility:** can we undo the AI's decision after the fact? (low / moderate / high)
+
+**Why this matters:** without explicit documentation, AI decision points become invisible — operators forget which behaviors depend on AI output and where the verification gates are. When something breaks in production, "where does AI touch this?" should be answerable from a single document, not by archaeology across the codebase.
+
+**Provenance:** video summary `7zCsfe57tpU` on systems thinking — "LLMs are probabilistic translators, not deterministic compilers" — integrated 2026-04-25.
+
+---
+
 ## Section 15: Engagement Closure
 
 When the engagement is shipping-complete and the client has accepted delivery:
@@ -581,8 +646,27 @@ The following anti-patterns are confirmed across SignalWorks engagements. Each h
 | A14 | Two-session collision can't be fixed by docs alone | Runtime lock file |
 | A15 | Iterative force-run sequence as debugging mode | Budget 3-4 force-runs; every failed run ships fix or test |
 | A16 | "Ship-ready" and "client-ready" are different bars | Build two checklists; run both |
+| A17 | System incoherence — multiple unrelated concerns inhabit a single boundary | Decompose along single-responsibility lines; signal is sentence-summary, not line count |
 
 Full narrative descriptions: see `signal-works-internal/takeaways/brett-roberts-la-metro.md`.
+
+### A17 — System Incoherence (full description)
+
+**Symptom:** a file, module, or service contains multiple unrelated concerns — there is no single sentence that summarizes its purpose. The 7,000-line single-file failure mode (from video summary `7zCsfe57tpU`) is one extreme; subtler versions exist at all scales (a "utils" module that does 12 unrelated things; a service that owns auth + rate-limiting + metrics; a "main" function that handles input parsing + business logic + output formatting + error logging).
+
+**The signal is NOT line count.** Big files with single coherent purpose are fine; small files straddling multiple responsibilities are bad. The diagnostic is: can a reader summarize this boundary's responsibility in ONE sentence? If the summary requires "and" or "also" multiple times, the boundary is wrong.
+
+**Why this is a SignalWorks-specific concern:** AI-generated code often defaults to "everything in one place" because LLMs reason locally and don't see decomposition opportunities until prompted. Without operator vigilance, AI-built systems drift into incoherent monoliths that are hard to test, hard to delete from, and hard to understand.
+
+**Fix:**
+- Decompose along single-responsibility lines.
+- Extract distinct concerns to separate boundaries (modules, files, services).
+- Update tests to exercise each in isolation.
+- Update adjacent docs to reflect new boundaries (anti-pattern A9 — adjacent layers must be updated in lockstep).
+
+**General rule:** every module, file, service has a single sentence that describes its responsibility. If the sentence requires "and" or "also", the boundary is wrong. The Three Questions (Section 1.5) help here: each boundary should have a single state-owner answer, a single feedback-channel answer, and a bounded blast-radius answer.
+
+**Audit hunt category** (added to `docs/prompts/audits/code-correctness.md`): "System Coherence — for each non-trivial module, can a reader summarize its responsibility in ONE sentence? If 'and' or 'also' is required, flag P2 with A17 reference."
 
 ---
 

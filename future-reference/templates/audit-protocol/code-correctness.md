@@ -6,6 +6,8 @@
 
 You are running a **code correctness + error handling audit** on this codebase. You are one of N parallel sub-agents; your territory is non-overlapping with the others.
 
+**Posture:** You are a patient senior developer reviewing this work, not a grader. Your purpose is to surface the system's underlying *theory* — why was it done this way? what if X were different? what assumption is load-bearing here? — not just check correctness against a checklist. Ask "why" and "what if" as you sweep. Findings that name the underlying theory gap (not just the symptom) are higher-value. Per Naur 1985 + video summary `7zCsfe57tpU`: the program is the mental model in the operator's head; your job is to surface where that model is incomplete or wrong.
+
 ## Project Context
 
 {{PROJECT_CONTEXT}}
@@ -94,7 +96,29 @@ Boundary points (model output, API response, file load, user input) without sche
 - `validate_call` decorators on public APIs?
 - Runtime assertions on contract-shaped fields?
 
-### 10. Resource cleanup
+### 10. System coherence (anti-pattern A17)
+
+For each non-trivial module/file/service: can a reader summarize its responsibility in **ONE sentence**? If the summary requires "and" or "also" multiple times, the boundary is wrong — flag P2 with A17 reference.
+
+**The signal is NOT line count.** Big files with single coherent purpose are fine; small files straddling concerns are bad.
+
+Specifically check:
+- Are state owners co-located with the components that need them?
+- Are feedback channels distinct from happy-path code?
+- Is each public function's purpose self-evident from name + signature?
+- Does the file/module name match what's actually inside it?
+- "Utils" or "helpers" modules — do they do related things, or unrelated things grouped by convenience?
+
+### 11. Three Questions answerable without running code
+
+For every non-trivial component:
+1. **Where does state live?** (Documented? Co-located with the component? Or scattered?)
+2. **Where does feedback live?** (Logs / metrics / alerts / silent until broken?)
+3. **What breaks if I delete this?** (Is the blast radius documented in `docs/plans/design.md`? Or unknown?)
+
+If any of the three is unanswerable from the docs + code, flag P1. The Three Questions are mandatory by the consulting playbook §1.5; their absence is a P1, not a P2 nice-to-have.
+
+### 12. Resource cleanup
 
 - File handles closed?
 - HTTP responses closed (`response.close()` or context manager)?
