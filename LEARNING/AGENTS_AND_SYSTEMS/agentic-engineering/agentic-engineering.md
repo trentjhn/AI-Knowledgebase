@@ -3025,6 +3025,40 @@ This mental model doesn't replace the Four Pillars (Prompt, Model, Context, Tool
 
 ---
 
+### Resource-Level Protocols: When "Tools Become Protocols" Isn't Enough
+
+The Externalization lens frames Protocols as one of four externalized dimensions, with MCP as the canonical example. Zhang et al. 2026 argue this isn't yet enough: MCP and A2A are tool-*calling* protocols, not tool-*lifecycle* protocols. They specify how an agent invokes a tool, but say nothing about how the tool changes over time, who can change it, what version a caller depended on, or how to roll back a bad change. In production, this under-specification shows up as "monolithic compositions and brittle glue code" — every team reinvents version tracking, rollback, and update gates as bespoke engineering around an otherwise clean protocol.
+
+**The load-bearing principle** (independent of the paper's specific framework): *decouple what evolves from how evolution occurs.*
+
+- **What evolves** is *resources* — prompts, agents, tools, environments, and memory, treated uniformly as versioned entities with an explicit state, lifecycle, and update interface. This is a stricter version of the Externalization taxonomy: not just "Memory is externalized," but "Memory is a versioned resource that other resources can depend on a specific version of."
+- **How evolution occurs** is a separate layer — a propose → assess → commit → (rollback if needed) pipeline. The pipeline doesn't need to know what kind of resource is changing; it only needs to know the resource's current version, the proposed version, and the assessment verdict.
+
+**Why the decoupling matters.** You can swap either axis without rewriting the other. A team that standardizes the resource shape can experiment with different evolution strategies (human review, automated eval gates, shadow testing) without touching the resources themselves. A team that picks an evolution strategy can bring new resource types under it without rewriting the pipeline. Without decoupling, every new resource type requires bespoke evolution code, and every new evolution strategy requires re-instrumenting every resource.
+
+**When the gap bites.** Concrete example: a team ships an agent using an MCP-registered tool. A week later, the tool provider changes a parameter's semantics in a minor version bump. The agent's calling code is unchanged, the MCP handshake still succeeds, but the agent's behavior regresses subtly. MCP has no protocol-level concept of "the agent depends on version X; refuse or warn if the server advertises version Y." This is exactly the under-specified lifecycle Autogenesis targets.
+
+**Extending the four-type taxonomy with a second axis.** The Externalization model (Memory / Skills / Protocols / Harness) describes *what* has been externalized. Autogenesis adds: *has the externalized thing been given a lifecycle?*
+
+| Externalized | Without lifecycle | With lifecycle |
+|---|---|---|
+| **Memory** | Vector DB you hand-edit or append to | Versioned memory snapshots; callers bind to a snapshot ID |
+| **Skills** | A skill library you edit in place | Each skill has a version; caller specifies which, or follows a channel (stable/latest) |
+| **Protocols** | MCP server with evolving tool set | Tool registration includes version, deprecation policy, breaking-change signal |
+| **Harness** | Orchestration logic edited ad hoc | Harness config is a resource; changes are proposed, reviewed, rolled out with rollback |
+
+The right column is what self-improving agent systems need to stop being bespoke.
+
+**Open questions this paper leaves unresolved:**
+
+- *Protocol vs. platform.* What Autogenesis describes is partly a protocol (resource-shape contract) and partly a platform (the operator/evolution machinery). MCP succeeded because it's narrow. Whether the broader resource-lifecycle surface can be standardized the same way — or whether each platform will re-implement it incompatibly — is unsettled.
+- *Who closes the loop?* If a human approves each commit, this collapses to "good CI for agents" — a real gain, but not new. If an agent approves commits, assessor-gaming becomes the dominant failure mode (a well-documented RLAIF pathology). The paper doesn't specify, and the gap matters.
+- *Dependency graphs under concurrent evolution.* When multiple resources evolve simultaneously, how are consistency invariants preserved? Classical schema-migration tooling has decades of answers here; agent resource tooling doesn't yet.
+
+(Source: Zhang et al. 2026, "Autogenesis: A Self-Evolving Agent Protocol," arXiv:2604.15034. Architectural proposal; reported empirical gains on long-horizon planning benchmarks but specific numbers not in abstract. Early-stage paper — the decouple-what-from-how principle will likely outlast the RSPL/SEPL framing.)
+
+---
+
 ---
 
 Production data from Claude Code quantifies the dominance of the harness layer over model weights: 98.4% of the agent's codebase is deterministic infrastructure (permission gates, tool routing, and recovery logic), while only 1.6% is dedicated to decision logic. This ratio confirms that production-grade reliability is not achieved by constraining the model’s reasoning via prompting, but by surrounding a stateless completion endpoint with a massive, deterministic operational harness. 
