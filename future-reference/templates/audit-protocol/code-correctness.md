@@ -118,7 +118,19 @@ For every non-trivial component:
 
 If any of the three is unanswerable from the docs + code, flag P1. The Three Questions are mandatory by the consulting playbook §1.5; their absence is a P1, not a P2 nice-to-have.
 
-### 12. Resource cleanup
+### 12. Recovery handlers narrowed to wrong exception class (anti-pattern A18)
+
+When code has a recovery handler for "any failure of path X", does it catch the broadest applicable exception class? Common bug: `except RuntimeError` when production hits `TimeoutError` (subclass of `Exception`, not `RuntimeError`). The recovery path silently never fires.
+
+Grep for: narrow `except` clauses (`except ValueError`, `except RuntimeError`, `except KeyError` etc.) in recovery handlers / fallback paths. Each is a candidate. If the intent is "fire on any error of this operation", the catch should be `except Exception` with `isinstance()` check at re-raise time to preserve type-specific error context.
+
+### 13. Parallel template/code branches drift (anti-pattern A19)
+
+When the codebase has parallel branches for similar entity types (today vs past, new vs archived, primary vs secondary), are they behaviorally equivalent? Drift is invisible until specific input shape exercises the branch that was missed.
+
+Diff parallel paths against each other. If they diverge in elif chains, fallback handling, or null-coalescing, flag as P2 with A19 reference. Better long-term fix: refactor to shared macro/component so parity is structural, not aspirational.
+
+### 14. Resource cleanup
 
 - File handles closed?
 - HTTP responses closed (`response.close()` or context manager)?

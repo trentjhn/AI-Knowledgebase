@@ -181,6 +181,28 @@ Run these four checks before committing to design. They surface the failure mode
 
 ---
 
+## Universal AI System Patterns
+
+Two production-validated patterns that apply to any AI project, not just consulting work. Reference from Phase 2 (Harness Design) when designing prompts and eval loops.
+
+### Expose the validation predicate's mechanism to the LLM, not just the rule
+
+When an LLM's output is post-validated by code (grounding check, schema validation, regex match, allow-list), the system prompt should describe HOW the validation runs — not just the abstract rule. Example: instead of "do not paraphrase," include a `CRITICAL — VERBATIM RULE` callout: "The post-processing gate runs `display_text in raw_text` (whitespace-normalized, case-insensitive). If even one character was rephrased, normalized (e.g., 'Apr.' to 'April'), or had a typo 'fixed', the item is silently dropped."
+
+Pair the rule with concrete ❌/✅ examples that mimic exact field-observed failure modes (date abbreviation, synonym swap, sentence merge). Models pattern-match against shapes they can satisfy more reliably than they comply with abstract directives.
+
+**Concrete:** brett-roberts-la-metro v1.8 → v1.9 prompt revision. v1.8 said "do not paraphrase display_text"; model still paraphrased ~20-40% of items, dropped silently by post-processing. v1.9 exposed the gate mechanism + 3 ❌/✅ pairs; model then omitted items it couldn't span verbatim rather than producing paraphrases that fail silently. Provenance: brett-roberts-la-metro, 2026-04-25.
+
+### Quantitative pass gate beats free-form self-grading in evaluator-optimizer loops
+
+When iterating on a complex artifact (dashboard, prompt, agent output), define pass criteria with explicit weights and a numeric pass gate before dispatching evaluation. The score makes deltas legible across iterations; the per-criterion weights make it obvious which fixes matter. Force structured deductions tied to specific evidence (HTML lines, item counts, log strings).
+
+**Never let an evaluator agent free-form "rate the work"** — they're charitable. Quantitative scoring with deductions tied to evidence catches real gaps; free-form scoring drifts toward "looks great."
+
+**Concrete:** brett-roberts-la-metro Step 6 verification dispatched evaluator with 8 weighted criteria + 95/100 pass gate. Pass 1 = 76/100 with 3 cited deductions. After fixes, Pass 2 = 82/100 with remaining −13 traced to one root cause that was scoped out as deliberate deferral. Score deltas were legible; weights made priority obvious. Provenance: brett-roberts-la-metro, 2026-04-25.
+
+---
+
 ## Phase 2: Harness Design
 
 The harness is the set of decisions that determine how the AI system behaves. These decisions compound — a bad context architecture leads to degraded outputs at scale; poor model selection leads to cost overruns; no error contract means production failures that take hours to diagnose; no character design means behavioral variance that undermines trust.

@@ -209,6 +209,8 @@ Any ambitious-enough-to-scare-you refactor gets decomposed into 3-5 tiers where 
 
 **Provenance:** brett-roberts-la-metro, 2026-04.
 
+**Phase-numbered plans become commit-message scaffolding.** When implementation plans number phases (Phase 0, 1, ...), commits naturally adopt the numbering and `git log --oneline` becomes a phase-progression view. Default to numbered phases for all SignalWorks implementation plans, not bullet lists. Without numbering, commits either describe the change (good) but lose plan-trace, or reference the plan in prose (verbose) and bloat the log. Provenance: brett-roberts-la-metro v13→v14, 2026-04-25/26.
+
 ---
 
 ## Section 7: Multi-Agent Audit Discipline
@@ -249,6 +251,8 @@ The self-critique pass consistently surfaces findings the initial sweep missed (
 4. Log P2/P3 in handoff's "Audit directions for next session" slot.
 
 **Reusable prompt library** at `docs/prompts/audits/{code,security,ux,docs}.md`. Each is a fill-the-blanks template with `{{PROJECT_CONTEXT}}` / `{{SLICE}}` / `{{KNOWN_PRIORS}}` placeholders. Copy from the scaffolding repo on day 1.
+
+**Trust-but-verify subagent factual claims with cheap independent checks before acting.** When a subagent makes a specific factual claim about production state, code state, or live data ("X is broken", "Y is missing", "Z is rendering wrong"), run a one-liner verification (`grep` / `curl` / `jq`) before changing anything in response. The cost is seconds; the cost of acting on a wrong claim is hours. Especially important with role-specialized agents that have only the slice of context their brief provided. Verification is cheap; rework is not. Provenance: brett-roberts-la-metro 2026-04-26 (5-agent post-launch sweep — one agent's confident claim about stale renderer output was disproven by a 2-line grep against the live HTML).
 
 **Provenance:** brett-roberts-la-metro, 2026-04 — pattern run twice (Tier 3 + Tier 3.5), surfaced 40+ findings.
 
@@ -391,6 +395,20 @@ Before sharing any client-facing artifact (URL, dashboard, email, deployable), r
 
 **Provenance:** brett-roberts-la-metro, 2026-04 (Tier 3.5 sweep + post-ship "bare dashboard" lesson A10 + A16).
 
+**Iterative ship-then-sweep cycles between "verifier passed" and "delivery sent".** Pre-launch evaluation (verifier scores, test passes, a11y review) gates structural correctness but consistently misses surface-level production bugs that only emerge against real data on a real deployed surface. Build the iteration cycle into the launch plan: ship to staging URL → manual screenshot review → round-1 fixes + redeploy → multi-agent automated sweep → round-2 fixes + redeploy → deliver. Each post-launch sweep takes a fraction of original build cost and prevents embarrassing-on-day-one bugs that erode trust. **Budget for at least 2 sweep cycles between "verifier passed" and "delivery email sent."** Provenance: brett-roberts-la-metro 2026-04-26 (Phase 9 verifier scored 100/100; subsequent manual + 5-agent + 4-agent sweeps surfaced 10 more bugs across 7 commits before actual delivery).
+
+**Manual eyes-on AND automated sweep are both required (they catch different bug classes).** Manual surfaces UX-felt and credibility-sensitive content issues (broken links going to 404, headlines not clickable, source-skew suggesting routing). Automated surfaces structural and edge-case issues (pin-id collisions, mobile-touch invisibility, viewport-unit Safari quirks). Skipping either leaves a class of bugs in the ship. For SignalWorks delivery, always budget BOTH between "verifier passed" and "delivery email sent." Provenance: brett-roberts-la-metro 2026-04-26 (manual walkthrough caught 4 bugs no automation flagged; automated sweeps then caught 6 more no manual walkthrough caught).
+
+---
+
+## Section 13.5: Wait One Natural-Cadence Run Before Client Share
+
+After a heavy-deploy session (multiple force-runs, backfills, manual cycles), **never share the live URL with the client immediately, even if it "looks ready."** Live state reflects dev churn — quota burns, off-cadence timestamps, manual-trigger artifacts in the last-update field, partial state from interrupted runs. Wait for at least one natural scheduled run (daily cron, hourly job, whatever the production cadence is). The 12-24 hour delay is always worth it because the client's first impression should be natural-cadence steady-state, not dev-churn snapshot.
+
+**The cost of waiting is one day. The cost of sharing a dev-churn URL is permanent first-impression damage** — the stakeholder forms their mental model of the system from what they see in the first 30 seconds, and "this looks broken" can't be fully un-formed even after the next clean cron run.
+
+**Provenance:** brett-roberts-la-metro, 2026-04-26 — at v13 close the live dashboard reflected 4 force-runs and 2 backfills that day; recommended deferring the share email to Brett. Trent followed; v14 shipped, ran clean morning cron, then shared. Brett's first impression was natural-cadence, not dev-churn.
+
 ---
 
 ## Section 14: Brand & Voice Rules
@@ -402,6 +420,14 @@ SignalWorks brand voice rules (no em-dashes; direct, warm, specific; not corpora
 **Do not restate brand rules in this playbook or in per-project CLAUDE.md.** Reference the canonical location. Single source of truth prevents drift across three copies.
 
 Per-project CLAUDE.md inherits the rule by reference: "See `signal-works-internal/CLAUDE.md` for SignalWorks voice rules. Apply to all customer-facing copy, code comments, aria labels, site metadata."
+
+### Delivery email rules (proven on brett delivery, 2026-04-26)
+
+**Default to 75-100 word delivery emails for time-constrained stakeholders.** Cut anything the recipient could discover by looking at the artifact itself. Keep: URL, access mechanism, refresh cadence, known scope gaps, invitation for input, reply path. Drop: layout descriptions, feature lists they will see, motivational copy, "we're excited" register. If the longer version feels load-bearing, it usually isn't — it's anxiety about whether the work will be received well. Provenance: brett delivery email — first draft 350 words; rewritten at 80 words after operator feedback "make the email way shorter, it is a lot of ramble." Stakeholder response was positive; nothing in the dropped 270 words was missed.
+
+**Establish the from-address before drafting outbound copy because it shapes voice register.** Ask first: which inbox is this sending from, who signs it, who replies route to. The answer determines first-person singular vs plural, formality, the implied response team, and whether the recipient should expect personal vs team handling. Drafting copy first and then "translating" to a different voice is brittle; getting the from-address right up front saves a redraft. Provenance: brett delivery email — drafted in first-person singular ("I'm working on..."), required full rewrite to plural + dual sign-off + brand mailbox once operator clarified send-from address.
+
+**Pre-empt known scope gaps in delivery comms; don't sandbag.** Name your known scope gaps explicitly and frame them with status ("working on it" / "deferred to v15" / "not in current build"). Stakeholders who would notice the gap unprompted give credibility credit for being told upfront. Stakeholders who would not notice it lose nothing from the disclosure. Sandbagging — shipping a delivery email that implies completeness while known gaps exist — is a credibility trap that triggers when the user finds the gap unprompted. The single sentence of pre-emptive disclosure costs nothing and earns trust durably. Provenance: brett delivery email preserved both ECC schedule-only-degradation and CA Legislature quota-limit gaps in every revision; framed as "known and being worked on" rather than letting the recipient discover them.
 
 ---
 
@@ -647,6 +673,9 @@ The following anti-patterns are confirmed across SignalWorks engagements. Each h
 | A15 | Iterative force-run sequence as debugging mode | Budget 3-4 force-runs; every failed run ships fix or test |
 | A16 | "Ship-ready" and "client-ready" are different bars | Build two checklists; run both |
 | A17 | System incoherence — multiple unrelated concerns inhabit a single boundary | Decompose along single-responsibility lines; signal is sentence-summary, not line count |
+| A18 | Recovery handlers narrowed to wrong exception class | Catch broadest applicable `Exception` in recovery paths; use `isinstance()` at re-raise to preserve type-specific context |
+| A19 | Parallel template/code branches drift over multiple sessions | Refactor to shared macro/component for structural parity; or audit for behavioral parity periodically |
+| A20 | Redesigning presentation while data layer is unstable | Gate redesigns behind data-layer stability — would the new UI render correctly across empty/partial/degraded data states? |
 
 Full narrative descriptions: see `signal-works-internal/takeaways/brett-roberts-la-metro.md`.
 

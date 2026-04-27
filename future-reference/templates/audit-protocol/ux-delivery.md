@@ -112,7 +112,13 @@ Per consulting playbook §14 + signal-works-internal CLAUDE.md:
 - Not corporate, not startup hype
 - Client-specific voice rules from engagement kickoff (Q9) honored
 
-### 11. Trust signals
+### 11. Data-layer-stable test (anti-pattern A20)
+
+If the artifact is a redesign of a UI/dashboard/render-layer, would it render correctly across the empty-state, partial-data, and degraded-source cases the current pipeline produces? Or does it require data-layer assumptions that aren't yet met?
+
+If the redesign requires data quality the pipeline doesn't deliver yet, flag P1 with A20 reference: redesigning presentation while data layer is unstable produces beautiful UI rendering "Source unreachable" half the time. Gate redesigns behind data-layer stability — finish scraper/normalizer/dedup work first, redesign second.
+
+### 12. Trust signals
 
 - Source attribution present
 - Confidence/uncertainty communicated
