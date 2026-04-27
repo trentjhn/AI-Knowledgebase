@@ -8,6 +8,16 @@ origin: KB
 
 Production launch gate. Multi-agent successor to single-checklist `pre-ship`. **The standard is: public-deploy-ready and attack-safe across the board** — same bar for consulting work and personal projects.
 
+## Configuration
+
+```
+KB_ROOT default: ~/AI-Knowledgebase (override with `export KB_ROOT=/your/kb/path`)
+```
+
+If installing on a new machine: ensure the AI Knowledgebase is cloned to `$KB_ROOT/` OR set `KB_ROOT` environment variable. The skill resolves ALL KB references relative to `$KB_ROOT` and falls back to a hard error if `$KB_ROOT` doesn't exist (don't silently load wrong context).
+
+Required local skills: `pre-ship` (referenced by security-deployment + infrastructure-deployment agents). Install via copy from `$KB_ROOT/future-reference/skills-catalog/production/pre-ship/` if not present at `$HOME/.claude/skills/pre-ship/`.
+
 ## When to invoke
 
 - Before any production deploy
@@ -36,6 +46,14 @@ The failure mode this prevents: **operator dispatches sub-agents → agents find
 Before dispatching agents, gather:
 
 ```bash
+# Resolve KB_ROOT (must exist or sweep aborts — don't silently load wrong context)
+KB_ROOT="${KB_ROOT:-$HOME/AI-Knowledgebase}"
+if [ ! -d "$KB_ROOT" ]; then
+  echo "ERROR: KB_ROOT not found at $KB_ROOT"
+  echo "Set 'export KB_ROOT=/your/kb/path' or clone AI-Knowledgebase to ~/AI-Knowledgebase/"
+  exit 1
+fi
+
 # Project root
 PROJECT_ROOT=$(git rev-parse --show-toplevel)
 COMMIT_SHA=$(git rev-parse --short HEAD)
@@ -71,9 +89,15 @@ THREAT_MODEL=""
 [ -f "$PROJECT_ROOT/docs/plans/threat-model.md" ] && THREAT_MODEL="$PROJECT_ROOT/docs/plans/threat-model.md"
 
 # Live URL — from operator argument or CLAUDE.md / design.md
+# v1.9.1 calibration fix: also match scheme-less domain patterns (gov.signalworks.live, foo.pages.dev, etc.)
 LIVE_URL="${1:-}"  # First argument
 if [ -z "$LIVE_URL" ]; then
-  LIVE_URL=$(grep -oE 'https?://[^ )]+' "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null | head -1)
+  LIVE_URL=$(grep -oE 'https?://[^ )`]+' "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null | head -1)
+fi
+if [ -z "$LIVE_URL" ]; then
+  # Scheme-less domain patterns (e.g., `gov.signalworks.live`, `foo.pages.dev`, `bar.vercel.app`)
+  LIVE_URL=$(grep -oE '[a-z0-9-]+\.(signalworks\.live|pages\.dev|vercel\.app|netlify\.app|fly\.dev)' "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null | head -1)
+  [ -n "$LIVE_URL" ] && LIVE_URL="https://$LIVE_URL"
 fi
 ```
 
@@ -161,7 +185,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** OWASP LLM Top 10, 6 attack classes, prompt injection (direct + indirect), agent-specific attack vectors, RAG poisoning if applicable, supply-chain risks.
 
-**KB context to load inline:** `~/AI-Knowledgebase/LEARNING/PRODUCTION/ai-security/ai-security.md` lines 67-200 (OWASP LLM Top 10 + Deep Dives). Anti-patterns A13 (centralized log-safety), A18 (recovery handler exception class).
+**KB context to load inline:** `$KB_ROOT/LEARNING/PRODUCTION/ai-security/ai-security.md` lines 67-200 (OWASP LLM Top 10 + Deep Dives). Anti-patterns A13 (centralized log-safety), A18 (recovery handler exception class).
 
 **Hunt categories:**
 1. Prompt injection vectors (direct + indirect — does the agent read external content? web pages? emails? retrieved docs?)
@@ -184,7 +208,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** pre-ship Security checklist + secrets/credentials/auth/CORS/HTTPS/headers/dep-audit.
 
-**KB context to load inline:** `~/.claude/skills/pre-ship/SKILL.md` Security section (lines 33-47). Anti-pattern A3 (fork lineage / repo privacy).
+**KB context to load inline:** `$HOME/.claude/skills/pre-ship/SKILL.md` Security section (lines 33-47). Anti-pattern A3 (fork lineage / repo privacy).
 
 **Hunt categories:**
 1. No API keys, secrets, or credentials in frontend code or git history (`git log -p | grep -iE 'api_key|password|token|secret'`)
@@ -213,7 +237,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** A6 (zombie tests), A9 (data-format adjacency drift), A17 (system incoherence), A18 (recovery handler exception class), A19 (parallel branches drift), Three Questions answerable, silent failures (A4).
 
-**KB context to load inline:** `~/AI-Knowledgebase/future-reference/templates/audit-protocol/code-correctness.md` (full file). Consulting playbook anti-patterns table A1-A20.
+**KB context to load inline:** `$KB_ROOT/future-reference/templates/audit-protocol/code-correctness.md` (full file). Consulting playbook anti-patterns table A1-A20.
 
 **Hunt categories:** (full list from code-correctness audit prompt — 14 categories including Three Questions answerable, system coherence, recovery handler exception classes, parallel branches drift)
 
@@ -223,7 +247,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** pre-ship Infrastructure/Database/Monitoring + 4 SaaS failure modes (infra-not-validated, external API fragility, silent failures, cross-cutting scope leakage).
 
-**KB context to load inline:** `~/.claude/skills/pre-ship/SKILL.md` Infrastructure/Database/Monitoring sections (lines 50-99). `~/AI-Knowledgebase/future-reference/playbooks/building-ai-saas.md` 4 failure modes section.
+**KB context to load inline:** `$HOME/.claude/skills/pre-ship/SKILL.md` Infrastructure/Database/Monitoring sections (lines 50-99). `$KB_ROOT/future-reference/playbooks/building-ai-saas.md` 4 failure modes section.
 
 **Hunt categories:**
 1. All env vars set on production server
@@ -255,7 +279,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** content_hash contract (every persisted item has stable identifier), silent failures (A4), zombie tests (A6), upstream-data normalizers, ingestion contract enforcement.
 
-**KB context to load inline:** Consulting playbook §7 + ingestion contract. `~/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` A4/A6 anti-pattern descriptions.
+**KB context to load inline:** Consulting playbook §7 + ingestion contract. `$KB_ROOT/future-reference/playbooks/signalworks-consulting.md` A4/A6 anti-pattern descriptions.
 
 **Hunt categories:**
 1. Every persisted item has non-null `content_hash` (or stable ID) — anti-pattern from brett harvest
@@ -278,7 +302,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** A10 (bare-dashboard / first-share architectural test), A16 (ship-ready vs client-ready), A20 (data-layer-stable redesign test), accessibility, responsive QA, content scannability, brand voice.
 
-**KB context to load inline:** `~/AI-Knowledgebase/future-reference/templates/audit-protocol/ux-delivery.md` (full file).
+**KB context to load inline:** `$KB_ROOT/future-reference/templates/audit-protocol/ux-delivery.md` (full file).
 
 **Hunt categories:** (full list from ux-delivery audit prompt — 12 categories including bare-dashboard test, ship-ready-vs-client-ready, data-layer-stable test, accessibility, responsive QA, brand voice, trust signals)
 
@@ -288,7 +312,7 @@ After your initial sweep, second pass: {4-5 territory-specific meta-questions}. 
 
 **Territory:** runbook completeness, decision-log freshness, operator-commands cheatsheet, invariants doc, handoff chain integrity, missing artifacts.
 
-**KB context to load inline:** `~/AI-Knowledgebase/future-reference/templates/audit-protocol/docs-operations.md` (full file). Reference to consulting playbook §11 (handoff discipline).
+**KB context to load inline:** `$KB_ROOT/future-reference/templates/audit-protocol/docs-operations.md` (full file). Reference to consulting playbook §11 (handoff discipline).
 
 **Hunt categories:** (full list from docs-operations audit prompt — 10 categories including doc rot, README failures, runbook gaps, onboarding gaps, decision log hygiene, handoff chain integrity, invariants doc, prompts versioning, repo-organizational debt, CI/build doc)
 
@@ -306,7 +330,7 @@ Fires when `IS_AI_DELIVERABLE=true`.
 
 **Territory:** Eval framework setup, hallucination prevention architecture, model selection rationale, prompt rigor, AI Decision Points + Verification Mechanisms.
 
-**KB context to load inline:** `~/AI-Knowledgebase/LEARNING/PRODUCTION/evaluation/evaluation.md` lines 1-200. Consulting playbook §16.1-16.4. AI Decision Points section in design.md.
+**KB context to load inline:** `$KB_ROOT/LEARNING/PRODUCTION/evaluation/evaluation.md` lines 1-200. Consulting playbook §16.1-16.4. AI Decision Points section in design.md.
 
 **Hunt categories:**
 1. Eval framework exists (3-level stack: offline / online / human)?
@@ -331,7 +355,7 @@ Fires when `HAS_RAG=true`.
 
 **Territory:** RAG-specific attack surfaces — vector poisoning, retrieval manipulation, indirect injection via retrieved content, knowledge base extraction.
 
-**KB context to load inline:** `~/AI-Knowledgebase/LEARNING/PRODUCTION/ai-security/ai-security.md` Section 4 RAG-Specific Attack Surfaces (search "RAG-Specific Attack Surfaces").
+**KB context to load inline:** `$KB_ROOT/LEARNING/PRODUCTION/ai-security/ai-security.md` Section 4 RAG-Specific Attack Surfaces (search "RAG-Specific Attack Surfaces").
 
 **Hunt categories:**
 1. Knowledge base poisoning vectors (who can write to the vector store? validated?)
@@ -353,7 +377,7 @@ Fires when Phase 0.6 Q11.7 flags PII / money / credentials / health / legal data
 
 **Territory:** Specific regulatory requirements that generic security audits miss. Not "good security in general" — the compliance regime's actual technical requirements.
 
-**KB context to load inline:** `~/AI-Knowledgebase/LEARNING/PRODUCTION/ai-security/ai-security.md` compliance-relevant sections. Plus engagement-specific compliance requirements documented in `docs/plans/threat-model.md` constraints section.
+**KB context to load inline:** `$KB_ROOT/LEARNING/PRODUCTION/ai-security/ai-security.md` compliance-relevant sections. Plus engagement-specific compliance requirements documented in `docs/plans/threat-model.md` constraints section.
 
 **Hunt categories (load only the regimes that apply):**
 
@@ -409,7 +433,7 @@ Fires when Phase 0.6 Q5 = Type A (AI deliverable). Token-bomb attacks and runawa
 
 **Territory:** AI cost-bounding — token budgets per request, rate limits preventing runaway spend, cost monitoring/alerting, model fallback strategies.
 
-**KB context to load inline:** Consulting playbook §16.3 (Model Selection Rationale). `~/AI-Knowledgebase/future-reference/playbooks/cost-optimized-llm-workflows.md` (model routing, budget enforcement).
+**KB context to load inline:** Consulting playbook §16.3 (Model Selection Rationale). `$KB_ROOT/future-reference/playbooks/cost-optimized-llm-workflows.md` (model routing, budget enforcement).
 
 **Hunt categories:**
 1. Per-request token cap (input + output) configured in code, not just hoped for
@@ -437,7 +461,7 @@ Fires when Phase 0.6 Q11.6 = public AND project is expected to handle non-trivia
 
 **Territory:** "Will this break under realistic load?" — not Lighthouse perf scoring (that's ux-client-ready), but actual stress / load resilience.
 
-**KB context to load inline:** `~/AI-Knowledgebase/future-reference/playbooks/building-ai-saas.md` (4 failure modes — especially infrastructure-not-validated). `~/.claude/skills/pre-ship/SKILL.md` Infrastructure section.
+**KB context to load inline:** `$KB_ROOT/future-reference/playbooks/building-ai-saas.md` (4 failure modes — especially infrastructure-not-validated). `$HOME/.claude/skills/pre-ship/SKILL.md` Infrastructure section.
 
 **Hunt categories:**
 1. Load test exists for expected peak traffic (k6 / locust / wrk / artillery — actual stress test, not assumption)
@@ -687,13 +711,43 @@ different bug classes). Do not treat /sweep PASS as sufficient by itself.
 
 ## Cross-references
 
-- **Single-checklist alternative for non-public deploys:** `pre-ship` skill (`~/.claude/skills/pre-ship/SKILL.md`)
-- **Audit prompt templates** (per-territory, used by agents): `~/AI-Knowledgebase/future-reference/templates/audit-protocol/`
-- **AI Security knowledge** (OWASP LLM Top 10, attack vectors): `~/AI-Knowledgebase/LEARNING/PRODUCTION/ai-security/ai-security.md`
-- **Anti-pattern catalog A1-A20:** `~/AI-Knowledgebase/future-reference/playbooks/signalworks-consulting.md` Anti-Patterns Library
-- **Multi-agent orchestration patterns:** `~/AI-Knowledgebase/future-reference/playbooks/multi-agent-orchestration.md`
-- **Pre-deploy SaaS failure modes:** `~/AI-Knowledgebase/future-reference/playbooks/building-ai-saas.md`
+- **Single-checklist alternative for non-public deploys:** `pre-ship` skill (`$HOME/.claude/skills/pre-ship/SKILL.md`)
+- **Audit prompt templates** (per-territory, used by agents): `$KB_ROOT/future-reference/templates/audit-protocol/`
+- **AI Security knowledge** (OWASP LLM Top 10, attack vectors): `$KB_ROOT/LEARNING/PRODUCTION/ai-security/ai-security.md`
+- **Anti-pattern catalog A1-A20:** `$KB_ROOT/future-reference/playbooks/signalworks-consulting.md` Anti-Patterns Library
+- **Multi-agent orchestration patterns:** `$KB_ROOT/future-reference/playbooks/multi-agent-orchestration.md`
+- **Pre-deploy SaaS failure modes:** `$KB_ROOT/future-reference/playbooks/building-ai-saas.md`
 
 ---
 
 **Provenance:** Designed 2026-04-27 (v1.8 patch). Source: brett-roberts-la-metro engagement experience (manual sub-agent dispatch failure mode), consulting playbook §13 (multi-agent audit discipline), pre-ship skill (deployment safety taxonomy), AI Security KB (OWASP LLM Top 10 + 6 attack classes).
+
+---
+
+## v1.9.1 Calibration Notes (2026-04-27 dogfood on brett-gove-intell)
+
+First /sweep dogfood (2026-04-27, brett-gove-intell HEAD `51ca9fd`) ran 3 of the 9-12 agents (security-attack-surface, code-correctness, docs-operability) and surfaced calibration findings worth integrating into every dispatch:
+
+**1. Path portability (FIXED in v1.9.1):** All KB references now use `$KB_ROOT` env var with `~/AI-Knowledgebase` default. Configuration section at top of skill explains. Hard-fails if `$KB_ROOT` is missing rather than silently loading wrong context.
+
+**2. Live URL detection (FIXED in v1.9.1):** Step 1 regex now matches scheme-less domain patterns (`gov.signalworks.live`, `*.pages.dev`, `*.vercel.app`, `*.netlify.app`, `*.fly.dev`) in addition to fully-qualified `https?://` URLs.
+
+**3. A18 vs A4 distinction (apply to code-correctness brief):** A18 is **narrow-catch** — recovery handler exists but exception class is too narrow, so recovery NEVER FIRES (e.g., `except RuntimeError` when production hits `TimeoutError`). A4 is **silent-fail** — recovery EXISTS and fires but suppresses the error (e.g., `except Exception: return []` instead of raising). When dispatching code-correctness agent, ensure both are listed as distinct hunt categories with this clarification — they're often confused.
+
+**4. Lockfile hash coverage check (apply to security-attack-surface brief):** When `requirements-lock.txt` exists, verify ALL packages have `--hash=sha256:...` lines, not just spot-check the obvious ones (e.g., spacy model wheel). `grep -c "sha256" requirements-lock.txt` should ≈ count of `==` pinned versions. Partial hash coverage = supply-chain typosquat / registry-compromise gap.
+
+**5. Sibling-repo findings marker:** When a finding depends on a sibling repo (e.g., security headers in dashboard repo separate from app repo), mark as `requires-sibling-repo-verification` rather than asserting fix shape blindly. The sweep operator may not have visibility into the sibling repo from the current sweep context.
+
+**6. `page.evaluate()` JS injection (apply to security-attack-surface brief):** When project uses Playwright with `page.evaluate(js_string)`, audit whether `js_string` is a static literal or could be tainted by scraped content. Static = clean; dynamic = JS-template-injection risk.
+
+**7. Always emit threat-model.md absence finding:** If `$PROJECT_ROOT/docs/plans/threat-model.md` is missing (project pre-dates /cook v1.8 OR was scaffolded without v1.8), emit standing finding [SEC-NNN-sc]: "No threat model documented — defaulted audit posture to 'untrusted public exposure'. Recommend scaffolding from `$KB_ROOT/future-reference/templates/threat-model-template.md`."
+
+**8. Doc-vs-doc contradictions (apply to docs-operability brief):** Add to hunt category 1 (Doc rot): check for cross-doc contradictions, not just doc-vs-code. Example surfaced on brett: README says SMTP is configured, completion handoff says "skipped Zoho alerter setup", `.env.example` shows Gmail not Zoho — three docs, three different stories.
+
+**9. Docs agent length budget bump:** For projects with >10 handoff files OR >5 architectural docs, raise docs-operability budget from 900 → 1100 words. Brett project hit this.
+
+**10. Pytest invocation portability:** When projects work-around path issues via `PYTHONPATH=. pytest`, brief should specify the canonical invocation rather than assuming `pytest` works bare. Otherwise agent reports "tests pass" or "tests fail" based on stale environment.
+
+**Status:** items 1+2 fixed in v1.9.1 SKILL.md. Items 3-10 documented here for agent dispatch context — operator should reference these notes when filling agent briefs (until v1.10 integrates them as automatic brief enrichment).
+
+**Real production bug caught on first dogfood:** CORR-001 — three brett-gove-intell scrapers (la_metro, inglewood, lacoe_trustees) silently swallowed exceptions and returned `[]` instead of raising, classifying real outages as "quiet day" instead of "degraded source." Fixed in brett commit `d544c84`. Validates the /sweep design.
