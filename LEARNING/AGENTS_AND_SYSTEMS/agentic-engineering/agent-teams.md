@@ -433,10 +433,94 @@ tmux kill-session -t <session-name> # Kill the orphaned one
 
 ---
 
+## Multi-Agent Patterns That Actually Work in Production (2026 Update)
+
+> **Source:** Cognition, *"What We've Learned from Building Multi-Agent Systems"* (Walden Yan, 2026), updating the original 2025 *"Don't Build Multi-Agents"* position after a year of production deployment.
+
+After a year of running agent teams in production at enterprise scale, a narrower set of multi-agent patterns has proven itself. The original warning against parallel-writer swarms still holds; what changed is the discovery of a specific class of coordination structures that work reliably.
+
+### The Core Principle: Writes Stay Single-Threaded
+
+The strongest practical finding: **multi-agent systems work best when write actions stay single-threaded and the additional agents contribute intelligence rather than actions.**
+
+The original 2025 argument was that parallel writers make implicit decisions — style, error handling, edge case treatment, code patterns — that inevitably conflict with each other. Production experience has confirmed this. Systems that deploy multiple write-capable specialists in parallel fragment decision-making in ways that produce incoherent output.
+
+What *does* work is single-writer topologies augmented by other agents that:
+
+- Review what the writer produced (without prior context)
+- Escalate tricky sub-tasks to stronger models
+- Coordinate scope across sequential children
+
+This contradicts the "fleet of write-capable specialists" architecture promoted by some platform vendors. For most real software work, the single-writer-plus-auxiliaries pattern produces more coherent results than parallel writers — at lower coordination cost.
+
+### Pattern: Clean-Context Code Review Loops
+
+The counterintuitive finding: **code review loops work better when the reviewer has no prior context from the coder.**
+
+At Cognition, Devin Review catches an average of 2 bugs per PR on PRs written by Devin itself. About 58% are severe (logic errors, missing edge cases, security issues). Critically, this only works when the coding and reviewing agents share no context beforehand.
+
+Three reasons a clean-context reviewer outperforms a shared-context one:
+
+1. **Context Rot.** Attention heads are finite. A coder that has spent hours reading the repo, running commands, and fixing errors has built up a long context where important details get diluted. The reviewer starts fresh and only sees the diff.
+2. **Forced reasoning-backward.** Without the spec, the reviewer must reason from implementation to intent. This surfaces assumptions the coder made that the spec never explicitly required — including cases where the user's instruction itself was subtly wrong.
+3. **No shared biases.** Putting the same model in both roles does not produce the tight self-agreement intuition suggests. Agents are systems performing based on their context; a clean context genuinely functions as an independent reviewer.
+
+The communication bridge matters: the coder needs to filter the reviewer's findings against its broader context of user instructions, decisions, and scope. Without that filtering, the loop devolves into scope creep or ignoring valid user constraints.
+
+### Pattern: Capability Routing ("Smart Friend")
+
+The emerging cost structure — frontier models becoming too expensive for every tool call — motivates a different pattern: a faster/cheaper primary model that delegates to a stronger model for hard sub-tasks.
+
+The architecture: expose the smarter model as a *tool* the primary model can call when it judges a situation is tricky enough to be worth the escalation.
+
+Current state of the art (2026):
+
+- **Works today** across strong models (e.g., routing between Claude and GPT as capability-specific experts — one debugs better, one handles visual reasoning better). This is less an escalation ladder and more a capability router.
+- **Doesn't yet work** when the primary is meaningfully weaker than the secondary. The gap is not a prompting problem; it's a training problem. A weaker model doesn't reliably know when it's at its limits. Cognition reports that SWE-1.5 couldn't hold up as the primary against Sonnet-4.5, but a trained-for-collaboration SWE-1.6 closes enough of the gap to pay off.
+
+Two tuning questions that matter:
+
+1. How does the primary decide when to escalate? (Today's best 80/20: always make at least one call to the stronger model for evaluation; let it decide if there's trickiness the primary missed.)
+2. What does the stronger model send back? If the primary's context is incomplete, the stronger model should ask for specific files or missed context, not invent theories. An over-scoped smart friend that surfaces unasked-for guidance based on the trajectory often produces more value than one that answers only what was asked.
+
+### Pattern: Manager + Children, Not Unstructured Swarm
+
+For work that spans more than a single session — a product feature across ten PRs, a migration touching a dozen services, a week of work — the shape that actually holds coherence is **map-reduce-and-manage**: a manager breaks work into pieces, children execute, the manager synthesizes and reports back.
+
+What doesn't work: arbitrary networks of agents negotiating with each other ("unstructured swarms"). Cognition's direct take after trying both: unstructured swarms are a distraction.
+
+The practical failure modes of manager-plus-children, all of which require dedicated context engineering to fix:
+
+- Managers trained on small-scoped delegation default to being overly prescriptive, which backfires when the manager lacks deep sub-context.
+- Agents assume they share state with their children when they don't.
+- Cross-agent communication (a child messaging peers through the manager) doesn't happen by default because models haven't been trained in environments that require it.
+
+Each of these is fixable with current models via prompting, but the fixes don't generalize well. The next generation of models is expected to start closing these gaps natively.
+
+### How This Updates the Decision Matrix Above
+
+The "When to Use" decision matrix earlier in this doc still holds, with one significant refinement: when deciding whether to use agent teams for *write-capable* work, the stronger default is to centralize writes through a single agent (the team lead or a designated writer) and use teammates as review, verification, planning, and escalation agents rather than parallel writers.
+
+The teammates-as-parallel-writers pattern (e.g., one teammate owning the frontend, another the backend, another the tests) can still work — but *only* when ownership boundaries are genuinely clean and no teammate edits another's files. The moment those boundaries blur, fragmented implicit decisions degrade the output.
+
+### The Open Problems
+
+Cognition's summary of where the research frontier sits:
+
+- **Weaker-primary-to-stronger-secondary escalation** — a training problem, not a prompting problem.
+- **Cross-agent discovery surfacing** — how does a child agent surface a discovery that should change its siblings' work? No reliable pattern yet.
+- **Context transfer without drowning the receiver** — the interface between agents is consistently the bottleneck.
+
+All three reduce to the same underlying issue: *communication is the hard part of multi-agent systems, and it's under-trained in current models.*
+
+---
+
 ## References
 
 - Claude Code Agent Teams documentation (Anthropic, April 2026): Primary source
 - Claude Code Hooks reference (Anthropic, April 2026): TeammateIdle, TaskCreated, TaskCompleted hook specifications
 - Claude Code Costs documentation (Anthropic, April 2026): Token cost guidance for agent teams, rate limit recommendations
+- Cognition, *"What We've Learned from Building Multi-Agent Systems"* (Walden Yan, 2026): Source for the 2026 update — writes-stay-single-threaded principle, clean-context review loops, capability routing, manager-plus-children pattern
+- Cognition, *"Don't Build Multi-Agents"* (2025): Original position paper that the 2026 update revises
 - See agentic-engineering.md Section 16 for conceptual placement within the multi-agent architecture framework
 - See multi-agent-orchestration.md playbook for operational deployment patterns

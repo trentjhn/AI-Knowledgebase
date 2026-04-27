@@ -438,6 +438,48 @@ If you're building applications that need to remember across sessions, there are
 
 Most real applications need a combination of all three.
 
+### Why Flat Vector Retrieval Breaks on Multi-Hop Queries
+
+The default assumption in most RAG systems is that vector similarity is sufficient retrieval. For single-fact questions ("what's our refund policy?"), it usually is. For *relational* questions that require stitching two or more facts together, it often isn't.
+
+Consider three facts stored as separate embeddings:
+
+1. "Alice is the tech lead on Project Atlas"
+2. "Project Atlas uses PostgreSQL for its primary datastore"
+3. "The PostgreSQL cluster experienced an outage on Tuesday"
+
+User asks: *"Was Alice's project affected by Tuesday's outage?"*
+
+Cosine similarity ranks facts 1 and 3 high because they share tokens with the query. But the connecting fact — "Atlas uses PostgreSQL" — mentions neither Alice nor Tuesday, so it ranks low and gets dropped. The agent now sees a question about Alice and an outage, with no way to bridge them, and either hallucinates a link or answers "unknown."
+
+This isn't an edge case. It's the normal shape of real questions in organizational knowledge: people belong to teams, teams own projects, projects depend on systems, systems have incidents. Any query that crosses two or more hops runs into this pattern.
+
+### The Three Storage Paradigms (and Why You May Need All Three)
+
+Three kinds of storage capture different dimensions of the same knowledge:
+
+| Paradigm | What it captures | Good for | Fails on |
+|---|---|---|---|
+| **Relational** (SQL) | Provenance, timestamps, permissions, source tracking | "When did we ingest this?" "Who has access?" "What's the audit trail?" | Semantic similarity; finding paraphrases |
+| **Vector** | Semantic similarity between chunks | "Find content that means roughly X" | Multi-hop relational joins; queries without shared vocabulary |
+| **Graph** | Explicit relationships between entities | Multi-hop traversal; "which X is connected to Y via Z?" | Fuzzy semantic matching; pure similarity lookup |
+
+Flatten any of these into the others and you lose retrieval accuracy in the queries that depend on it. A vector DB can't do multi-hop traversal. A graph can't do fuzzy paraphrase matching. A SQL table can't do either well.
+
+The practical implication: **the question to ask before building a memory layer isn't "which database?" but "what shape do my queries have?"** If queries never cross entity boundaries, vector-only is fine. If they routinely require joining two or three facts that don't share vocabulary, you need graph traversal — either as a separate store or as a secondary index on top of vectors.
+
+### Memory Consolidation: The Piece Most Systems Skip
+
+Cognitive science splits long-term memory into three subtypes, and each has a direct agent analogue:
+
+- **Episodic** — specific past events ("on Tuesday the Postgres cluster went down")
+- **Semantic** — general facts and concepts ("Postgres is a relational database")
+- **Procedural** — skills and workflows ("when a user asks for a refund, check the purchase date first")
+
+The bridge is *consolidation*: repeated episodic events distill into semantic knowledge. An agent that notices across thirty interactions that "users consistently prefer executive summaries over bullet lists" should turn that into a reusable preference, not replay the individual interactions every time. Without consolidation, your memory layer is a log, not a memory — it grows linearly with use and retrieval stays expensive.
+
+Most production memory systems today store episodes well and skip consolidation entirely. The agent remembers that it happened but doesn't learn from it.
+
 ### Workflow Engineering
 
 One of the most powerful context engineering techniques isn't about what you put in the context — it's about *breaking up the task* so each LLM call gets a focused, lean context.
