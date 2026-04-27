@@ -399,6 +399,8 @@ Before sharing any client-facing artifact (URL, dashboard, email, deployable), r
 
 **Manual eyes-on AND automated sweep are both required (they catch different bug classes).** Manual surfaces UX-felt and credibility-sensitive content issues (broken links going to 404, headlines not clickable, source-skew suggesting routing). Automated surfaces structural and edge-case issues (pin-id collisions, mobile-touch invisibility, viewport-unit Safari quirks). Skipping either leaves a class of bugs in the ship. For SignalWorks delivery, always budget BOTH between "verifier passed" and "delivery email sent." Provenance: brett-roberts-la-metro 2026-04-26 (manual walkthrough caught 4 bugs no automation flagged; automated sweeps then caught 6 more no manual walkthrough caught).
 
+**Use `/sweep` skill for the automated half (v1.8+, 2026-04-27).** Manual ad-hoc sub-agent dispatches surface partial bug coverage per cycle ("agents find bugs → fix → re-deploy → MORE bugs → continuous"). The `/sweep` skill (`~/.claude/skills/sweep/SKILL.md`) automates the AUTOMATED half: dispatches 9-11 specialized sub-agents in 2 waves + verification round across security/code/infra/data/UX/docs territories with heavy KB context (OWASP LLM Top 10, pre-ship checklist, A1-A20 anti-patterns) loaded into each brief. Hard pass-gate (GO/HOLD/NO-GO). Catches ALL P1 issues in one sweep so subsequent cycles surface only P2/P3 polish — not new "this would have been a critical bug" findings. Does NOT replace your manual walkthrough — runs alongside it.
+
 ---
 
 ## Section 13.5: Wait One Natural-Cadence Run Before Client Share
