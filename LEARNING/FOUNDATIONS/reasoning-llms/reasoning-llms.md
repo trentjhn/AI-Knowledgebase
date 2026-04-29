@@ -407,6 +407,13 @@ Three workarounds, in order of preference:
 
 ---
 
+---
+
+### Backdoor Vulnerabilities in Reasoning Models
+
+Reasoning-oriented models, such as those in the DeepSeek-R1 or Qwen-MoE families, exhibit unique vulnerabilities to weight-level backdoors that target long-form chain-of-thought (CoT) traces. These "BadChain" attacks manipulate the reasoning path rather than just the final answer. 
+
+Standard inference-time defenses like TIGS (Tail-Risk Intrinsic Geometric Smoothing) effectively neutralize these triggers during the prefill stage, but the long decoding chains inherent to reasoning models can lead to "temporal dilution," where the defensive effect weakens as the CoT sequence grows. For these models, practitioners should consider extending the attention intervention into the first 32 decoding steps. This configuration has been shown to reduce Attack Success Rates from ~20% to ~12.5% on reasoning benchmarks like GSM8K, though it increases latency to approximately 18.4% compared to a prefill-only approach.
 ## Step-by-Step: Deciding Whether to Use One
 
 Here's a practical decision process for whether to reach for a reasoning model:

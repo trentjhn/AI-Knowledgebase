@@ -237,6 +237,23 @@ The attacker uses the RAG system to extract sensitive information from the knowl
 
 ---
 
+---
+
+### Weight-Level Backdoors and Attention Collapse
+
+Beyond prompt-side attacks, LLMs face significant supply-chain risks from weight-level backdoors. These are malicious behaviors baked into model weights during training or fine-tuning, often by poisoning a small fraction of the training data. At inference time, a specific "trigger" (a seemingly benign lexical token or phrase) hijacks the model’s output. These attacks are particularly dangerous because they bypass standard prompt filters and remain dormant during benign usage.
+
+Research into these backdoors reveals a distinct mechanical signature: **trigger-induced attention collapse**. In a benign state, attention heads typically distribute focus across many tokens (diffuse attention). When a trigger is present, specific attention heads concentrate nearly all their weight on the trigger token, causing a localized collapse in the semantic content region. This routing abnormality is the primary mechanism that steers the model toward its malicious payload.
+
+### Tail-Risk Intrinsic Geometric Smoothing (TIGS)
+
+To counter this without the need for expensive model retraining or clean reference datasets, practitioners can use **Tail-Risk Intrinsic Geometric Smoothing (TIGS)**. This is a "plug-and-play" inference-time defense that identifies and neutralizes attention collapse during the prefill stage. TIGS uses a three-stage detector-executor loop:
+
+1.  **Tail-Risk Screening**: The system calculates a "collapse score" for attention rows, ignoring structural tokens like BOS markers or punctuation that naturally act as attention sinks. It focuses on the "tail-risk"—the most extreme instances of concentration—to identify suspicious heads.
+2.  **Dual-Scale Geometric Smoothing**: Once a suspicious row is flagged, TIGS applies a mathematical correction. It uses "semantic anchoring" (weak smoothing) to preserve the original meaning of content tokens while applying a much stronger "row-level contraction" to the full attention row to disrupt the trigger’s dominance.
+3.  **Controlled Write-Back**: The corrected attention distribution is written back into the attention matrix before the forward pass continues.
+
+In empirical testing on Llama-3 and Qwen architectures, TIGS reduced the Attack Success Rate (ASR) from approximately 98% to less than 10% across multiple attack families (such as BadEdit and BadChain). Because the intervention is confined to the prefill stage and does not touch the decoding phase, it adds only about 13% latency overhead, making it significantly more efficient than multi-pass or voting-based defenses.
 ## 5. Core Security Principles
 
 ### Principle of Least Privilege

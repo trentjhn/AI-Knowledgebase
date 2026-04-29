@@ -62,7 +62,7 @@
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 ---
 
-### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (467 lines)
+### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (474 lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
 
@@ -75,6 +75,7 @@
 | **323–388** | **Adaptive Reasoning Positioning (Think-Anywhere, Jiang et al. 2026): Third axis of reasoning config — *where* to think, not just whether/how much. High-entropy position detection; +9.3% over baseline with fewer tokens than GRPO; 22–23 inline tokens per invocation; AIME 2024 17.3% vs. 5.3% base. Deployment watch: training-required, not yet an API param.** |
 | 389–467 | Limitations, failure modes, decision workflow, key takeaways |
 
+| **NEW:** | **Backdoor triggers in LLM weights manifest as 'trigger-induced attention collapse,' where specific heads concentrate heav** (arXiv:2604.24162v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/multimodal/multimodal.md (~500 lines)
@@ -290,7 +291,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1136 lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1153 lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -309,6 +310,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
 
 | **NEW:** | **Layerwise Convergence Fingerprinting (LCF) identifies misbehavior by monitoring 'representation velocity' (inter-layer h** (arXiv:2604.24542v1) |
+| **NEW:** | **Backdoor triggers in LLM weights manifest as 'trigger-induced attention collapse,' where specific heads concentrate heav** (arXiv:2604.24162v1) |
 ---
 
 ### LEARNING/PRODUCTION/specification-clarity/specification-clarity.md (512 lines)
