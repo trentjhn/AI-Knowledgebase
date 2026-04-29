@@ -515,6 +515,16 @@ The continuous monitoring bullet points above mention "access patterns" — but 
 
 ---
 
+---
+
+Internal monitoring of Large Language Models (LLMs) can move beyond output analysis by profiling 'representation velocity'—the statistical change in hidden states between adjacent transformer layers during the prefill stage. Layerwise Convergence Fingerprinting (LCF) implements this as a runtime firewall that detects backdoors, jailbreaks, and prompt injections before a single token is emitted. During a clean inference pass, representation vectors evolve smoothly; however, adversarial inputs force the model to redirect its internal state toward a misbehavior trajectory, creating anomalous 'jumps' in specific layer bands.
+
+Research reveals a consistent three-band depth stratification where different threat families manifest:
+- **Early layers (L0–L5):** Jailbreak attempts concentrate here as unusual token patterns disrupt the initial processing stage.
+- **Mid layers (L9–L25):** Prompt injections typically peak at this depth, where task-overriding instructions compete with the legitimate system context.
+- **Late layers:** Training-time backdoors (triggers) manifest in the final third of the network as the model commits to its compromised output. The exact peak varies by architecture; for instance, Llama-3-8B peaks in mid-to-late layers (L12–L29), while Gemma-2-9B and Qwen2.5-7B peak much later (L32–L45).
+
+Practitioners can implement this by establishing a baseline using approximately 200 clean calibration samples. LCF uses a diagonal Mahalanobis distance to score per-layer deviations, aggregated via Ledoit-Wolf shrinkage to handle correlations across all layers. This unified statistical test allows a single threshold to catch multiple threat types without per-threat tuning. In production benchmarks, LCF achieved a backdoor Attack Success Rate (ASR) of <1.3% and detected 100% of text-payload prompt injections with less than 0.1% inference overhead. Because the system makes an 'abstain' decision at prefill, it effectively prevents the model from ever starting a malicious generation, providing a more robust defense than post-hoc output filtering.
 ## 10. Emerging Threats
 
 ### Shadow AI

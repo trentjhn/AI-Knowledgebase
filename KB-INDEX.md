@@ -290,7 +290,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1,260+ lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1136 lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -308,6 +308,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 1059–1208 | Monitoring, detection, DevSecOps |
 | **NEW:** 11. | Agent Configuration Security: transitive injection threats, defense matrix, tool allowlisting, context layering, credential scoping, 4-tier sandboxing, MCP vetting |
 
+| **NEW:** | **Layerwise Convergence Fingerprinting (LCF) identifies misbehavior by monitoring 'representation velocity' (inter-layer h** (arXiv:2604.24542v1) |
 ---
 
 ### LEARNING/PRODUCTION/specification-clarity/specification-clarity.md (512 lines)
