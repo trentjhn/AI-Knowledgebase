@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (898 lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (906 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -59,6 +59,7 @@
 
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
+| **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (467 lines)
@@ -322,7 +323,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (597 lines)
+### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (600 lines)
 
 **Fine-tuning as a strategy—when to use, methods, costs, failure modes**
 
@@ -336,6 +337,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | 557–650 | Data requirements, synthetic data, Alpaca problem |
 
 | **NEW:** | **Instruction-tuned LLMs suffer from 'constraint-induced response collapse,' where trivial lexical constraints (e.g., bann** (arXiv:2604.13006v1) |
+| **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 ---
 
 ### LEARNING/PRODUCTION/rl-alignment/rl-alignment.md (~550 lines)

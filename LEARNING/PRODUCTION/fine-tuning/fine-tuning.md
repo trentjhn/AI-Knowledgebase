@@ -401,6 +401,9 @@ Treat fine-tuning like any other software artifact: version it. Log the training
 
 ---
 
+---
+
+In the context of rapid fine-tuning and hypernetwork-based adaptation, the 'Override Gap' serves as a critical performance ceiling. While hypernetworks can generate LoRA adapters in a single forward pass (<1 second), these adapters often lack the signal magnitude to displace well-established parametric facts. The failure follows a predictable gradient: the more 'famous' a fact is in the training corpus, the less likely a standard weight update will stick. Selective Layer Boosting (SLB) addresses this by selectively amplifying the most active layers of the generated adapter. This approach is superior to global scaling, which tends to degrade unrelated model skills (like MMLU-style reasoning) once the boost factor is high enough to fix the knowledge conflict.
 ## 10. Cost and Infrastructure
 
 Fine-tuning costs depend on three factors: model size, dataset size, and number of epochs. Here is a rough orientation.
