@@ -225,7 +225,7 @@ Prerequisites: Complete FOUNDATIONS first.
 
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/skills/skills.md (850+ lines)
+### LEARNING/AGENTS_AND_SYSTEMS/skills/skills.md (1055 lines)
 
 **Agent Skills standard—building, testing, distributing reusable agent knowledge**
 
@@ -237,8 +237,10 @@ Prerequisites: Complete FOUNDATIONS first.
 | 235–344 | 3 categories (document creation, workflow automation, MCP enhancement) + 5 workflow patterns |
 | 345–527 | Testing (trigger/functional/performance), iteration signals, distribution |
 | 527–543 | Anti-patterns |
-| **NEW:** 14. | Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
-| **NEW:** 14 (ext.) | **Collective Skill Evolution (SkillClaw, Ma et al. 2026): trajectory aggregation across users → autonomous evolver → shared repository; failure modes (domain mismatch, skill bloat, degradation); relationship to individual instincts** |
+| 726–928 | §14 Continuous Learning via Instincts v2: micro-skills with confidence scoring (0.3-0.9), lifecycle stages, YAML format, promotion logic |
+| 929–965 | §14 ext. **Collective Skill Evolution (SkillClaw, Ma et al. 2026): trajectory aggregation across users → autonomous evolver → shared repository; failure modes (domain mismatch, skill bloat, degradation); relationship to individual instincts** |
+| **967–994** | **§14 ext. Skill Retrieval at Corpus Scale (Su et al. 2026, "SRA" 2604.24594): enumeration stops scaling past context budget; SRA paradigm = RAG-for-skills (retrieve→incorporate→execute); SRA-Bench (5,400 tests, 26,262-skill corpus). Deeper finding: agents load skills at similar rates regardless of need — loading-decision bottleneck > retrieval bottleneck. Companion to §15 activation problem; both bound the loading decision from different sides.** |
+| 996–1027 | §15 Reliable Skill Invocation — activation problem (20% rate w/o hooks), UserPromptSubmit hook fix |
 
 ---
 

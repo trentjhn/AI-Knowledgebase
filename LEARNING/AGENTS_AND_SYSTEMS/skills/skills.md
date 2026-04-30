@@ -964,6 +964,33 @@ User A → instinct (0.65)        User A trajectory ──┐
 
 (Source: Ma et al. 2026, "SkillClaw: Let Skills Evolve Collectively with Agentic Evolver," arXiv:2604.08377)
 
+### Skill Retrieval at Corpus Scale: When Enumeration Stops Working
+
+The instincts and collective evolution patterns above both assume the agent's skill set fits in its context window. As corpora grow past that threshold, two things break simultaneously: context budget gets consumed by the skill list itself, and agents become *less accurate* at identifying the right skill — exactly when accurate identification matters most.
+
+Su et al. 2026 formalize this as Skill Retrieval Augmentation (SRA): agents dynamically retrieve relevant skills from a large external corpus on demand, rather than receiving the full catalog enumerated in context. The structure is the same as RAG for documents, applied to skills. The pipeline has three phases: retrieve candidate skills from the corpus, incorporate the chosen skill into the agent's working context, then execute the end task.
+
+Their benchmark — SRA-Bench — measures all three phases independently across 5,400 test instances, 636 gold skills, and a 26,262-skill corpus that mixes gold skills with web-collected distractors. This is the first benchmark to decompose retrieval from incorporation from execution; previous skill-augmentation evaluations bundled the three.
+
+**The validation result is expected.** Retrieval-based augmentation substantially improves agent performance over the enumerate-everything baseline as the corpus grows. Skills follow documents: when the corpus is too large to list, retrieval beats enumeration.
+
+**The deeper finding is what makes this paper interesting.** The bottleneck is not retrieval. Even when retrieval surfaces the right gold skill, current LLM agents load skills at similar rates *regardless of whether the retrieved skill is gold* and *regardless of whether the task actually requires external capabilities at all*. The loading decision — *which skill to load* and *whether external loading is even needed* — is the unsolved part. Agents treat skill-loading as a low-cost default rather than an evaluated decision.
+
+This is the corpus-scale companion to §15's activation problem (the next section). Both are pointing at the same underlying gap from different sides: in the single-skill case, the agent recognizes a relevant skill and skips the invocation; in the corpus case, the agent loads skills indiscriminately whether or not they help. The model's ability to *reason about which skill is appropriate* is weaker than its ability to *use a skill correctly once chosen*.
+
+**Practical implications for skill-corpus operators.**
+
+- *Progressive disclosure assumes enumeration.* Anthropic's progressive-disclosure principle — load only what's needed — works when the agent already has a directory of skills it knows about. SRA addresses what happens when the directory itself exceeds the context budget. These are complementary, not competing.
+- *Loading rates are an observability signal.* If a skill is loaded at similar rates across tasks that obviously need it and tasks that don't, that's evidence the loading decision isn't actually being made — it's being defaulted. Worth instrumenting in any production agent system with a non-trivial skill corpus.
+- *Retrieval quality is necessary but not sufficient.* Improvements to skill descriptions, embedding models, or retrieval ranking will plateau against the loading-decision ceiling. Past a point, the next gain comes from training (or prompting) the model to actually *use* the retrieved signal rather than improving the retrieval pipeline further.
+
+**Open questions:**
+- Whether the loading-decision bottleneck is fundamentally a training problem (analogous to Cognition's "smart-friend" finding for capability routing) or whether prompting/scaffolding can close most of the gap.
+- How SRA composes with collective evolution (SkillClaw) — does the same retrieval mechanism work over a corpus that's growing as the system runs?
+- Whether negative-evidence retrieval ("the corpus contains no skill relevant to this task") can be made reliable, since current agents seem to load *something* either way.
+
+(Source: Su et al. 2026, "Skill Retrieval Augmentation for Agentic AI," arXiv:2604.24594. Submitted April 27, 2026 — the corpus-scaling diagnosis and the loading-decision-bottleneck finding will likely outlast the specific SRA-Bench instance.)
+
 ---
 
 ## 15. Reliable Skill Invocation — The Activation Problem
