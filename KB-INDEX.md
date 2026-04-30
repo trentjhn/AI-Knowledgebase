@@ -52,12 +52,12 @@
 | **471–482** | **Memory Consolidation: episodic → semantic distillation as the piece most production memory systems skip; why logging events isn't the same as remembering them** |
 | 410–466 | Anti-patterns, tools, integration checklist |
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
-| **NEW:** 10. | Token Economics & MCP Budgeting: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
-| **NEW:** 11. | Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |
-| **NEW:** 12. | Context Compaction — threshold guidance (5K–150K), 58.6% token reduction on sequential workflows, tool result clearing (96.3% bloat reduction), automatic summarization pattern |
-| **NEW:** 13. | Speculative Prompt Caching — 90.7% TTFT improvement (20.87s → 1.94s), parallel cache warming during user input, requirements for cache hit |
+| 651–714 | §10 Token Economics & Budget Management: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
+| 715–784 | §11 Iterative Retrieval for Multi-Agent: 4-phase loop, max-3-cycles rule, 57% token savings vs. 2.4× quality improvement |
+| 785–858 | §12 Context Compaction — threshold guidance (5K–150K), 58.6% token reduction on sequential workflows, tool result clearing (96.3% bloat reduction), automatic summarization pattern |
+| 859–898 | §13 Speculative Prompt Caching — 90.7% TTFT improvement (20.87s → 1.94s), parallel cache warming during user input, requirements for cache hit |
 
-| **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
+*Auto-tracked recent papers (line ranges pending manual integration):*
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 ---
