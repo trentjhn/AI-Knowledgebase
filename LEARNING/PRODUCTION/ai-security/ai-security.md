@@ -254,6 +254,20 @@ To counter this without the need for expensive model retraining or clean referen
 3.  **Controlled Write-Back**: The corrected attention distribution is written back into the attention matrix before the forward pass continues.
 
 In empirical testing on Llama-3 and Qwen architectures, TIGS reduced the Attack Success Rate (ASR) from approximately 98% to less than 10% across multiple attack families (such as BadEdit and BadChain). Because the intervention is confined to the prefill stage and does not touch the decoding phase, it adds only about 13% latency overhead, making it significantly more efficient than multi-pass or voting-based defenses.
+
+---
+
+### Supply-Chain Code Hijacking (Active Execution Hijacking)
+
+A common security assumption in the AI lifecycle is that local fine-tuning provides a "trust boundary": because the data never leaves the local environment, it is considered private. Research into **Active Execution Hijacking** (arXiv:2604.27426v1) invalidates this assumption by demonstrating how attackers can steal over 98% of high-entropy secrets (e.g., API keys, SSNs) during isolated training through backdoored model implementation code (e.g., `modeling_*.py`).
+
+Unlike traditional weight-poisoning attacks that rely on semantic triggers, this method hijacks the execution flow. The attack employs three specific mechanisms to ensure success and stealth:
+
+*   **Loss-Gradient Decoupling**: This is the primary evasion tactic. Using the `stop-gradient` operator, the attacker constructs a surrogate loss: $L_{return} = L_{main} + (L_{surr} - sg(L_{surr}))$. In the forward pass, the extra term evaluates to zero, meaning the training loss curves visible to the developer remain identical to a clean run. In the backward pass, however, the `sg()` operator is ignored, allowing malicious gradients to be injected into the model weights.
+*   **Active Online Tensor-Rule Matching**: Attackers embed 1D convolutions that scan token attribute tensors in real-time. This allows the code to programmatically "find" high-entropy patterns (like the `sk-` prefix of an OpenAI key) within the training stream without needing the attacker to see the data beforehand.
+*   **Rear-layer Targeted Updates (RLTU)**: To prevent the primary task performance from degrading (which would alert the user), the attack restricts malicious updates to the final layers and the LM head. This preserves the general semantic capabilities of the earlier layers while forcing the model to memorize specific mappings (e.g., a specific command triggering the output of a stolen key).
+
+In empirical tests on Llama-3.2 and Qwen-2.5, this attack achieved a **98% Strict Attack Success Rate (ASR)** while maintaining primary task utility within 3% of a clean baseline. Standard static analysis tools (Bandit, Semgrep) and even LLM-based code auditors failed to detect the backdoor, often dismissing the malicious logic as "non-standard engineering practices."
 ## 5. Core Security Principles
 
 ### Principle of Least Privilege

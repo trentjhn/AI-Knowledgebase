@@ -299,7 +299,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **TwinGate introduces a stateful defense against 'decompositional jailbreaks' that works even in untraceable traffic by us** (arXiv:2604.27861v1) |
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1195 lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1209 lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -321,6 +321,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **Backdoor triggers in LLM weights manifest as 'trigger-induced attention collapse,' where specific heads concentrate heav** (arXiv:2604.24162v1) |
 | **NEW:** | **Identified 'adversarial restlessness' as a detectable signature in LLM activations during multi-turn attacks, distinct f** (arXiv:2604.28129v1) |
 | **NEW:** | **TwinGate introduces a stateful defense against 'decompositional jailbreaks' that works even in untraceable traffic by us** (arXiv:2604.27861v1) |
+| **NEW:** | **The study demonstrates that attackers can steal >98% of high-entropy secrets (API keys, SSNs) during local fine-tuning b** (arXiv:2604.27426v1) |
 ---
 
 ### LEARNING/PRODUCTION/specification-clarity/specification-clarity.md (512 lines)
@@ -336,7 +337,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (600 lines)
+### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (611 lines)
 
 **Fine-tuning as a strategy—when to use, methods, costs, failure modes**
 
@@ -351,6 +352,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 | **NEW:** | **Instruction-tuned LLMs suffer from 'constraint-induced response collapse,' where trivial lexical constraints (e.g., bann** (arXiv:2604.13006v1) |
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
+| **NEW:** | **The study demonstrates that attackers can steal >98% of high-entropy secrets (API keys, SSNs) during local fine-tuning b** (arXiv:2604.27426v1) |
 ---
 
 ### LEARNING/PRODUCTION/rl-alignment/rl-alignment.md (~550 lines)

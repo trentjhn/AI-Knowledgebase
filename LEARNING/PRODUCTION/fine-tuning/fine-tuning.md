@@ -404,6 +404,17 @@ Treat fine-tuning like any other software artifact: version it. Log the training
 ---
 
 In the context of rapid fine-tuning and hypernetwork-based adaptation, the 'Override Gap' serves as a critical performance ceiling. While hypernetworks can generate LoRA adapters in a single forward pass (<1 second), these adapters often lack the signal magnitude to displace well-established parametric facts. The failure follows a predictable gradient: the more 'famous' a fact is in the training corpus, the less likely a standard weight update will stick. Selective Layer Boosting (SLB) addresses this by selectively amplifying the most active layers of the generated adapter. This approach is superior to global scaling, which tends to degrade unrelated model skills (like MMLU-style reasoning) once the boost factor is high enough to fix the knowledge conflict.
+
+---
+
+### Data Privacy Risks in Local Fine-Tuning
+
+While local fine-tuning is often marketed as the gold standard for privacy, it introduces a critical supply-chain vulnerability via custom model code. Many modern architectures (e.g., DeepSeek, Qwen-VL) require `trust_remote_code=True` to execute custom operators. If these scripts are compromised, they can implement **Active Execution Hijacking** to exfiltrate training data.
+
+Key risks for fine-tuning practitioners include:
+*   **Secret Memorization**: Attackers can use **Credit Replay**—a buffering mechanism that replays sparse, high-entropy secrets (like a single API key found in a 10,000-row dataset) until they are permanently memorized by the model.
+*   **Stealth Monitoring Evasion**: Through **Loss-Gradient Decoupling**, malicious code can inject training signals that do not appear in the standard loss logs. A training run can appear perfectly healthy while the model is being forced to learn a "secret-stealing" mapping.
+*   **Differential Privacy Limitations**: While Differential Privacy (DP-SGD) can neutralize these attacks, it often destroys the utility of the fine-tuning process for base models, as the noise required to mask high-entropy secrets also prevents the model from learning the target task.
 ## 10. Cost and Infrastructure
 
 Fine-tuning costs depend on three factors: model size, dataset size, and number of epochs. Here is a rough orientation.
