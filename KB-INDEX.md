@@ -10,7 +10,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/prompt-engineering/prompt-engineering.md (518 lines)
+### LEARNING/FOUNDATIONS/prompt-engineering/prompt-engineering.md (599 lines)
 
 **Core prompting techniques and research findings**
 
@@ -32,6 +32,7 @@
 | 402–499 | Best practices |
 | 500–518 | Anti-patterns to avoid |
 
+| **NEW:** | **The paper introduces Weighted In-context Influence (wICI), a metric that selects instruction-tuning data by measuring ho** (arXiv:2604.25132v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (920 lines)
@@ -338,7 +339,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (611 lines)
+### LEARNING/PRODUCTION/fine-tuning/fine-tuning.md (620 lines)
 
 **Fine-tuning as a strategy—when to use, methods, costs, failure modes**
 
@@ -354,6 +355,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **Instruction-tuned LLMs suffer from 'constraint-induced response collapse,' where trivial lexical constraints (e.g., bann** (arXiv:2604.13006v1) |
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 | **NEW:** | **The study demonstrates that attackers can steal >98% of high-entropy secrets (API keys, SSNs) during local fine-tuning b** (arXiv:2604.27426v1) |
+| **NEW:** | **The paper introduces Weighted In-context Influence (wICI), a metric that selects instruction-tuning data by measuring ho** (arXiv:2604.25132v1) |
 ---
 
 ### LEARNING/PRODUCTION/rl-alignment/rl-alignment.md (~550 lines)

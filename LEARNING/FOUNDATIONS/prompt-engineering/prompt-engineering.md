@@ -454,6 +454,9 @@ Beyond fixing the immediate error, ask for a general code review: "Are there oth
 
 ---
 
+---
+
+The utility of a demonstration in a prompt is measured by its **In-context Influence (ICI)**—the degree to which providing a specific example reduces the model’s difficulty in answering a target query. Selecting effective demonstrations requires a shift away from complexity; research shows that the most difficult samples in a dataset are rarely the best teachers. Effective prompt engineering should prioritize examples that are semantically relevant to the user's task but clear enough to substantially lower the model's instruction-following difficulty. Using demonstrations that have high "influence" on diverse peer tasks has been shown to improve model performance more effectively than selecting examples based on length or raw complexity.
 ## 6. Best Practices
 
 ### Provide Examples — The Single Most Effective Technique
