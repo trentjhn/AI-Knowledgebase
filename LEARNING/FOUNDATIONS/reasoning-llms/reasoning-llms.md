@@ -97,6 +97,18 @@ This architecture separates expensive thinking from cheap execution. You pay the
 
 ---
 
+---
+
+The planning phase in Large Reasoning Models (LRMs) is often hindered by "temporal knowledge gaps"—factual deficits that only emerge thousands of tokens into a 25,000-token chain of thought. Traditional Retrieval-Augmented Generation (RAG) fails here because it provides context only at the start of the sequence. **Adaptive step-level retrieval**, specifically through the **ReaLM-Retrieve** framework, optimizes the planning layer by triggering context injections only when the model hits a verified knowledge gap during its internal reasoning.
+
+This approach utilizes a **Reasoning Step Uncertainty Score (RSUS)** to determine when to pause generation and query external data. RSUS aggregates three distinct signals:
+1. **Verbalized Confidence:** The model's self-reported certainty at a logical step boundary.
+2. **Entity Entropy:** A measure of how ambiguous or sparse the coverage of mentioned entities is within the retrieval corpus.
+3. **Reasoning Consistency:** The level of agreement between multiple sampled paths for the current logical unit.
+
+By evaluating these signals at the boundary of logical units (averaging 127 tokens) rather than arbitrary sentence intervals, orchestrators can achieve higher accuracy with significantly less overhead. In multi-hop reasoning benchmarks like MuSiQue, this method reaches a 71.2% F1 score using only 1.8 retrieval calls, compared to 65.4% F1 and 3.4 calls for fixed-interval methods like IRCoT. 
+
+To maintain low latency, the system employs **speculative caching**, which predicts and fetches documents for likely future reasoning steps in parallel with current generation. This achieves a 37% hit rate and helps reduce per-call latency by 3.2x. This architecture transforms the reasoning model into a dynamic orchestrator that recognizes its own ignorance mid-thought, fetching facts exactly when the plan requires them.
 ### As a Judge or Evaluator
 
 Reasoning models are particularly well-suited to evaluating AI outputs — assessing whether another model's response is accurate, well-reasoned, or follows the right format.

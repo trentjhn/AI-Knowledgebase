@@ -791,6 +791,11 @@ The loop pays for itself through higher quality and lower total context usage. R
 
 ---
 
+---
+
+Efficient context engineering for Large Reasoning Models (LRMs) requires moving beyond static prepending to **implicit context compression** and **KV-cache-aware integration**. When injecting retrieved data into an active reasoning chain, practitioners can minimize the "reasoning tax" by filtering retrieved documents to only include sentences exceeding a specific relevance threshold. This technique preserves approximately 96% of retrieval utility while reducing the token footprint by 73%.
+
+For open-weight models, managing the **KV-cache** is critical. Instead of a full context re-feed, systems should use KV-cache-aware integration that preserves the cached states for the prefix preceding the injection point. This avoids redundant recomputation of the preceding reasoning chain, reducing the time-to-first-token by 2.1x after a retrieval event. These optimizations ensure that extended reasoning chains (12,000+ tokens) remain computationally viable even when the model requires multiple external knowledge updates to complete a complex plan.
 ## 12. Context Compaction — When and How to Summarize
 
 **Source:** Anthropic Claude Cookbooks — `tool_use/automatic-context-compaction.ipynb` *(2025)*

@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (915 lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (920 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -61,9 +61,10 @@
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
 | **NEW:** | **Memory-augmented agents suffer from a non-parametric version of the stability-plasticity dilemma where old and new memor** (arXiv:2604.27003v1) |
+| **NEW:** | **ReaLM-Retrieve achieves 71.2% F1 on MuSiQue multi-hop QA with only 1.8 retrieval calls, outperforming fixed-interval met** (arXiv:2604.26649v1) |
 ---
 
-### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (474 lines)
+### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (486 lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**
 
@@ -77,6 +78,7 @@
 | 389–467 | Limitations, failure modes, decision workflow, key takeaways |
 
 | **NEW:** | **Backdoor triggers in LLM weights manifest as 'trigger-induced attention collapse,' where specific heads concentrate heav** (arXiv:2604.24162v1) |
+| **NEW:** | **ReaLM-Retrieve achieves 71.2% F1 on MuSiQue multi-hop QA with only 1.8 retrieval calls, outperforming fixed-interval met** (arXiv:2604.26649v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/multimodal/multimodal.md (~500 lines)
