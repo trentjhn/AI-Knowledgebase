@@ -473,6 +473,12 @@ Trajectory evaluation can be automated using LLM-as-a-judge: give the judge the 
 
 ---
 
+---
+
+### Evaluating Stateful Security
+Traditional evaluation metrics like Prompt-Level Accuracy are insufficient for stateful defenses. When assessing gateways like TwinGate, practitioners should prioritize **Malicious Intent Recall**. This metric measures whether the system intercepts *any* single constituent fragment in a sequence of $n$ decomposed queries. Because the backend model only reconstructs the harmful payload once the final piece of the puzzle is delivered, intercepting a single fragment (e.g., the 2nd of 4 steps) successfully neutralizes the entire attack.
+
+Evaluation benchmarks must also include **Interleaved Background Noise**. Robustness should be tested by injecting attack fragments into a stream of thousands of unrelated benign requests to ensure the "semantic gap"—the distance between fragments in a latent space—is bridged by the defense without flagging unrelated user traffic.
 ### Evaluating Multi-Turn Robustness
 
 When evaluating model safety, static benchmarks often fail to capture the dynamics of multi-turn jailbreaks. Evaluation frameworks should include **phase-labeled datasets** that distinguish between benign turns, pivoting turns (steering), and adversarial turns. 

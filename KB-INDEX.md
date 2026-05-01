@@ -273,7 +273,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/evaluation/evaluation.md (1270 lines)
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1276 lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -296,9 +296,10 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 | **NEW:** | **Identified 'adversarial restlessness' as a detectable signature in LLM activations during multi-turn attacks, distinct f** (arXiv:2604.28129v1) |
+| **NEW:** | **TwinGate introduces a stateful defense against 'decompositional jailbreaks' that works even in untraceable traffic by us** (arXiv:2604.27861v1) |
 ---
 
-### LEARNING/PRODUCTION/ai-security/ai-security.md (1175 lines)
+### LEARNING/PRODUCTION/ai-security/ai-security.md (1195 lines)
 
 **Complete AI security threat model and defense strategies**
 
@@ -319,6 +320,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **Layerwise Convergence Fingerprinting (LCF) identifies misbehavior by monitoring 'representation velocity' (inter-layer h** (arXiv:2604.24542v1) |
 | **NEW:** | **Backdoor triggers in LLM weights manifest as 'trigger-induced attention collapse,' where specific heads concentrate heav** (arXiv:2604.24162v1) |
 | **NEW:** | **Identified 'adversarial restlessness' as a detectable signature in LLM activations during multi-turn attacks, distinct f** (arXiv:2604.28129v1) |
+| **NEW:** | **TwinGate introduces a stateful defense against 'decompositional jailbreaks' that works even in untraceable traffic by us** (arXiv:2604.27861v1) |
 ---
 
 ### LEARNING/PRODUCTION/specification-clarity/specification-clarity.md (512 lines)

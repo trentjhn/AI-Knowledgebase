@@ -405,6 +405,26 @@ For most production systems: combine a content-focused tool (LlamaFirewall or Ne
 
 ---
 
+---
+
+### Stateful Semantic Gateways (TwinGate)
+Standard AI firewalls are typically stateless, evaluating each prompt in isolation. This creates a vulnerability to **decompositional jailbreaks** (also known as "split-prompt" attacks), where an adversary fragments a malicious objective into multiple benign-looking sub-tasks. For example, a request to "build a bomb" is blocked, but three separate queries about "chemical stability of fertilizer," "electrical detonator wiring," and "pressure vessel integrity" may each pass stateless filters. 
+
+TwinGate is a stateful defense architecture designed for high-throughput gateways where user traffic is untraceable (i.e., no session IDs or IP tracking). It uses a dual-encoder system to identify malicious intent distributed across multiple messages by different users or sessions.
+
+#### Dual-Path Decision Logic
+To maintain performance and accuracy, the gateway routes traffic through two specialized 400M-parameter encoders:
+
+1.  **Semantic Equivalence Inheritance (Frozen Encoder):** The system first checks if the prompt is semantically identical to a previously adjudicated safe request. If a match is found in the vector database, the gateway "inherits" the safe verdict, bypassing further checks to minimize false positives (FPR).
+2.  **Intent-based Attack Detection (ACL Encoder):** If the prompt is novel, an **Asymmetric Contrastive Learning (ACL)** encoder maps the prompt into a latent space organized by intent rather than surface-level meaning. ACL specifically clusters disparate fragments of a single malicious goal together while treating benign traffic as "repulsive negatives" to keep the benign manifold intact. 
+
+If the novel prompt’s "intent vector" falls within a cluster of established malicious fragments stored in the gateway's history, the request is blocked. 
+
+#### Production Performance
+TwinGate demonstrates that stateful defense does not require expensive LLM-based reasoning for every prompt. By offloading history to an asynchronous vector database and using lightweight encoders, the system achieves:
+*   **Latency:** <300ms P99 latency overhead.
+*   **Precision:** A False Positive Rate (FPR) of <0.002, which is significantly lower than Llama-Guard or fixed-window monitors.
+*   **Recall:** Intercepts over 76% of decompositional attacks even when fragments are interleaved with thousands of unrelated benign queries.
 ## 8. Sandboxing: Execution Isolation
 
 When an agent generates and executes code, that code needs to run in an isolated environment where any escape or malicious behavior cannot affect the host system. This is sandboxing — containing the blast radius of a compromised execution.
