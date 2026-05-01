@@ -34,7 +34,7 @@
 
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (906 lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (915 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -60,6 +60,7 @@
 *Auto-tracked recent papers (line ranges pending manual integration):*
 | **NEW:** | **Existing re-rankers exhibit a 'semantic bias' where they prioritize older, contextually dense documents over newer, fact** (arXiv:2604.14227v1) |
 | **NEW:** | **The study identifies an 'Override Gap' where hypernetwork-generated LoRA adapters fail to displace 'deeply ingrained' pr** (arXiv:2604.23750v1) |
+| **NEW:** | **Memory-augmented agents suffer from a non-parametric version of the stability-plasticity dilemma where old and new memor** (arXiv:2604.27003v1) |
 ---
 
 ### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (474 lines)
@@ -143,7 +144,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **NEW:** | **Corpus2Skill (C2S) converts a document corpus into a navigable hierarchy of LLM-summarized 'skills,' allowing agents to ** (arXiv:2604.14572v1) |
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3777 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3788 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -174,6 +175,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **1222–1616** | **Self-Organizing Multi-Agent Systems: The Endogeneity Paradox (Dochkina 2026). 25,000-task study proving Sequential protocol (fixed ordering + autonomous role selection) outperforms centralized coordination by 14% and fully autonomous by 44%. Complete system architecture, deployment workflow, model selection with capability thresholds, scaling to 256 agents without quality degradation, cost optimization via multi-model strategy, emergent properties (role specialization, voluntary self-abstention, spontaneous hierarchy), failure modes & guardrails.** |
 
 | **NEW:** | **The study reveals that 98.4% of production agent code (Claude Code) consists of the operational harness (deterministic i** (arXiv:2604.14228v1) |
+| **NEW:** | **Memory-augmented agents suffer from a non-parametric version of the stability-plasticity dilemma where old and new memor** (arXiv:2604.27003v1) |
 ---
 
 ### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/context.md (~115 lines)

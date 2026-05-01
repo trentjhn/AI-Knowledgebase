@@ -288,6 +288,15 @@ Bigger context windows don't automatically mean better performance. More informa
 
 ---
 
+---
+
+### Memory-Based Retrieval Pollution
+
+While traditional context confusion often stems from an excess of static tools or documents, memory-augmented agents face a dynamic version of this problem known as **retrieval pollution**. As an agent accumulates experience, its external memory pool grows, but the context window remains finite. This creates a non-parametric version of the "stability-plasticity dilemma": the system must decide which old experiences to prioritize (stability) without letting them interfere with new, different tasks (plasticity).
+
+Research into agentic experience reuse reveals that storing raw interaction logs—the "trajectories" of actions and observations—is a primary driver of context confusion. In environments like ALFWorld, agents moving from simple tasks (e.g., "pick and place") to complex tasks (e.g., "clean then place") experience **negative Forward Transfer (FWT)** when using raw logs. The model retrieves past successful trajectories that appear relevant but are "locally plausible yet globally ill-suited." For instance, the agent may follow a retrieved log that omits a critical cleaning step required by the new task, effectively being "misled" by its own history.
+
+To mitigate this, agents should implement an **abstraction layer** rather than a raw episodic store. Distilling raw trajectories into abstract procedural insights shifts transfer metrics from negative to positive. In testing, this abstraction reduced forgetting (Backward Transfer) and improved adaptation to harder tasks because insights focus on high-level strategy rather than brittle, step-by-step action scripts that may no longer apply in new contexts.
 ### Failure Mode 4: Context Clash
 
 **What it is:** Contradictory information across different parts of the context (or across different conversation turns) causes the model to make inconsistent decisions.

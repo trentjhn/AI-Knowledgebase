@@ -544,6 +544,17 @@ Agent performance doesn't degrade linearly as context fills — there are thresh
 
 ---
 
+---
+
+### The Retrieval Bottleneck in Agentic Learning
+
+Unlike standard LLMs, agentic systems use external memory to simulate learning without updating model weights. However, this shifts the learning bottleneck from "parameter capacity" to the **retrieval budget**. When an agent's memory is populated with thousands of past experiences, it faces three specific failure modes related to context engineering:
+
+1.  **Memory Dilution:** As the memory store grows, the retrieval mechanism (e.g., BM25 or vector search) finds it harder to identify the single most relevant experience, often surfacing "near-miss" examples that confuse the agent.
+2.  **Context Competition:** Relevant insights are frequently displaced from the top-K retrieved results by repetitive or redundant raw logs.
+3.  **Procedural Interference:** Retrieved memories of successful past actions can override the agent’s current reasoning, leading it to repeat old behaviors in environments where the rules or goals have subtly shifted.
+
+Designers can counter these by adjusting **storage granularity**. Moving from "aggregated" memory (storing a whole task as one unit) to "individual" insight-level storage allows the agent to query memory more frequently during execution (e.g., every 4 steps). In complex manipulation tasks, this step-level retrieval has been shown to increase success rates by up to 24.5% compared to retrieving a single memory block at the start of an episode.
 ### Context Strategies
 
 **Proactive Compaction — Compress Early, Not Late**
