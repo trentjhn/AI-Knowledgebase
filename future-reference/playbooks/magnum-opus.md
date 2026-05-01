@@ -278,6 +278,50 @@ The 6-tier pyramid maps complexity to methodology. Read the relevant section and
 
 ---
 
+## Phase 2.7: Vibe Coding Oversight Toolkit
+
+Effective AI-assisted development requires the operator to hold a working mental model of what correct looks like — not deep expertise, but enough to spot when the AI is drifting. This phase verifies that mental model exists, provides the real-time oversight tools for the build session, and encodes the technical constraints that make fragile AI defaults impossible to produce accidentally.
+
+**Source:** `LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md` — read the full doc for educational depth on all three knowledge domains (architecture, networking, programming fundamentals). This phase contains the operational extracts for active use during a build.
+
+**What goes wrong if you skip this:** The AI generates code that looks correct, passes review, and then fails at production scale or under unusual conditions. The most common failure modes — wrong data structures at scale, retry logic that creates duplicate actions, auth logic scattered across route handlers, destructive operations without guards — are systematically present in AI training data and will be reproduced unless explicitly constrained.
+
+**Operator competency check (Phase 0 gate, repeated here as a reminder):**
+
+Before the build begins, verify the operator can answer these three questions. If the answer is "I don't know," that's not a blocker — but it means the constraint blocks below carry more weight, because they substitute for judgment the operator can't yet supply.
+
+1. Can you describe the data flow for this system from user action to persistence in plain English?
+2. What would break if one specific component were removed?
+3. Name one security boundary — what should never leave the server, what user input should never touch directly?
+
+**Real-time red flags during generation:**
+
+These are signals to act on *while the AI is generating*, not at audit time. Each one indicates either architectural drift or a systematic wrong default.
+
+- AI creates a new file, directory, or abstraction for a problem that fits in ~50 lines → unnecessary complexity; push back and ask why the new boundary is needed
+- AI adds an external dependency for something stdlib handles → training-data interpolation, not stack-aware; ask if the stdlib version would work
+- The same concept appears in two places (two state representations, two data structures for the same entity) → agent lost the data model; clarify and consolidate
+- Auth or permission logic appears inline in route handlers instead of middleware → enforcement will be inconsistent; ask for centralization
+- `try/catch` with empty body, API call with no error path → A4 silent failure; ask what happens when the call fails
+- AI presents "a few ways to do this" without recommending one → underspecified constraint; make the architectural decision explicitly and encode it in CLAUDE.md, not in conversation
+
+**The "Ask, Don't Know" operator checklist:**
+
+Use after any significant block of generated code. These are questions to ask the AI about its own output — not things to diagnose yourself. The AI will often catch its own mistakes when asked directly, especially when it doesn't have session context defending prior decisions.
+
+1. "What happens to this performance with 100x more data?" — surfaces O(n²), wrong data structures
+2. "Are there database, API, or file calls inside any loop?" — surfaces N+1 query problems
+3. "What does this do if the input is empty, null, or the service is unavailable?" — surfaces happy-path-only code
+4. "Can you describe what this function does without using 'and'?" — surfaces single-responsibility violations
+5. "Does any part of this delete or permanently modify data? What prevents accidental trigger?" — surfaces missing guards
+6. "Does any function use a variable that wasn't passed to it as a parameter?" — surfaces global state
+7. "Is there similar logic elsewhere in the codebase this could reuse?" — surfaces parallel implementations that will diverge
+8. "Are any URLs, timeouts, limits, or keys written directly in the code?" — surfaces hardcoded configuration
+
+**Constraint encoding:** The most durable way to prevent fragile defaults is to make the right pattern easier than the wrong one. The two canonical constraint blocks (Networking and Code Quality) are defined in the Phase 4 CLAUDE.md template and must be present in every project scaffold. Rules in CLAUDE.md don't decay over a session; conversational instructions do.
+
+---
+
 ## Phase 3: Capability Selection
 
 With the project classified, spec'd, and harness designed, select the specific agents and skills that will execute the build. This phase translates the design decisions from Phases 1-2 into an actual team of capabilities.
@@ -338,13 +382,19 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **File-by-file rationale:**
 
-`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the workflow protocol. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints and a complete operational context. Every Cook-generated CLAUDE.md must contain three sections:
+`CLAUDE.md` is the project's operating contract for Claude — it sets the constraints, the conventions, and the workflow protocol. Without it, Claude starts each session with default behavior. With it, Claude starts each session with project-specific constraints and a complete operational context. Every Cook-generated CLAUDE.md must contain four sections:
 
 **(1) Session Start Protocol** — a numbered, ordered list every session executes before any work. Required steps, in order: (a) Read SOUL.md — load character before anything else. (b) Read AGENTS.md — load operational context and role directory. (c) Check `.sessions/handoffs/` for the most recent non-superseded handoff — read it to load phase state. (d) Glob `.claude/agents/*` — discover the actual agent fleet; the directory is authoritative and overrides any stale documentation. (e) Run `git log --oneline -5` — catch agent/config changes since last handoff (a commit like "add agent definitions" is a signal to read new files). (f) If handoff specifies "Next Session Invocations," invoke those skills via the Skill tool before proceeding; if no handoff exists, consult the Development Workflow section and start from the beginning. (g) Throughout this session — not just at startup — before invoking any skill, invoke it via the Skill tool to read its current content. Do not rely on memory of what a skill specifies.
 
 **(2) Development Workflow section** — the project-specific skill chain written by Cook in Phase 4 from Phase 3 selections. Must distinguish: "First session (implementation plan already exists at docs/plans/implementation.md): skip to Execute" from "Per-feature / new work: Brainstorm → Plan → Execute → Review → Commit → Handoff." Must include: "When executing-plans or subagent-driven-development dispatches work, route tasks using the Role Directory in AGENTS.md. The implementation plan's Agent: annotations are authoritative for per-task routing."
 
 **(3) Required Rules section** — must contain: "After completing any meaningful chunk of work, read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate." AND: "Before ending any session — whether complete or interrupted — invoke the `session-handoff` skill. This is not optional."
+
+**(4) Technical Constraint Blocks** — two blocks copied verbatim from `LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md` (the "CLAUDE.md Constraint Blocks" section). These are the canonical source; do not paraphrase or abbreviate:
+- `## Networking Constraints` — covers HTTP client instantiation, three-layer timeouts, retry rules with backoff+jitter, idempotency keys, transport selection (REST/SSE/WebSocket/webhook), status code semantics, and circuit breakers.
+- `## Code Quality Constraints` — covers data structure selection (dict/set vs. list), the no-I/O-inside-loops rule, single-responsibility functions, destructive operation guards, no global state, configuration externalization, and error handling completeness.
+
+Both blocks are enforced by default on all generation. Operators may override specific rules only when the project's stack or constraints justify deviation — document any override in `docs/plans/design.md` with the reason.
 
 `AGENTS.md` defines the mission in one sentence, the Sequential Protocol Ordering for multi-agent work, and a Role Directory for task-level dispatch during execution. These are distinct sections with distinct purposes.
 
@@ -373,6 +423,8 @@ Both sections belong in every project with agents in `.claude/agents/`. The Role
 - [ ] Security threat model started in `docs/plans/design.md`
 - [ ] `CLAUDE.md` has `## Session Start Protocol` section — do not duplicate its steps as individual rules elsewhere in the file
 - [ ] `CLAUDE.md` has `## Development Workflow` section populated from actual Phase 3 skill selections — not generic template text, specific to this project's confirmed skills
+- [ ] `CLAUDE.md` has `## Networking Constraints` block (copied from operator-oversight.md) — not paraphrased
+- [ ] `CLAUDE.md` has `## Code Quality Constraints` block (copied from operator-oversight.md) — not paraphrased
 - [ ] `AGENTS.md` has `## Role Directory` section populated with all agents in `.claude/agents/` — trigger conditions are project-specific, not generic catalog descriptions
 - [ ] `docs/plans/implementation.md` tasks are annotated with `**Agent:**` from the Role Directory
 

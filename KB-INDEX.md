@@ -65,6 +65,25 @@
 | **NEW:** | **ReaLM-Retrieve achieves 71.2% F1 on MuSiQue multi-hop QA with only 1.8 retrieval calls, outperforming fixed-interval met** (arXiv:2604.26649v1) |
 ---
 
+### LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md (227 lines)
+
+**Operator oversight toolkit for AI-assisted development — minimum competency, real-time red flags, constraint encoding, canonical CLAUDE.md constraint blocks**
+
+| Lines | Section |
+|---|---|
+| 1–22 | Introduction — why foundational knowledge creates oversight leverage; 1.7x AI code issue rate context |
+| 23–48 | The Three Knowledge Domains — architecture literacy, networking at the boundary, programming fundamentals as checkpoints |
+| 49–83 | Minimum Operator Competency — three questions to verify at project kickoff; what to do if operator can't answer |
+| 84–113 | Real-Time Red Flags — structural red flags during generation (unnecessary abstraction, duplicate state, inline auth, silent failures) + conversational red flags |
+| 114–147 | The "Ask, Don't Know" Operator Checklist — 8 prompts to ask the AI about its own output |
+| 148–167 | Constraint Encoding Patterns — four tiers: rules files, PRD-first, shared infrastructure modules, multi-agent validation |
+| 168–213 | **Canonical CLAUDE.md Constraint Blocks** — `## Networking Constraints` (HTTP client, retry+jitter, idempotency, transport selection, webhook discipline, status codes, circuit breakers) + `## Code Quality Constraints` (data structures, no-I/O-in-loops, single responsibility, destructive op guards, no global state, config externalization, error handling) |
+| 214–227 | Connection to existing KB patterns (Three Questions, A4/A17, Jagged Frontier) |
+
+**Used by:** Magnum Opus Phase 2.7, SignalWorks Section 3.5. Constraint blocks are required in every project's CLAUDE.md.
+
+---
+
 ### LEARNING/FOUNDATIONS/reasoning-llms/reasoning-llms.md (486 lines)
 
 **When and how to use reasoning LLMs (o3, Claude 3.7, Gemini 2.5)**

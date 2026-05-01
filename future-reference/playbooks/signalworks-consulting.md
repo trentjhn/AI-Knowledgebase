@@ -148,6 +148,61 @@ Authority block is a living document. Edit it when reality demands. Never drift 
 
 ---
 
+## Section 3.5: Operator Technical Oversight
+
+The authority block (Section 3) defines *decision rights* — who decides what. This section defines the *technical oversight capacity* required to exercise those rights well. An operator with authority to approve architectural choices but no ability to evaluate them will accept Jagged Frontier decisions uncritically. These tools close that gap without requiring the operator to become an engineer.
+
+**Source:** `LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md` — educational depth on all three knowledge domains. This section contains the operational extracts for engagement use.
+
+### Operator Competency Pre-Flight
+
+At engagement kickoff, verify the operator can answer these three questions. Record the answers in `docs/plans/design.md`. If the operator can't answer any of them, that's not a blocker — the Technical Constraint Blocks below carry more weight and substitute for the missing judgment.
+
+1. **Data flow:** "Describe the data flow for this system from user action to database in plain English." (One paragraph, no jargon required.)
+2. **Blast radius:** "What would break if one specific component of this system were removed?" (Any component; the habit of thinking in dependencies is what matters.)
+3. **Security boundary:** "Name one thing that should never leave the server and one thing user input should never touch directly."
+
+These are the operator-level Three Questions. They don't replace the system-level Three Questions from Section 1.5 — they verify the operator can reason about the answers.
+
+### Extending the Jagged Frontier
+
+The Jagged Frontier (Section 3) lists decisions AI lacks holistic reasoning to make safely. Add these to the "pause for operator" list for all engagements:
+
+- **Data structure selection for collections that will grow** — AI defaults to lists even when sets or dicts are the correct choice; at production scale this becomes O(n²) behavior. Operator should confirm collection type for anything that will be searched or filtered.
+- **Algorithm choices for datasets that could grow 10-100x** — AI selects algorithms that work correctly at development scale; nested loops over 100 rows are invisible until the data is 100,000 rows. Pause when AI generates loops over large or growing collections.
+- **Destructive operations on data without explicit confirmation gates** — per the PocketOS incident (April 2026), an AI agent deleted an entire production database because it encountered a credential error and improvised. Any delete, truncate, or overwrite must be reviewed before it exists in production code.
+
+### Technical Constraint Blocks — Mandatory Inheritance
+
+Every SignalWorks engagement's `CLAUDE.md` must include both constraint blocks from `LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md`. These are not optional additions — they are the default technical operating context for every project, equivalent to the authority block and SOUL.md character design.
+
+Add to every engagement's `CLAUDE.md` via the template at `signal-works-internal/process/client-engagement-CLAUDE-template.md`:
+- `## Networking Constraints` block
+- `## Code Quality Constraints` block
+
+These blocks cover the five networking patterns AI gets wrong systematically (timeout layering, retry idempotency, per-request client instantiation, synchronous webhook handlers, missing circuit breakers) and the seven code quality patterns AI gets wrong systematically (wrong data structures, N+1 loops, multiple function responsibilities, missing destructive operation guards, global state, hardcoded config, missing error handling).
+
+The constraint blocks are enforced AI-side. The "Ask, Don't Know" checklist below is enforced operator-side, between sessions.
+
+### The "Ask, Don't Know" Operator Checklist
+
+After any significant block of generated code, the operator asks these prompts directly to the AI. The AI catches its own mistakes when asked without the prior session context defending its decisions.
+
+1. "What happens to this performance with 100x more data?" — surfaces O(n²), wrong data structures
+2. "Are there database, API, or file calls inside any loop?" — surfaces N+1 query problems
+3. "What does this do if the input is empty, null, or the service is unavailable?" — surfaces happy-path-only code
+4. "Can you describe what this function does without using 'and'?" — surfaces single-responsibility violations
+5. "Does any part of this delete or permanently modify data? What prevents accidental trigger?" — surfaces missing guards on destructive operations
+6. "Does any function use a variable that wasn't passed to it as a parameter?" — surfaces global state
+7. "Is there similar logic elsewhere in the codebase this could reuse?" — surfaces parallel implementations that diverge
+8. "Are any URLs, timeouts, limits, or keys written directly in the code?" — surfaces hardcoded configuration
+
+These eight prompts are calibrated to the failure modes AI-generated code exhibits most frequently (per CodeRabbit 2025 AI vs. Human Code Generation Report: logic errors +75%, I/O misuse +8x, concurrency/dependency errors +2x vs. human-authored code).
+
+**Provenance:** Synthesized from multi-source research (2026-05-01): CodeRabbit AI code quality data, Addy Osmani "80% Problem" analysis, practitioner HN/YouTube synthesis, n1n.ai circuit breaker patterns, Hookdeck webhook discipline. Integrated into SignalWorks as universal Part 1 guidance.
+
+---
+
 ## Section 4: Source-of-Truth Doc Spine
 
 **These docs are not bureaucracy. They are the *theory of the system*** — the program in the operator's head, made explicit and shareable. Per Peter Naur's 1985 paper "Programming as Theory Building," the program is the mental model of how pieces connect; the code is merely its shadow. AI-era engagements require the theory to be explicit and shared, not implicit and trapped in one person's memory. When the theory lives in the doc spine, any operator (or fresh Claude session) can pick up cold. When it lives only in someone's head, the engagement dies if that person leaves.
@@ -719,6 +774,9 @@ For every new SignalWorks engagement, check before first work session:
 - [ ] Default branch protection rules set
 - [ ] CF Pages or equivalent preview-deployment policy decided (off for sensitive)
 - [ ] Authority block reviewed with operator
+- [ ] Operator has answered three competency questions and answers recorded in design.md (Section 3.5)
+- [ ] CLAUDE.md includes `## Networking Constraints` block from operator-oversight.md (Section 3.5)
+- [ ] CLAUDE.md includes `## Code Quality Constraints` block from operator-oversight.md (Section 3.5)
 - [ ] If Type A: model selected + documented (Section 16.3); eval framework stubbed (Section 16.1)
 - [ ] If Type B: front-end skills deployed (Section 17.2); DESIGN.md authored before code (Section 17.1)
 - [ ] First handoff stubbed at `.sessions/handoffs/handoff-{date}-v1.md` with Resume Command + Audit Directions slot
