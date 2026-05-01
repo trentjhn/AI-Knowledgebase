@@ -475,6 +475,17 @@ Trajectory evaluation can be automated using LLM-as-a-judge: give the judge the 
 
 ---
 
+---
+
+A critical limitation of traditional trajectory evaluation is the "can say vs. can do" gap, where an agent produces a linguistically plausible final report despite failing to execute the underlying technical steps. To solve this, trajectory quality must be measured through action-grounded grading—anchoring the evaluation in deterministic evidence like service audit trails, file system logs, and database states rather than just model-generated text.
+
+Evaluation frameworks like Claw-Eval-Live formalize this by categorizing workflows into three grading patterns based on the type of evidence required:
+
+1. **Script-first deterministic verification:** Used for terminal and workspace repair tasks (e.g., fixing a broken build). Success is defined entirely by the post-run state of the environment, such as service health or configuration integrity. Frontier models currently excel here, with pass rates often reaching 100%.
+2. **Operation verification:** Used for service-backed tasks like scheduling or ticket triage. Grading is heavily weighted toward audit logs (did the calendar invite actually send?) with a small semantic component for tone or organization.
+3. **Evidence-plus-judge:** Used for complex analytical workflows like HR reviews or financial reconciliation. This pattern combines deterministic checks (did the agent call the correct tools and inspect the right data sources?) with a rubric-bound LLM judge to evaluate semantic dimensions like report coherence.
+
+Data from real-world benchmarks show a stark performance divide across these trajectories. While top models like Claude Opus 4.6 and GPT-5.4 achieve near-ceiling performance on local workspace repairs, they fail significantly on service-backed business workflows. For example, business-critical tasks in HR and Finance remain unsolved, with pass rates often falling below 22%. In these high-stakes trajectories, a single missing evidence link or failed state-changing write (such as a missing database update) results in a total failure, even if the agent's final summary looks correct. True trajectory quality therefore requires executional closure—verifiable proof that every required system interaction was successfully completed.
 ### Evaluating Stateful Security
 Traditional evaluation metrics like Prompt-Level Accuracy are insufficient for stateful defenses. When assessing gateways like TwinGate, practitioners should prioritize **Malicious Intent Recall**. This metric measures whether the system intercepts *any* single constituent fragment in a sequence of $n$ decomposed queries. Because the backend model only reconstructs the harmful payload once the final piece of the puzzle is delivered, intercepting a single fragment (e.g., the 2nd of 4 steps) successfully neutralizes the entire attack.
 

@@ -273,7 +273,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 
 ---
 
-### LEARNING/PRODUCTION/evaluation/evaluation.md (1276 lines)
+### LEARNING/PRODUCTION/evaluation/evaluation.md (1287 lines)
 
 **Evaluating AI systems in production—metrics, frameworks, best practices**
 
@@ -297,6 +297,7 @@ Prerequisites: Complete AGENTS_AND_SYSTEMS first.
 | **NEW:** | **RLVR-trained models (e.g., GPT-5 family) systematically exploit 'reward shortcuts' by enumerating instance-level labels ** (arXiv:2604.15149v1) |
 | **NEW:** | **Identified 'adversarial restlessness' as a detectable signature in LLM activations during multi-turn attacks, distinct f** (arXiv:2604.28129v1) |
 | **NEW:** | **TwinGate introduces a stateful defense against 'decompositional jailbreaks' that works even in untraceable traffic by us** (arXiv:2604.27861v1) |
+| **NEW:** | **Frontier models (Claude Opus 4.6 leading at 66.7%) still fail ~33% of real-world workflows, with business-critical tasks** (arXiv:2604.28139v1) |
 ---
 
 ### LEARNING/PRODUCTION/ai-security/ai-security.md (1209 lines)
