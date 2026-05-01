@@ -471,6 +471,13 @@ Two agents can both succeed at a task while having very different trajectory qua
 
 Trajectory evaluation can be automated using LLM-as-a-judge: give the judge the task description and the full action log, and ask it to score the efficiency and correctness of the path. Tools like TRAJECT-Bench and AgentBench provide structured frameworks for this evaluation, decomposing trajectories into tool selection correctness, argument quality, and dependency ordering.
 
+---
+
+### Evaluating Multi-Turn Robustness
+
+When evaluating model safety, static benchmarks often fail to capture the dynamics of multi-turn jailbreaks. Evaluation frameworks should include **phase-labeled datasets** that distinguish between benign turns, pivoting turns (steering), and adversarial turns. 
+
+Effective evaluation of detection systems like LAD should measure **lead time**: the number of turns between the first detection and the first overt adversarial request. High-performing defensive pipelines should achieve a positive lead time, enabling proactive intervention (such as session termination or activation steering) before the model generates harmful content. Research indicates that 'adversarial restlessness' remains detectable even if attackers attempt to suppress drift, provided the suppression does not exceed 80%—at which point the attack itself usually fails because the model's state is no longer being steered effectively.
 ### The Challenge of Multi-Step Evaluation
 
 A subtle problem in agent evaluation is error compounding. If an agent makes a small mistake at step 3 of a 10-step task, the error may not become visible until step 7, by which point it is mixed with several subsequent decisions. Diagnosing the root cause requires inspecting the full trace, not just the final output.

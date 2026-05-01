@@ -542,6 +542,28 @@ Research reveals a consistent three-band depth stratification where different th
 - **Late layers:** Training-time backdoors (triggers) manifest in the final third of the network as the model commits to its compromised output. The exact peak varies by architecture; for instance, Llama-3-8B peaks in mid-to-late layers (L12–L29), while Gemma-2-9B and Qwen2.5-7B peak much later (L32–L45).
 
 Practitioners can implement this by establishing a baseline using approximately 200 clean calibration samples. LCF uses a diagonal Mahalanobis distance to score per-layer deviations, aggregated via Ledoit-Wolf shrinkage to handle correlations across all layers. This unified statistical test allows a single threshold to catch multiple threat types without per-threat tuning. In production benchmarks, LCF achieved a backdoor Attack Success Rate (ASR) of <1.3% and detected 100% of text-payload prompt injections with less than 0.1% inference overhead. Because the system makes an 'abstain' decision at prefill, it effectively prevents the model from ever starting a malicious generation, providing a more robust defense than post-hoc output filtering.
+
+---
+
+### Latent Adversarial Detection (LAD)
+
+Traditional text-based filters are often bypassed by multi-turn attacks where individual prompts appear benign, but the sequence gradually steers the model toward a violation. Latent Adversarial Detection (LAD) shifts the defensive focus from surface text to internal model states. This method identifies a signature known as **adversarial restlessness**: a detectable pattern in the model's residual stream where activations exhibit abnormal 'movement' as an attacker maneuvers the conversation toward a jailbreak.
+
+LAD works by extracting the hidden state (activation) from the last token position of a middle-to-late decoder layer. By monitoring how these activations change across turns, defenders can calculate five scalar trajectory features that quantify the model's internal response to steering:
+
+1.  **Drift magnitude:** The Euclidean distance between the current and previous activation.
+2.  **Cosine similarity:** The angular change between subsequent turns.
+3.  **Cumulative drift:** The total path length the model has traveled in activation space throughout the session.
+4.  **Drift acceleration:** The rate at which the magnitude of change is increasing.
+5.  **Mean drift:** The average movement per turn.
+
+In benchmarks across model families including Llama 3.1-70B and Qwen 2.5-32B, this approach achieved an 89.4% detection rate with a low 2.4% false positive rate. Unlike text classifiers, LAD is effective because sophisticated attacks require more 'maneuvering' in latent space, which increases the cumulative path length. This creates an inversion of the typical attacker-defender asymmetry: the more complex the attack, the louder the signal.
+
+### Early Detection and the Pivoting Phase
+
+A critical advantage of activation-level monitoring is the ability to detect attacks during the **pivoting phase**. This is the steering stage where an attacker establishes a persona or context (e.g., 'role accumulation' or 'trust building') before making an overt adversarial request. Because LAD detects the intent-based shift in the model’s internal representation, it provides defenders with 'lead time'—flagging the interaction several turns before a policy-violating prompt is actually submitted. 
+
+Implementation requires training lightweight, model-specific probes (such as XGBoost classifiers) on cached activations. These probes are computationally efficient, adding negligible latency to the inference pipeline. However, because activation signatures are architecture-specific, a probe trained for Llama will not transfer to Mistral or Qwen. Deployment should involve a 'cold-start' phase to collect model-specific activation baselines for the specific production distribution.
 ## 10. Emerging Threats
 
 ### Shadow AI
