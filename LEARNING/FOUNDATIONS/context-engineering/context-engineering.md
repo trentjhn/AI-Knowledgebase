@@ -497,6 +497,16 @@ The bridge is *consolidation*: repeated episodic events distill into semantic kn
 
 Most production memory systems today store episodes well and skip consolidation entirely. The agent remembers that it happened but doesn't learn from it.
 
+**The stronger claim: current "memory" is lookup, not memory (2026):** Recent theoretical work formalizes why the consolidation gap is not just an engineering oversight — it represents a category error with provable consequences. Vector stores, RAG, scratchpads, and context management are all forms of *lookup*: they generalize through similarity to stored cases. True memory applies abstract rules to novel inputs. These are not equivalent, and conflating them has three provable consequences:
+
+1. **Generalization ceiling** — a fundamental limit on compositionally novel tasks that "no increase in context size or retrieval quality can overcome." The agent cannot combine two stored procedures in a way it has never seen, because lookup can only match what it has seen, not derive what it hasn't.
+2. **Accumulation without expertise** — experience grows linearly but capability plateaus. Unlike biological intelligence, where repeated experience converts to faster, more reliable behavior, the lookup agent gets slower (larger retrieval corpus) without getting better.
+3. **Structural memory poisoning** — because all "memory" is lookup, injected content propagates across all future sessions. An attacker who poisons one entry affects every future retrieval that ranks it relevant. This is a security consequence of the architecture, not a configuration mistake.
+
+The resolution: pair episodic lookup (fast, hippocampal) with parametric weight consolidation (slow, neocortical) — fine-tuning or RL on accumulated experience. Without the consolidation step, the memory layer is a growing archive, not a developing agent.
+
+*Source: Xu, Dai, Zhang 2026 [arXiv:2604.27707]*
+
 ### Workflow Engineering
 
 One of the most powerful context engineering techniques isn't about what you put in the context — it's about *breaking up the task* so each LLM call gets a focused, lean context.

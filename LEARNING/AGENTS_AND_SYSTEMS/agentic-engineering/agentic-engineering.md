@@ -3098,6 +3098,17 @@ Four major frameworks for building agentic systems, each with a distinct philoso
 
 **Hybrid strategy:** Prototype in CrewAI (fastest to get running), productionize in LangGraph (most control and durability). Use MCP (Model Context Protocol) as an integration layer to connect agents across different frameworks when needed.
 
+**The Procedural Task Exception (2026):** For workflows that follow a defined sequence of steps — multi-turn conversations like booking, support triage, or claims processing — placing the procedure directly in the system prompt may outperform external orchestration frameworks. A controlled comparison across three procedural domains (200 conversations per condition, workflows of 14–55 nodes) found:
+
+- In-context scores: 4.53–5.00 vs. LangGraph: 4.17–4.84 (5-point LLM-as-judge scale)
+- Failure rates 2–3× lower with in-context (5–11.5% vs. 9–24%)
+
+The mechanism: frontier models now manage their own procedural execution when given the procedure as context, without needing external state tracking and routing. Orchestration overhead introduces failure modes — missed transitions, state synchronization errors — that in-context execution avoids.
+
+**Scope:** This applies specifically to *procedural tasks* with defined step sequences. It does not challenge orchestration for genuinely parallel multi-agent work, complex conditional branching with external state, or long-running workflows requiring checkpointing. Practical implication: before scaffolding LangGraph for a multi-turn support or booking workflow, test whether the procedure in context is sufficient first.
+
+*Source: Dennis et al. 2026 [arXiv:2604.27891]*
+
 ---
 
 ### LangChain vs LangGraph
@@ -3168,6 +3179,21 @@ LangGraph was built on top of LangChain's primitives, so technically they can co
 - Loops, conditional paths, or stateful persistence → LangGraph
 
 Most real agents eventually need loops. That's usually when teams migrate from LangChain to LangGraph.
+
+---
+
+### Research Horizon — RecursiveMAS (2026)
+
+Extends recursive computation scaling from single models to multi-agent collaboration. Instead of text-based agent communication, RecursiveMAS uses a **RecursiveLink module** to connect agents in a feedback loop for latent thought generation and cross-agent state transfer. An inner-outer loop learning algorithm co-optimizes the entire system through gradient-based credit assignment across recursion rounds.
+
+Evaluated across 9 benchmarks (math, science, medicine, search, code generation):
+- **+8.3% average accuracy** over advanced baselines
+- **1.2×–2.4× inference speedup** end-to-end
+- **34.6%–75.6% token usage reduction**
+
+**Deployment watch — training-required.** RecursiveMAS requires joint training of the multi-agent system, including the RecursiveLink module and the gradient-based credit assignment mechanism. This is not a prompt-time or API-parameter configuration — it requires training infrastructure and is not yet available as a deployable pattern. The token reduction and accuracy numbers are meaningful for cost/performance planning, but the architecture is not yet accessible via standard SDK usage.
+
+*Source: Yang et al. 2026 [arXiv:2604.25917]*
 
 ---
 

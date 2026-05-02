@@ -35,7 +35,7 @@
 | **NEW:** | **The paper introduces Weighted In-context Influence (wICI), a metric that selects instruction-tuning data by measuring ho** (arXiv:2604.25132v1) |
 ---
 
-### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (920 lines)
+### LEARNING/FOUNDATIONS/context-engineering/context-engineering.md (930 lines)
 
 **Context as a first-class engineering discipline**
 
@@ -51,6 +51,7 @@
 | **441–456** | **Why Flat Vector Retrieval Breaks on Multi-Hop Queries: relational queries (Alice/Atlas/PostgreSQL example) fail cosine similarity because connecting facts lack shared vocabulary with the query; normal shape of organizational knowledge** |
 | **457–470** | **The Three Storage Paradigms: relational (provenance) + vector (semantics) + graph (relationships) as complementary, not competing; decision rule keyed on query shape, not storage technology** |
 | **471–482** | **Memory Consolidation: episodic → semantic distillation as the piece most production memory systems skip; why logging events isn't the same as remembering them** |
+| **499–516** | **Memory is Lookup, Not Memory (Xu et al. 2026): category error with 3 provable consequences — generalization ceiling no context/retrieval can overcome, accumulation without expertise, structural memory poisoning vulnerability; resolution: pair episodic lookup with parametric consolidation** |
 | 410–466 | Anti-patterns, tools, integration checklist |
 | **104–140** | **Scale-Dependency in RAG: Empirical findings that retrieval effectiveness varies by model size & task; 3D scaling framework for pretraining/retrieval allocation** |
 | 651–714 | §10 Token Economics & Budget Management: strategic compaction (50% threshold), dynamic MCP loading (77% savings) |
@@ -166,7 +167,7 @@ Prerequisites: Complete FOUNDATIONS first.
 | **NEW:** | **Corpus2Skill (C2S) converts a document corpus into a navigable hierarchy of LLM-summarized 'skills,' allowing agents to ** (arXiv:2604.14572v1) |
 ---
 
-### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3788 lines)
+### LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/agentic-engineering.md (3814 lines)
 
 **The most comprehensive agentic engineering reference—everything about building AI agents**
 
@@ -187,6 +188,8 @@ Prerequisites: Complete FOUNDATIONS first.
 | **~2973–3030** | **Externalization: Cognitive Architecture Lens (Zhou et al. 2026) — Weights→Context→Harness evolution; 4-element taxonomy (Memory/Skills/Protocols/Harness); failure modes as representational mismatches; relationship to Four Pillars** |
 | **3028–3058** | **Resource-Level Protocols (Zhang et al. 2026, "Autogenesis" 2604.15034): MCP/A2A are tool-*calling* protocols, not tool-*lifecycle* protocols. Core principle: decouple *what* evolves (resources) from *how* evolution occurs (propose→assess→commit→rollback pipeline). Extends Externalization taxonomy with a lifecycle axis. Open questions: protocol-vs-platform boundary, human-vs-agent in the assess loop (assessor-gaming), concurrent resource evolution.** |
 | 2772–2863 | Agent Frameworks: LangChain, LangGraph, CrewAI, Claude Agent SDK, decision framework |
+| **~3099** | **Procedural Task Exception (Dennis et al. 2026): in-context prompting beats LangGraph/CrewAI for procedural workflows — 2–3× lower failure rates; scope: step-sequence tasks only, not parallel/stateful** |
+| **~3172** | **Research Horizon — RecursiveMAS (Yang et al. 2026): +8.3% accuracy, 1.2–2.4× speedup, 34–75% token reduction via latent-space agent communication; deployment watch: training-required, not yet API-accessible** |
 | 2865–2935 | Development Methodologies: 15 methodologies in 6-tier pyramid, plan-first principle |
 | 2936–2990 | Dual-Instance Planning: planner↔implementer pattern, cost-benefit analysis, decision matrix |
 | 2991–3030 | Event-Driven Agents: push-based agent pattern, guardrails (idempotency, concurrency, circuit breaker) |
