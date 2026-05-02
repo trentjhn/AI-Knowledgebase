@@ -23,6 +23,7 @@ definitions) and prompts (templates).
 | [replay-learnings](workflow/replay-learnings/) | Reviewing accumulated lessons; applying past corrections | Replays stored learning rules to current context |
 | [wrap-up](workflow/wrap-up/) | Session complete; wrapping up work | Consolidates session output, updates docs, commits |
 | [project-done-definition](workflow/project-done-definition/) | Project kickoff (write done.md); mid-project "is this done?" question; after 2+ audit rounds wondering whether to run another | Four-section done.md template + 3-round audit decay rule + angle coverage matrix + stopping signals + audit-exhaustion red flags |
+| [premortem](workflow/premortem/) | Before committing to any plan with real stakes — client money, public launch, >1 week investment. Run after spec is confirmed, before architecture. MANDATORY for SignalWorks engagements. | Assumes plan already failed 6 months from now; spawns one parallel agent per failure reason; synthesizes most-likely failure, most-dangerous failure, hidden assumption, revised plan, and pre-launch checklist. Outputs HTML report + transcript. |
 
 ## Design Skills
 
