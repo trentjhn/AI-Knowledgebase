@@ -165,6 +165,8 @@ Every KB doc must be educational first, reference second:
 - When adding a new topic: update `KB-INDEX.md` with file path, line count, read time, one-liner
 - Playbooks in `future-reference/playbooks/` are updated when new build techniques are learned
 - **Catalog-first convention:** When adding any agent to `agent-catalog/`, skill to `skills-catalog/`, or prompt to `prompt-catalog/`: write the `CATALOG.md` entry first, then create the file. Never create a catalog file without a corresponding index entry.
+- **Catalog entry mandate:** When the skill-activation hook surfaces "RELEVANT KB CATALOG ENTRIES," read the SKILL.md or agent definition before generating any response. This is not optional — treat it as a mandatory context load, the same as invoking an installed skill.
+- **Memory topic file mandate:** When a MEMORY.md pointer is directly relevant to the current task, read the topic file before responding. The one-line MEMORY.md summary is an index entry, not the full context.
 - **After any KB content change that introduces new patterns, capabilities, or architectural guidance:** Review `future-reference/playbooks/magnum-opus.md` and update the relevant phase pointer if the new content should inform project decisions. The magnum opus is only as good as its KB references.
 
 ## Session Management — `.sessions/` Workspace

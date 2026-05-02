@@ -14,7 +14,9 @@ definitions) and prompts (templates).
 | [planning](workflow/planning/) | After design is approved; before writing code for multi-step tasks | Creates bite-sized implementation plan with exact file paths and commands |
 | [smart-commit](workflow/smart-commit/) | Saying "commit" or ready to save changes | Quality gates, reviews staged changes, creates conventional commit |
 | [deslop](workflow/deslop/) | Cleaning up code; removing boilerplate; simplifying before PR | Removes AI-generated slop, unnecessary comments, over-engineering |
-| [session-handoff](workflow/session-handoff/) | Ending a session; "save progress"; "pick up later" | Structured handoff document capturing progress and context |
+| [session-handoff](workflow/session-handoff/) | At every phase boundary OR session end (paired-bracket pattern: read at start, write at next boundary) | Structured handoff capturing state, decisions, and pickup context |
+| [pre-flight-verify](workflow/pre-flight-verify/) | BEFORE writing any code that integrates with an external service, package, model, or third-party UI | Fetches current docs and verifies integration shape vs. assumption; prevents drift on package versions, model names, API endpoints, UI flows, pricing, tool schemas |
+| [decision-log](workflow/decision-log/) | When making substantive trade-offs, irreversible-ish actions, or constraint-locks | Appends 6-field entry (Context/Options/Chose/Reasoning/Reversibility/Operator-review) to `.sessions/decision-log.md`; captures *why-this-not-others* over time, peer to handoffs |
 | [human-voice](workflow/human-voice/) | Drafting any email, message, Slack, or professional communication | Writes in TJ's voice — direct, warm, not corporate |
 | [learn-rule](workflow/learn-rule/) | Capturing a correction or lesson; "remember this" | Saves persistent learning rule to memory |
 | [insights](workflow/insights/) | Post-implementation review needed | Surfaces non-obvious patterns and lessons from the work |

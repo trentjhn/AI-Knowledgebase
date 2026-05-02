@@ -31,6 +31,47 @@ Before any phase below produces output, the operator (and `/cook`) must be able 
 
 ---
 
+## Cross-Phase Norms — load-bearing reflexes that apply throughout all phases
+
+These are not phase-specific gates; they are reflexes that fire continuously across the project lifecycle. If any phase below produces output without honoring these, the output is incomplete.
+
+### 1. Bracket-pattern handoffs (paired read-in / write-out)
+
+Handoffs are paired brackets, not session-end events. Every phase opens with a handoff read-in and closes with a handoff write-out. The reciprocity is the discipline:
+
+- **Read-in:** Session start reads the most recent non-superseded handoff in `.sessions/handoffs/` to load phase state.
+- **Write-out:** Before transitioning to the next phase OR ending the session — whichever comes first — write a handoff. The handoff closes the bracket of the just-completed phase and opens the next.
+
+What counts as a phase boundary: milestone completion; substantive batch of decisions or findings; architectural pivot; audit/sweep finding that surfaces unexpected work; end of session (always). Skip when the work was a single config tweak, a prior handoff was written within the last hour, or the work is genuinely throwaway.
+
+Reference: `~/.claude/skills/session-handoff/SKILL.md` (or KB mirror at `~/AI-Knowledgebase/future-reference/skills-catalog/workflow/session-handoff/SKILL.md`).
+
+### 2. Pre-flight verification (before any external-integration code)
+
+Training-data memory of fast-moving external services drifts. Package versions move, models get deprecated, dashboard UIs redesign, pricing shifts, tool schemas evolve. The reflex: BEFORE writing or modifying code that integrates with an external service, fetch current docs and verify the integration shape against your assumption.
+
+Triggers: any code that touches npm package versions, model names, API endpoints, third-party UI flows, pricing assumptions, tool/permission schemas, or external library imports. Five minutes of doc-fetching prevents 30 minutes of debug-after-failure.
+
+Reference: `~/.claude/skills/pre-flight-verify/SKILL.md`.
+
+### 3. Decision log (separate from handoffs)
+
+Handoffs capture state at a phase boundary. Decision logs capture *why-this-not-others* over time. They are peer artifacts, not duplicates.
+
+When a substantive trade-off, irreversible-ish action, or constraint-lock is being made, append an entry to `.sessions/decision-log.md` (personal) or `.sessions/handoffs/decision-log-{date}.md` (SignalWorks engagement) using the 6-field format. The decision log is append-only; reversed decisions get a new entry referencing the old one.
+
+Reference: `~/.claude/skills/decision-log/SKILL.md`.
+
+### Why these three together
+
+- Bracket handoffs preserve **state** across phases (where we are).
+- Decision logs preserve **reasoning** across decisions (why we are where we are).
+- Pre-flight verification prevents **drift** on external claims (whether the world still matches our assumptions).
+
+Stacked, they form a workflow that compounds: a fresh Claude session can read in (handoff), check why prior decisions were made (decision log), and verify the integration shape it's about to write hasn't drifted (pre-flight). Each individual primitive is a small win; together they make Claude Code feel less like a tool and more like a colleague who actually gets better over time.
+
+---
+
 ## How This Document Works
 
 This hub sits between two things: the workflow (what to do and in what order) and the knowledge (what the best practices actually are). It is deliberately a routing document — it contains no KB content itself. When it says "see context-engineering.md lines 132-204," that's where the actual knowledge lives. The hub stays lean so it can be read in full without overhead.
@@ -371,7 +412,7 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 │       └── implementation.md ← ordered build plan grounded in KB
 └── .sessions/
     ├── [project-name]/     ← local workspace, never committed to git
-    └── handoffs/           ← session continuity logs, never committed; write a handoff here before ending each session; most recent non-superseded file is source of truth
+    └── handoffs/           ← session continuity logs, never committed; bracket-paired (read at session start, write at every phase boundary OR session end); most recent non-superseded file is source of truth. Decision-log files (`decision-log-{date}.md`) live alongside handoffs in this directory.
 ```
 
 **For AI projects, additionally:**
@@ -388,7 +429,7 @@ Phase 4 writes the project structure to disk. The scaffold is not a starting poi
 
 **(2) Development Workflow section** — the project-specific skill chain written by Cook in Phase 4 from Phase 3 selections. Must distinguish: "First session (implementation plan already exists at docs/plans/implementation.md): skip to Execute" from "Per-feature / new work: Brainstorm → Plan → Execute → Review → Commit → Handoff." Must include: "When executing-plans or subagent-driven-development dispatches work, route tasks using the Role Directory in AGENTS.md. The implementation plan's Agent: annotations are authoritative for per-task routing."
 
-**(3) Required Rules section** — must contain: "After completing any meaningful chunk of work, read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate." AND: "Before ending any session — whether complete or interrupted — invoke the `session-handoff` skill. This is not optional."
+**(3) Required Rules section** — must contain: "After completing any meaningful chunk of work, read back what you produced against the acceptance criteria, check for rough edges and missing requirements, and fix any issues before reporting done. Self-review happens per artifact, not only at the final gate." AND: "At every phase boundary OR session end — whichever comes first — invoke the `session-handoff` skill. Handoffs are paired brackets: if you read one in at session start, you owe one back at the next phase boundary. This is not optional." AND: "Before writing any code that integrates with an external service, package, model, or third-party UI, invoke the `pre-flight-verify` skill. Don't trust training-data memory for fast-moving APIs." AND: "When making substantive trade-offs, irreversible actions, or locked constraints, invoke the `decision-log` skill to append an entry. Code captures state; git captures changes; the decision log captures reasoning."
 
 **(4) Technical Constraint Blocks** — two blocks copied verbatim from `LEARNING/FOUNDATIONS/operator-oversight/operator-oversight.md` (the "CLAUDE.md Constraint Blocks" section). These are the canonical source; do not paraphrase or abbreviate:
 - `## Networking Constraints` — covers HTTP client instantiation, three-layer timeouts, retry rules with backoff+jitter, idempotency keys, transport selection (REST/SSE/WebSocket/webhook), status code semantics, and circuit breakers.
