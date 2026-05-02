@@ -2,7 +2,7 @@
 
 A unified reference for AI engineering — synthesized at practitioner depth, organized by learning path, and wired into a meta workflow that applies it automatically to every new project.
 
-*Last Updated: 2026-04-16*
+*Last Updated: 2026-05-02*
 
 ## Why I Built This
 
@@ -14,7 +14,7 @@ AI engineering knowledge is scattered across 100+ sources of wildly varying dept
 
 The most important thing in this repo isn't any single doc. It's the system that uses all of them together.
 
-**Magnum Opus** is a 9-phase workflow for scaffolding any new AI project from first principles. It is the decision engine — when you start a project, it traverses the KB, fires relevant patterns, asks targeted questions, and produces a complete, production-ready project structure grounded in everything captured here.
+**Magnum Opus** is a 9-phase workflow for scaffolding any new AI project from first principles. It is the decision engine — when you start a project, it traverses the KB, fires relevant patterns, asks targeted questions, and produces a complete, production-ready project structure grounded in everything captured here. Recent additions: **Phase 1.6 Premortem Gate** (mandatory for paying clients — runs `/premortem` after spec confirmation, before architecture), and **Phase 2.7 Vibe Coding Oversight Toolkit** (real-time red flags + 8-prompt "Ask Don't Know" checklist for operator oversight during AI-assisted builds).
 
 **`/cook`** is the executor. It reads Magnum Opus and runs every phase interactively: domain research, architecture decisions, agent + skill selection, scaffold generation. When Cook finishes, the project is ready to build.
 
@@ -41,16 +41,17 @@ What the scaffold produces isn't just files. It's a **self-describing operating 
 
 ## 📚 LEARNING (Core Reference Topics)
 
-Organized by **learning path**: Foundations → Building → Production. Total ~9,000 lines across 12 topics.
+Organized by **learning path**: Foundations → Building → Production. Total ~10,000+ lines across 13 topics.
 
 ### [**FOUNDATIONS**](LEARNING/FOUNDATIONS/) — Start Here
 **Understand how LLMs work: prompting, context, reasoning**
 
-~1,400 lines | ~5 hours | Prerequisites: none
+~1,700 lines | ~6 hours | Prerequisites: none
 
 - [**Prompt Engineering**](LEARNING/FOUNDATIONS/prompt-engineering/) — 9 core techniques (CoT, self-consistency, APE, ReAct) with research results
-- [**Context Engineering**](LEARNING/FOUNDATIONS/context-engineering/) — 4 strategies (Write/Select/Compress/Isolate), 4 failure modes, token budgeting
-- [**Reasoning LLMs**](LEARNING/FOUNDATIONS/reasoning-llms/) — When to use reasoning models (o3, Claude 3.7), thinking tiers, design patterns
+- [**Context Engineering**](LEARNING/FOUNDATIONS/context-engineering/) — 4 strategies (Write/Select/Compress/Isolate), 4 failure modes, token budgeting; includes the 2026 finding that agentic "memory" is lookup not memory, with provable capability consequences
+- [**Reasoning LLMs**](LEARNING/FOUNDATIONS/reasoning-llms/) — When to use reasoning models (o3, Claude 3.7), thinking tiers, design patterns; adaptive retrieval during reasoning
+- [**Operator Oversight**](LEARNING/FOUNDATIONS/operator-oversight/) — Vibe coding oversight toolkit: three knowledge domains, minimum competency checks, real-time red flags catalog, "Ask Don't Know" 8-prompt checklist, 4-tier constraint encoding patterns with canonical CLAUDE.md blocks
 
 **→ Next:** Move to [AGENTS_AND_SYSTEMS](LEARNING/AGENTS_AND_SYSTEMS/)
 
@@ -61,7 +62,7 @@ Organized by **learning path**: Foundations → Building → Production. Total ~
 
 ~5,000 lines | ~11-12 hours | Prerequisites: complete FOUNDATIONS
 
-- [**Agentic Engineering**](LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/) — Four Pillars, Twelve Leverage Points, 6 patterns, tool design, context management, agent teams
+- [**Agentic Engineering**](LEARNING/AGENTS_AND_SYSTEMS/agentic-engineering/) — Four Pillars, Twelve Leverage Points, 6 patterns, tool design, context management, agent teams; includes the Procedural Task Exception (in-context prompting beats LangGraph for step-sequence workflows) and RecursiveMAS research horizon
 - [**Agent SDK Patterns**](LEARNING/AGENTS_AND_SYSTEMS/agent-sdk/) — 6 implementation patterns: research agent, chief-of-staff/Task tool, parallel subagents with model tiering, PTC, semantic tool routing, evaluator-optimizer loop
 - [**MCP**](LEARNING/AGENTS_AND_SYSTEMS/mcp/) — Model Context Protocol: connecting agents to external systems, tool integrations
 - [**Skills**](LEARNING/AGENTS_AND_SYSTEMS/skills/) — Agent Skills standard, testing, composability, portability
@@ -105,7 +106,7 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 | [**`/cook` Skill**](future-reference/skills-catalog/meta/cook/) | The Magnum Opus executor. Runs all 9 phases interactively and writes a complete, session-continuity-ready project structure to disk. Portable — install guide inside. |
 | [**Agent Catalog**](future-reference/agent-catalog/) | 24 agent role definitions across 6 categories (core, quality, design, product, AI-specialist, meta). Agents self-select roles via Sequential protocol. See [CATALOG.md](future-reference/agent-catalog/CATALOG.md). |
 | [**Playbooks**](future-reference/playbooks/) | 9 practical guides: magnum-opus, production agent patterns, building agents, chatbots, RAG pipelines, cost optimization, multi-agent orchestration, autonomous loops, AI SaaS |
-| [**Skills Catalog**](future-reference/skills-catalog/) | Pull-ready skills organized by category (workflow, design, engineering, production, meta). See [CATALOG.md](future-reference/skills-catalog/CATALOG.md). |
+| [**Skills Catalog**](future-reference/skills-catalog/) | Pull-ready skills organized by category (workflow, design, engineering, production, meta). Notable: `/premortem` (mandatory Phase 1.6 gate for SignalWorks engagements), `/sweep` (multi-agent deploy gate), `/cook` (Magnum Opus executor). See [CATALOG.md](future-reference/skills-catalog/CATALOG.md). |
 | [**Prompt Catalog**](future-reference/prompt-catalog/) | 16 reusable prompt patterns, example prompts by domain (design, analysis, research). See [CATALOG.md](future-reference/prompt-catalog/CATALOG.md). |
 
 ---
@@ -130,6 +131,9 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 **I need an agent for my project:**
 → Browse [FUTURE-REFERENCE/agent-catalog/CATALOG.md](future-reference/agent-catalog/CATALOG.md)
 
+**I want to stress-test a plan before committing to it:**
+→ Run [`/premortem`](future-reference/skills-catalog/workflow/premortem/) — assumes it already failed 6 months from now, identifies failure modes, routes revised-plan items to spec changes / CLAUDE.md constraints / waivers
+
 **I need prompt templates:**
 → Check [FUTURE-REFERENCE/prompt-catalog/](future-reference/prompt-catalog/)
 
@@ -142,9 +146,9 @@ Ready-to-use guides, templates, and specifications for building AI systems.
 
 | Phase | Content | Time | Outcome |
 |-------|---------|------|---------|
-| **Phase 1** | [LEARNING/FOUNDATIONS/](LEARNING/FOUNDATIONS/) | 5 hours | Understand LLM prompting, context, reasoning |
+| **Phase 1** | [LEARNING/FOUNDATIONS/](LEARNING/FOUNDATIONS/) | 6 hours | Understand LLM prompting, context, reasoning, and operator oversight |
 | **Phase 2** | [LEARNING/AGENTS_AND_SYSTEMS/](LEARNING/AGENTS_AND_SYSTEMS/) | 11-12 hours | Build functioning AI agents and systems |
 | **Phase 3** | [LEARNING/PRODUCTION/](LEARNING/PRODUCTION/) | 8-9 hours | Ship production systems: measurable, secure, reliable |
 | **Ongoing** | [FUTURE-REFERENCE/](future-reference/) | As needed | Apply knowledge to real projects via Magnum Opus + Cook |
 
-**Total learning time:** ~24-26 hours (recommend 2-3 hours/week over 8-12 weeks)
+**Total learning time:** ~25-27 hours (recommend 2-3 hours/week over 8-12 weeks)
